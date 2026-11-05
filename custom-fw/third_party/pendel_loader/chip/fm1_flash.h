@@ -40,7 +40,7 @@ static inline void *fl_far(void *p) { void *volatile q = p; return q; }
 #define FL_DATA_HI      0x000E0000u
 #define FL_GLOB_LO      0x000FC000u                /* Felucca superblock / globals */
 #define FL_GLOB_HI      0x000FF000u
-#define FL_OTA_LO       0x000E0000u                /* M-UPGRADE loader staging, ota.c */
+#define FL_OTA_LO       0x000E0000u                /* OTA loader staging, ota.c */
 #define FL_OTA_HI       0x000E5000u
 #define FL_AUTO_LO      0x000E5000u                /* 1.2: the autosave (storage.c OBJ_AUTOSAVE), A/B, just above */
 #define FL_AUTO_HI      0x000E7000u                /* the OTA staging; 0xE7000 stays free */

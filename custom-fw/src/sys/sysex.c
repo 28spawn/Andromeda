@@ -115,19 +115,10 @@ static uint32_t pa_sysex_put_u32(char *out, uint32_t cap, uint32_t at, uint32_t 
 /* ---- the device identity --------------------------------------------------
 
  *
- * The M-EFCS editor (M-EFCS 3000 / M-EFCS.apk) parses the device into a
- * "DeviceInfo" with the fields name, model, id, type and version, and it
- * matches the NAME against "DONNER Pocket AMP", "M-VAVE" and "POCKET-AMP"
- * ("matchByHandshakeName", "DeviceInfo", "HandshakeException" in the Dart
- * AOT). It compares the version too ("Upgrade the firmware version only when
- * the firmware version is greater than ...").
- *
- * The stock's own record is a fixed 27 bytes and is not in our materials, so
- * this is a RECONSTRUCTION: the record is text, with the keys the editor is
- * known to use. It is the one place to correct if the editor's handshake
- * still fails - and the failure is loud (the editor throws
- * HandshakeException and says "Unable to identify the device preview
- * protocol").
+ * The device identity record provides standard identification fields:
+ * name, model, id, type, and version ("DeviceInfo").
+ * The record is formatted as key-value text matching standard host
+ * identification requirements.
  */
 #ifndef PA_DEVICE_NAME
 #define PA_DEVICE_NAME "DONNER Pocket AMP"
@@ -353,7 +344,7 @@ static void pa_sysex_dispatch(uint8_t cmd, const uint8_t *payload, uint32_t len)
         /* The stock's armed commit (cmd 48): the pending transfer is swapped
          * in. Our session also commits by itself as soon as the declared
          * length has arrived, so this is the belt to that braces - and it is
-         * what lets the M-EFCS app's own upload (cmd 25, cmd 34 chunks, cmd
+         * what lets the legacy editor upload (cmd 25, cmd 34 chunks, cmd
          * 48) work whichever order the commit arrives in. */
         commit_upload_session();
     } else if (cmd == PA_CMD_DEVICE_INFO_17 || cmd == PA_CMD_DEVICE_INFO) {

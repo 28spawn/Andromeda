@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* Felucca update loader, the portable part (step 2 of the M-UPGRADE update
+/* Felucca update loader, the portable part (step 2 of the update
  * protocol).
  *
  * The host serves the package ("logical image") with cmd 0x30 reads (ota.c).

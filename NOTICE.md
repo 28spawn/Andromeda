@@ -7,7 +7,7 @@ personal-modding research on a device the author owns (Donner / M-VAVE Pocket Am
 ## What is deliberately NOT included (and where to obtain it)
 To avoid redistributing third-party copyrighted software, none of the following is in this repo:
 - **M-VAVE / Donner firmware** (the stock `.fwsc` or vendor updates). Obtain from the vendor's official updater.
-- **M-VAVE M-EFCS / M-UPGRADE editor software** (binaries, DLLs, models). From the vendor.
+- **Vendor editor / updater software** (binaries, DLLs, models). Obtain directly from the vendor.
 - **JieLi pi32v2 toolchain & post-build tools** — https://pkgman.jieliapp.com/s/linux-toolchain and
   https://pkgman.jieliapp.com/s/linux-postbuild
 - **JieLi AC79 AIoT SDK** — https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK (Apache-2.0; commit

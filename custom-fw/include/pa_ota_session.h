@@ -1,12 +1,12 @@
-/* include/pa_ota_session.h - the firmware's half of the vendor's MIDI update ("M-UPGRADE", step 1) - USB-MIDI only.
+/* include/pa_ota_session.h - the firmware's half of the USB-MIDI update sequence (step 1) - USB-MIDI only.
  *
- * The host (the web editor's Firmware tab, tools/pa_install.py of the Pendel project, or standard updater) sends the "upgrade" frame F0 22 24 35 7F F7. The running firmware then pulls parts of the
+ * The host (the web editor's Firmware tab, or standard updater) sends the "upgrade" frame F0 22 24 35 7F F7. The running firmware then pulls parts of the
  * package from the host with cmd 0x30 read requests, checks them, stages the package's own update loader in the five 4 KB sectors 0xB8000..0xBCFFF (the top of the VM area), asks the host for "success"
  * (nothing is committed without it), writes the update record (flash 0xBCF00 and RAM 0x01C7FD88) and resets the core: the boot area's SPL runs the staged loader, which writes the new firmware.
  * The boot area (0..0x3FFF) is never touched by this file. A failure erases the staging area and the firmware carries on.
  *
  * The protocol and the staging layout are those of the Pendel project's chip/ota.c (MPL-2.0, (C) 2026 Leo Kuroshita, Hugelton Instruments), which runs them on this very unit (it proves the SPL side);
- * this is a port to this firmware's own flash, USB and screen code. The other frame, F0 22 24 35 7D F7 (the stock's "soft key"), still resets into the chip's ROM download mode.
+ * this is a port to this firmware's own flash, USB and screen code. The other frame, F0 22 24 35 7D F7 (the diagnostic soft key), still resets into the chip's ROM download mode.
  *
  * The hooks below are the platform: src/board/ota_hw.c on the device, the test's own on the host.
  */

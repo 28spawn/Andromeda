@@ -48,7 +48,7 @@ function pack8to7(data) {
   return out;
 }
 function buildFrame(cmd, payload) {
-  /* the length is a plain 24-bit little-endian (the stock's len:u24le) */
+  /* the length is a plain 24-bit little-endian (len:u24le) */
   const l0 = payload.length & 0xFF;
   const l1 = (payload.length >> 8) & 0xFF;
   const l2 = (payload.length >> 16) & 0xFF;

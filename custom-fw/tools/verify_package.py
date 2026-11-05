@@ -60,7 +60,7 @@ def verify_files():
     print("=" * 65)
     fwsc_data = fwsc_path.read_bytes()
     unwrapped, prod = unwrap_fwsc(fwsc_data)
-    print(f"  M-VAVE Product Tag:  '{prod}' (Verified M-UPGRADE Protocol)")
+    print(f"  Container Product Tag: '{prod}' (Verified OTA Protocol)")
     print(f"  Decoded Size:        {len(unwrapped)} bytes")
     print(f"  Binary Match UFW:    {'MATCH [PASS]' if unwrapped == ufw_data else 'MISMATCH [FAIL]'}")
     print("=" * 65)

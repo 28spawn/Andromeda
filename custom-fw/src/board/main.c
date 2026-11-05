@@ -6,7 +6,7 @@
  *   - BR-2:   On-chip 0x01EE0400 Vector/FIR Coprocessor + 16-Unit Q21 NAM A2 GRU + Q18 IR Cab
  *   - BR-3:   Full 8-Slot Effect Chain (Dynamics, Drive, Amp, Cab, EQ, Mod, Delay, Reverb) + C7 Reclaim
  *   - BR-4:   Color TFT UI (ST7735S/ST7789) + 8-Slot Strip + Parameter Bars + Chromatic Tuner + Telemetry
- *   - BR-5:   USB Composite (USB-MIDI EP4 + UAC1 24-bit Audio EP3 + OTA) & BLE M-EFCS Bridge
+ *   - BR-5:   USB Composite (USB-MIDI EP4 + UAC1 24-bit Audio EP3 + OTA) & BLE MIDI Bridge
  *   - SP-1/2: Dual-Core CPU1 Post-FX Offload + Zero-Flash Procedural 808/909 Drum Machine & Metronome
  */
 

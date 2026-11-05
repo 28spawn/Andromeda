@@ -49,7 +49,7 @@ function pack8to7(data) {
   return out;
 }
 function buildFrame(cmd, payload) {
-  /* The length is a plain 24-bit little-endian (the stock's len:u24le) - it
+  /* The length is a plain 24-bit little-endian (len:u24le) - it
    * used to be three 7-bit groups, which only agreed with the firmware for
    * lengths up to 256. */
   const l0 = payload.length & 0xFF;

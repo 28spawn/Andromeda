@@ -1,14 +1,8 @@
 /* custom-fw/include/pa_diag.h - a private diagnostic channel
  *
- * A manufacturer SysEx (0x7D, the "educational/non-commercial" ID) that the M-EFCS editor
- * never sends, so it cannot be confused with the editor's protocol.  It exists for one
- * job: to let a host read a region of the SPI NOR flash.
- *
- * Why that matters: the JieLi downloader entry - the last piece of the OTA handshake - is
- * the stock's "usb_update_mode" config flag, and that flag lives in the stock's settings
- * store (the VM partition, 0x0B5000, 32 KB).  That partition is not in the stock .fwsc
- * (the updater only writes 0x000000-0x0B4FFF), so the only way to see the flag's
- * layout is to read it off the device.  This is a *read* - it changes nothing.
+ * A manufacturer SysEx (0x7D, the "educational/non-commercial" ID) used for host
+ * diagnostic reads. It allows reading regions of SPI NOR flash and RAM for hardware
+ * inspection and verification. This is a *read* - it changes nothing.
  *
  *   F0 7D 01 <addr u32 LE> <len u16 LE> F7      ->  F0 7D 81 <len u16 LE> <data> F7
  *

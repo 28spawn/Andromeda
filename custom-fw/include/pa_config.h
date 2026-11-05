@@ -19,17 +19,32 @@
 #define PA_CPU_HZ              360000000u
 #define PA_BLOCK_N             64      /* samples/channel per DAC block (64..128) */
 
+/* Board identification. Defaults to Pocket AMP if not specified */
+#ifndef BOARD_POCKET_AMP
+#if !defined(BOARD_BLACKBOX)
+#define BOARD_POCKET_AMP       1
+#endif
+#endif
+
 /* The firmware version the editor and the updater compare against;
  * the device-info record and the OTA ID block both carry this number.
  * One definition, so the two cannot drift apart. */
 #ifndef PA_FW_VERSION
-#define PA_FW_VERSION          103u   /* shown as 1.03; the OTA ID block says V103 */
+#define PA_FW_VERSION          101u   /* shown as 1.01; the OTA ID block says V101 */
 #endif
 #ifndef PA_DEVICE_NAME
+#if defined(BOARD_BLACKBOX)
+#define PA_DEVICE_NAME         "M-VAVE BlackBox"
+#else
 #define PA_DEVICE_NAME         "DONNER Pocket AMP"
 #endif
+#endif
 #ifndef PA_DEVICE_MODEL
+#if defined(BOARD_BLACKBOX)
+#define PA_DEVICE_MODEL        "BlackBox"
+#else
 #define PA_DEVICE_MODEL        "PocketAmp"
+#endif
 #endif
 
 /* The C7 DSP pool (src/sys/pa_pool.c holds the array; every effect allocates its

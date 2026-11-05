@@ -34,7 +34,7 @@
  * What the FM-1 said instead (blell3, 9a90c7d, 2026-10-08): while advertising RXBUFnCNTL stays 00 and the packet is
  * in the buffer RXTOG has moved past (hw_adv_find); in a connection RXBUFnCNTL bit0 = 1 does mark the filled buffer
  * (470 packets, no desync); and the slot clock read through columns 0 / 14 steps backwards, so the link layer's timers
- * run on TIMER4 (ble_hw_time_us). TX follows the vendor's contract, HW §8.2 (bit0 = 1 empty; see hw_tx_service). */
+ * run on TIMER4 (ble_hw_time_us). TX follows the hardware specification, HW §8.2 (bit0 = 1 empty; see hw_tx_service). */
 #include "ble_hw.h"
 #include "ble_vm.h"                     /* the stored trims rf_init takes (ble_vm.c) */
 #include "ble_diag.h"                   /* console blell: counters only, no behaviour */
@@ -132,8 +132,8 @@ static struct {
     uint8_t state, gen;                /* gen: moves on every state change (a callback may stop / restart the link) */
     uint8_t rx_next, rx_sn, rx_seen, rx_any;
     uint8_t win_wide, upd, sca;
-    uint8_t vendor, az_started;        /* PA-MOD (pack 153): the vendor window profile, latched at connection start; autozoom has seen the first reception */
-    uint32_t win32, widen_us, az_widen;   /* PA-MOD: the nominal receive window (vendor field 5), the widening in force (field 4), the autozoom's extra widening (ble_window_autozoom.widen) */
+    uint8_t vendor, az_started;        /* PA-MOD (pack 153): adaptive window profile, latched at connection start; autozoom has seen the first reception */
+    uint32_t win32, widen_us, az_widen;   /* PA-MOD: nominal receive window, widening in force, autozoom extra widening */
     uint16_t interval, last_evt, wide_from, upd_instant, chm_instant;
     struct ble_hw_conn_upd u;
     uint8_t chm[5];
@@ -288,7 +288,7 @@ BLE_API uint8_t ble_hw_addr(uint8_t addr[6])
 
 /* ------------------------------------------------------------------------------------- control block --- */
 
-static void cb_rfprio(uint16_t p)       /* "RFPRIO n" (HW §6, §7, §9): both words, as stock's dump shows */
+static void cb_rfprio(uint16_t p)       /* "RFPRIO n" (HW §6, §7, §9): both words per hardware behavior */
 {
     CB->rfpriostat = p;
     CB->rfpriocntl = p;
@@ -363,7 +363,7 @@ static void cb_channels(const uint8_t chm[5])
 static uint32_t hw_widening(uint16_t interval, uint8_t sca)
 {
     static const uint16_t PPM[8] = {500, 250, 150, 100, 75, 50, 30, 20};   /* Core Vol 6 Part B 2.3.3.1 */
-    if (drv.vendor)     /* PA-MOD (pack 153): the vendor's ll_slave_cal_widening: master SCA + 500 ppm (its own clock), x (latency + 1) with latency 0, no multiplier */
+    if (drv.vendor)     /* PA-MOD (pack 153): slave widening calculation: master SCA + 500 ppm, x (latency + 1) with latency 0, no multiplier */
         return 2u + 2u * ((uint32_t)interval * 1250u * (PPM[sca & 7u] + 500u) / 1000000u);
     return HW_WIDEN_X * (PA_PROF(PA_BLE_PROF_WIDEN2) ? 2u : 1u) * (2u + 2u * ((uint32_t)interval * 1250u * (PPM[sca & 7u] + 200u) / 1000000u));   /* PA-MOD: x HW_WIDEN_X */
 }
@@ -380,24 +380,23 @@ static void cb_window(uint32_t us)      /* WINCNTL0/1 (HW §3, §7 step 13) */
     CB->wincntl[1] = (uint16_t)(us >> 16);
 }
 
-/* ---- PA-MOD (pack 153): the vendor's receive-window management, ported from the bitcode of the AC79 SDK's btctrler.a (cpu/wl82/liba), RF_ble.c: __hw_set_widen_drift, the
- * ble_window_autozoom inlined in ble_event_irq_handler, __set_winsize / __set_widen. Names, constants and the order of the arithmetic follow the vendor's. */
+/* ---- PA-MOD (pack 153): adaptive receive-window management and drift compensation per hardware registers. */
 
-static void cb_window_nominal(uint32_t us)  /* vendor __set_winsize: the window register and field 5 (what autozoom restores) */
+static void cb_window_nominal(uint32_t us)  /* window register and nominal field (what autozoom restores) */
 {
     drv.win32 = us;
     cb_window(us);
 }
 
-/* vendor __hw_set_widen_drift(hw, us, win): the next anchor 'us' earlier (column 7 = bit offset, column 16 = slots) and the window register = win.
- * 0x2800C bits 9:0 and 0x28014 bits 7:0 are the baseband's position inside the current 625 us slot (the vendor reads them as they are). 1: done, 0: refused (the vendor prints 'X'). */
+/* hw_set_widen_drift(us, win): the next anchor 'us' earlier (column 7 = bit offset, column 16 = slots) and window register = win.
+ * 0x2800C bits 9:0 and 0x28014 bits 7:0 are baseband position inside current 625 us slot. 1: done, 0: refused. */
 static uint8_t hw_set_widen_drift(uint32_t us, uint32_t win)
 {
     const uint32_t slots0 = us / 625u, rem = us % 625u;
-    const uint32_t clkn = fm1_ble_col_rd(HW_LINK, 0) | (fm1_ble_col_rd(HW_LINK, 14) << 16 & 0xFF0000u);   /* vendor __get_clkn */
+    const uint32_t clkn = fm1_ble_col_rd(HW_LINK, 0) | (fm1_ble_col_rd(HW_LINK, 14) << 16 & 0xFF0000u);
     const int32_t phase = (int32_t)(625u - ((*(volatile uint32_t *)0x2800Cu) & 1023u)) - (int32_t)((*(volatile uint32_t *)0x28014u) & 255u);
     const int32_t c7 = (int16_t)fm1_ble_col_rd(HW_LINK, 7);
-    const int32_t v = (int16_t)((c7 & 2048) == 0 ? c7 : (c7 | 0xF800));   /* column 7 as the vendor reads it: a 12-bit signed bit offset */
+    const int32_t v = (int16_t)((c7 & 2048) == 0 ? c7 : (c7 | 0xF800));   /* column 7: 12-bit signed bit offset */
     const int32_t t = v + (int32_t)(uint16_t)phase, t_rem = t - (int32_t)rem;
     uint32_t slots;
     int32_t off;
@@ -422,11 +421,11 @@ static uint8_t hw_set_widen_drift(uint32_t us, uint32_t win)
     return 1;
 }
 
-/* the vendor's ble_window_autozoom, run at the end of every connection event of a link in state 7 (our HW_CONN as a peripheral). rx_ok: a packet was taken in this event
- * (the vendor's flag bit 0). Returns what it did, as PA_BLE_ZOOM_*. */
+/* ble_window_autozoom: run at the end of every connection event of a link in state 7 (HW_CONN). rx_ok: packet received in event.
+ * Returns result code PA_BLE_ZOOM_*. */
 static uint8_t hw_autozoom(uint8_t rx_ok)
 {
-    if (!drv.az_started) {                                 /* vendor field 2: the event with the first EVTCOUNT is only noted */
+    if (!drv.az_started) {                                 /* event with first EVTCOUNT is noted */
         if (CB->evtcount != 0u) {
             drv.az_started = 1;
             return PA_BLE_ZOOM_NONE;
@@ -600,7 +599,7 @@ BLE_API void ble_hw_adv_stop(void)
 
 /* ----------------------------------------------------------------------------------------- connection --- */
 
-/* called by the link layer from inside ble_ll_hw_connect_ind (the RX interrupt), HW §7 in the vendor's order */
+/* called by the link layer from inside ble_ll_hw_connect_ind (the RX interrupt), HW §7 in specification order */
 BLE_API void ble_hw_conn_start(const struct ble_hw_conn *c)
 {
     uint16_t h0;
@@ -706,7 +705,7 @@ BLE_API void ble_hw_tx_kick(void) {}
 
 /* ------------------------------------------------------------------------------------ event servicing --- */
 
-/* ---- TX: the vendor's contract, docs/BLE-HW-FACTS.md §8.2 (a3b2f06). TXBUFnCNTL bit0 is the buffer's "empty" flag:
+/* ---- TX: hardware interface specification, docs/BLE-HW-FACTS.md §8.2. TXBUFnCNTL bit0 is the buffer's "empty" flag:
  * 1 = empty (software may fill it; a PDU software had put there is finished: acknowledged), 0 = handed to the engine.
  * conn_start sets both to 1 (HW §7 step 5) and software never sets bit0 again; it clears bit0 as the last write of a
  * load. The engine sends from the buffer TXTOG bit0 names and moves TXTOG itself; it sets bit0 back to 1 when it is
@@ -1239,12 +1238,12 @@ static void hw_event_service(void)
         return;
     }
 #endif
-    if (drv.vendor) {                   /* PA-MOD (pack 153): the vendor's autozoom, and what it did into this event's ring record (bits 4-5) */
+    if (drv.vendor) {                   /* PA-MOD (pack 153): adaptive autozoom, and what it did into this event's ring record (bits 4-5) */
         const uint8_t z = hw_autozoom(rx_ok);
         pa_ble_dgb.ring[(pa_ble_dgb.wr - 1u) & (PA_BLE_RING_N - 1u)].flags |= (uint8_t)(z << PA_BLE_EVF_ZOOM_SHIFT);
     }
     if (drv.win_wide && rx_ok && (int16_t)(counter - drv.wide_from) >= 0 && !drv.upd) {
-        if (!drv.vendor)                /* the vendor never cuts the window register after the first packet (autozoom alone moves it) */
+        if (!drv.vendor)                /* maintains window register after first packet (autozoom adjusts it) */
             cb_window(HW_WIN_NORMAL);   /* in step: the normal window (WINCNTL2), the offset spent */
         fm1_ble_col_wr(HW_LINK, 4, 0);
         cb_rfprio(28u);

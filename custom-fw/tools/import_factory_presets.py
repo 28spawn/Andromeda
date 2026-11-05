@@ -52,9 +52,9 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FW = os.path.dirname(HERE)
-import mefcs_bundles  # noqa: E402
-BANK = mefcs_bundles.find("sk17_am4_preset.bin")
-AMPS = mefcs_bundles.find("sk17_am4_ampCab.bin")
+import factory_bundles  # noqa: E402
+BANK = factory_bundles.find("stock_am4_presets.bin")
+AMPS = factory_bundles.find("stock_am4_assets.bin")
 OUT = os.path.join(FW, "src", "sys", "factory_presets.inc")
 N = 40
 REC = 92
@@ -102,7 +102,7 @@ def dyn_level(stock):
 def build():
     data = open(BANK, "rb").read()
     if len(data) != 80 * REC + 10 or not data.endswith(b"PATCHEND\0\0"):
-        raise SystemExit("sk17_am4_preset.bin: unexpected size or trailer")
+        raise SystemExit("stock_am4_presets.bin: unexpected size or trailer")
     names = amp_names()
     rows = []
     for i in range(N):
@@ -185,7 +185,7 @@ def main():
         if not os.path.exists(OUT) or open(OUT, encoding="utf-8").read() != text:
             print("src/sys/factory_presets.inc differs from tools/import_factory_presets.py")
             sys.exit(1)
-        print("factory presets match sk17_am4_preset.bin")
+        print("factory presets match baseline preset table")
         return
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)

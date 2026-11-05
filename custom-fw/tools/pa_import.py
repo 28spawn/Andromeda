@@ -19,7 +19,7 @@ peak trimmed (8 samples kept), cut to 1,024 taps with a short fade if it was lon
 (L2 norm) is the reference cabinet's, CAB_REF_L2_Q18 = 400150 in Q18 - the rule fx_cab_ir.c applies to every user IR,
 so one cabinet is as loud as another.
 
-The files in user_content/ and the generated .inc are git-ignored: they are your content (or a vendor's), not the project's.
+The files in user_content/ and the generated .inc are local user content.
 """
 import argparse
 import binascii
@@ -128,7 +128,7 @@ def emit(nams, cabs, allow_wavenet=False) -> str:
     out = ["/*",
            " * src/sys/pa_user_embedded.inc - user NAM captures and cabinet IRs linked into the image",
            " *",
-           " * GENERATED FILE - do not edit, do not commit (git-ignored). Regenerate with",
+           " * GENERATED FILE - do not edit. Regenerate with",
            " *     python custom-fw/tools/pa_import.py",
            " * from custom-fw/user_content/. Included by src/sys/stock_assets.c.",
            " */",

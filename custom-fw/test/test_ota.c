@@ -1,6 +1,6 @@
 /* custom-fw/test/test_ota.c - the app side of the JieLi OTA handshake
  *
- * The two frames M-UPGRADE sends over USB MIDI, and the ID block the query is answered
+ * The two frames the updater sends over USB MIDI, and the ID block the query is answered
  * with.  Pure logic, so it is checked here rather than on a device.
  */
 #include <stdarg.h>

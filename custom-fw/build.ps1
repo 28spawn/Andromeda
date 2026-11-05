@@ -13,9 +13,16 @@
 # The build directory (custom-fw/build_pi32) is deleted at the start of every run, so a
 # stale object can never be linked into an image.
 
+[CmdletBinding()]
+param(
+    [string]$Board = "pocket_amp"
+)
+
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
+
+$BoardDef = if ($Board -eq "blackbox") { "-DBOARD_BLACKBOX=1" } else { "-DBOARD_POCKET_AMP=1" }
 
 # ---- the one place a native command's failure is noticed --------------------
 function Invoke-Checked {
@@ -90,7 +97,7 @@ function Run-HostTest {
     )
     $exe = Join-Path $BuildDir "$Name.exe"
     Invoke-Checked "the $Name compile" {
-        clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 @Extra $Source @Srcs -o $exe
+        clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 $BoardDef @Extra $Source @Srcs -o $exe
     }
     Invoke-Checked "the $Name suite" { & $exe }
 }
@@ -101,7 +108,7 @@ Run-HostTest -Name "pa_test_meter" -Source "custom-fw/test/test_cpu_meter.c" -Sr
 # it is compiled here so its numbers cannot drift from PA_CPU_HZ again - it used to
 # carry three hard-coded clocks (360/320/240) that contradicted the firmware.
 Invoke-Checked "the cycle/clock report compile" {
-    clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 custom-fw/test/test_wavenet_cycles.c custom-fw/src/nam/pa_wavenet.c custom-fw/src/dsp/hw_accel.c -o (Join-Path $BuildDir "pa_test_wn_cycles.exe")
+    clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 $BoardDef custom-fw/test/test_wavenet_cycles.c custom-fw/src/nam/pa_wavenet.c custom-fw/src/dsp/hw_accel.c -o (Join-Path $BuildDir "pa_test_wn_cycles.exe")
 }
 Invoke-Checked "the cycle/clock report" { & (Join-Path $BuildDir "pa_test_wn_cycles.exe") }
 
@@ -164,7 +171,7 @@ Invoke-Checked "the millisecond clock test compile" {
 }
 Invoke-Checked "the millisecond clock suite" { & (Join-Path $BuildDir "pa_test_ms_clock.exe") }
 
-# The app side of the JieLi OTA handshake (M-UPGRADE): the two frames and the ID block.
+# The app side of the JieLi OTA handshake: the two frames and the ID block.
 Invoke-Checked "the OTA handshake test compile" {
     clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 custom-fw/test/test_ota.c custom-fw/src/sys/pa_ota.c -o (Join-Path $BuildDir "pa_test_ota.exe")
 }
@@ -192,7 +199,7 @@ Run-HostTest -Name "pa_test_full" -Source "custom-fw/test/test_full_firmware.c" 
 $robDir = Join-Path $BuildDir "rob"
 New-Item -ItemType Directory -Force -Path $robDir | Out-Null
 Invoke-Checked "the robustness suite compile" {
-    clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 -DPA_POOL_TEST=1 custom-fw/test/test_robustness.c custom-fw/src/sys/settings.c custom-fw/src/sys/pa_bond.c (Srcs "host_robust") -o (Join-Path $robDir "pa_test_robust.exe")
+    clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 $BoardDef -DPA_POOL_TEST=1 custom-fw/test/test_robustness.c custom-fw/src/sys/settings.c custom-fw/src/sys/pa_bond.c (Srcs "host_robust") -o (Join-Path $robDir "pa_test_robust.exe")
 }
 Push-Location $robDir
 Invoke-Checked "the robustness suite" { & (Join-Path $robDir "pa_test_robust.exe") }
@@ -238,9 +245,9 @@ $pi32Bin = "$pi32Root\bin"
 $pi32Inc = "$pi32Root\pi32v2-include"
 $pi32Lib = "$pi32Root\pi32v2-lib\r3"
 
-Invoke-Checked "the startup code compile" {
-    & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 -c custom-fw/src/board/entry.S -o (Join-Path $BuildDir "entry.o")
-}
+    Invoke-Checked "the startup code compile" {
+        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 $BoardDef -c custom-fw/src/board/entry.S -o (Join-Path $BuildDir "entry.o")
+    }
 
 # The object names come from the source PATH, not its base name: two files with the same
 # base name in different directories would otherwise overwrite each other's object, and
@@ -252,7 +259,7 @@ foreach ($s in $srcs) {
     $tag = ($rel -replace "[\\/:]", "_")
     $obj = Join-Path $BuildDir "$tag.o"
     Invoke-Checked "the compile of $($s.Name)" {
-        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 -O2 -Wall -Wno-tautological-constant-out-of-range-compare -ffreestanding -fno-builtin -isystem $pi32Inc -Icustom-fw/include -Icustom-fw/src/board/ble_platform -Icustom-fw/third_party/optimist_ble/src -Icustom-fw/third_party/optimist_ble/hal -c $s.FullName -o $obj
+        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 -O2 -Wall -Wno-tautological-constant-out-of-range-compare -ffreestanding -fno-builtin -isystem $pi32Inc -Icustom-fw/include $BoardDef -Icustom-fw/src/board/ble_platform -Icustom-fw/third_party/optimist_ble/src -Icustom-fw/third_party/optimist_ble/hal -c $s.FullName -o $obj
     }
     $objs += $obj
 }
@@ -327,7 +334,7 @@ Write-Host ("    the app image is {0} bytes; the app area holds an app.bin of up
 # custom-fw/test/EFFECT_MATRIX.md.
 Write-Host "`n=== [3/5] The Effect Matrix (every effect, every pair, every order) ===" -ForegroundColor Cyan
 Invoke-Checked "the emulator DLL build" {
-    powershell -ExecutionPolicy Bypass -File custom-fw/emu/build_dll.ps1
+    powershell -ExecutionPolicy Bypass -File custom-fw/emu/build_dll.ps1 -Board $Board
 }
 Invoke-Checked "the effect matrix" {
     python custom-fw/tools/stress_effects.py --dll custom-fw/emu/pocket_amp_emu.dll --types

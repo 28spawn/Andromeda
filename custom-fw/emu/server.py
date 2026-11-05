@@ -207,7 +207,7 @@ with emu_lock:
 # Sample Player & Guitar DI Loops.
 # The test audio and the IR bank are the project's own, synthesised by
 # custom-fw/tools/gen_test_audio.py on first start (emu/samples/ and emu/irs/ are
-# git-ignored): plucked-string DI phrases, modelled cabinets, plate and spring reverbs.
+plucked-string DI phrases, modelled cabinets, plate and spring reverbs.
 sys.path.insert(0, str(EMU_DIR.parent / "tools"))
 try:
     import gen_test_audio

@@ -12,7 +12,7 @@ The transfer sequence is: cmd 25 (the length) + cmd 34 (the raw bytes) +
 cmd 48 (the commit). This drives the custom firmware's own parser with
 that sequence and checks that the capture lands in flash byte for byte.
 
-    python custom-fw/test/test_mefcs_upload.py [path/to/pocket_amp_emu.dll]
+    python custom-fw/test/test_sysex_upload.py [path/to/pocket_amp_emu.dll]
 """
 import ctypes
 import os
@@ -23,7 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 # a private simulated flash (the chip has room for ONE user capture, and the shared emu/pocket_amp_flash.bin carries other tests' leftovers)
 import tempfile  # noqa: E402
-_scratch = tempfile.mkdtemp(prefix="pa_mefcs_")
+_scratch = tempfile.mkdtemp(prefix="pa_sysex_scratch_")
 os.environ["PA_FLASH_FILE"] = os.path.join(_scratch, "flash.bin")
 DEFAULT_DLL = os.path.join(ROOT, "emu", "pocket_amp_emu.dll")
 
@@ -158,7 +158,7 @@ def session_state():
 
 
 def try_upload(payload):
-    """cmd 25 (length only) + cmd 34 (body) + cmd 48 (commit), M-EFCS shaped."""
+    """cmd 25 (length only) + cmd 34 (body) + cmd 48 (commit) transfer sequence."""
     hdr = bytes([len(payload) & 0xFF, (len(payload) >> 8) & 0xFF,
                  (len(payload) >> 16) & 0xFF])
     feed(M.build_frame(25, hdr))
@@ -194,5 +194,5 @@ for size, want_ok in ((8192, True), (32768, True), (33792, False), (65536, False
             # the SysEx session took it, but it is larger than a flash capture slot: the commit is refused, and the capture count does not change
             check(st[3] != 0, f"the {size} byte upload is refused as a capture, it does not fit a {SLOT} byte slot (status {st[3]})")
 
-print("\n" + ("THE M-EFCS UPLOAD IS ACCEPTED" if fails == 0 else f"{fails} FAILURE(S)"))
+print("\n" + ("THE SYSEX UPLOAD IS ACCEPTED" if fails == 0 else f"{fails} FAILURE(S)"))
 sys.exit(0 if fails == 0 else 1)

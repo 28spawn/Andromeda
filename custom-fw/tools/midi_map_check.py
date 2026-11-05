@@ -82,9 +82,9 @@ def random_ext(rng):
 
 
 def find_banks(extra):
-    root = os.path.join(REPO, "local_storage", "root", "M-EFCS 3000", "M-EFCS", "data", "flutter_assets", "lib", "resources", "bin", "sk17")
-    cands = [p for p in glob.glob(os.path.join(root, "*.bin")) if "preset" in os.path.basename(p).lower()]
-    cands += glob.glob(os.path.join(REPO, "local_storage", "*.abkx")) + list(extra)
+    cands = list(extra)
+    cands += glob.glob(os.path.join(REPO, "local_storage", "*.bin"))
+    cands += glob.glob(os.path.join(REPO, "local_storage", "*.abkx"))
     cands += glob.glob(os.path.join(FW, "factory_bundles", "*.bin")) + glob.glob(os.path.join(FW, "factory_bundles", "*.abkx"))
     seen, out = set(), []
     for p in cands:

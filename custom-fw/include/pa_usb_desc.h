@@ -9,7 +9,7 @@
  *       1  audio streaming, playback (host -> unit): alt 0 no endpoint, alt 1 isochronous OUT endpoint 3, adaptive
  *       2  audio streaming, recording (unit -> host): alt 0 no endpoint, alt 1 isochronous IN endpoint 3, asynchronous
  *   interface association 2 (interfaces 3..4): USB MIDI, as before (3 audio control, 4 MIDI streaming, bulk endpoint 1 in and out)
- * The audio format is the stock's: PCM, 2 channels, 3 bytes (24 bit), one rate, 44,100 Hz (read from the stock image, app.bin offsets 0x61c15 and 0x62841).
+ * The audio format: PCM, 2 channels, 3 bytes (24 bit), one rate, 44,100 Hz.
  * The audio endpoints are declared here and refused by the driver for now (SET_INTERFACE alt 1 stalls): step A is enumeration only.
  * Written from the USB Audio Class 1.0 and USB MIDI 1.0 specifications; no vendor source is used.
  */

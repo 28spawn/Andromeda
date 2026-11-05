@@ -1,7 +1,7 @@
 """Factory presets 1..40: baseline preset bank, imported.
 
   [1] src/sys/factory_presets.inc is exactly what tools/import_factory_presets.py makes from
-      sk17_am4_preset.bin (nobody edits the bank by hand)
+      stock_am4_presets.bin (nobody edits the bank by hand)
   [2] the bank decodes cleanly: 40 configured records + 40 blank templates, every type in
       range, the bass presets on the bass amps and cabs, the clean ones on the clean amps
   [3] through the firmware (the emulator DLL): each preset loads the record's amp, cab,
@@ -66,8 +66,8 @@ import tempfile  # noqa: E402
 os.chdir(tempfile.mkdtemp(prefix="pa_factory_"))
 # the emulator reads the stock amps and cabs from its simulated flash, which it fills from the
 # baseline bundle - tell it where that is (it only searches relative paths otherwise)
-import mefcs_bundles  # noqa: E402
-os.environ["PA_STOCK_BUNDLE"] = mefcs_bundles.find("sk17_am4_ampCab.bin")
+import factory_bundles  # noqa: E402
+os.environ["PA_STOCK_BUNDLE"] = factory_bundles.find("stock_am4_assets.bin")
 d = ctypes.CDLL(dll_path)
 F = ctypes.POINTER(ctypes.c_float)
 d.emu_process_audio_f32.argtypes = [F, F, F, ctypes.c_int]

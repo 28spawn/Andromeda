@@ -200,7 +200,7 @@ window-write groups), 10,706 B to 5,795 B; the pinned SHA-256 is over the unpack
 ### 8.3 The capture and the build
 `tools/ble_rf_capture.py` (HW §17) runs the user's stock `FM-1.fwsc` in the emulator and writes the tables; the result is committed
 as `firmware/hal/ble_rf_tables_v15.h` (format 3, 39.9 KB, SHA-256 `30ba97ea…`). `tools/build.py` puts the tables at
-`build/gen/ble_rf_tables.h`: a matching local cache in `config/ble/` (git-ignored) as it is; with `FM1_STOCK_FWSC` and no matching
+`build/gen/ble_rf_tables.h`: a matching local cache in `config/ble/` as it is; with `FM1_STOCK_FWSC` and no matching
 cache a capture from that file (it must still be stock V15, else the build stops); with neither, the committed tables. All three
 give the same content, so a BLE build needs no V15 file (BUILDING.md). A capture takes about 30 s.
 

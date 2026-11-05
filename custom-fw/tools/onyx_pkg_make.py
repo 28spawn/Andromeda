@@ -6,7 +6,7 @@
 
   flash.bin  head [0, 0x4000): flash header (JieLi SDK default values), JLFS entries, the SDK SPL (uboot.boot, Apache-2.0), an isd_config blob of our own that decodes to the chip key. The head is never
              written by the Onyx loader: it only has to look like a package head.
-             app area [0x4000, ...): app_area_head, the Onyx app.bin, the SDK cfg_tool.bin and eq_cfg_hw.bin, the region descriptors, SFC-encrypted with the chip key. It ends before 0x86000
+             app area [0x4000, ...): app_area_head, the Onyx app.bin, the SDK cfg_tool.bin and eq_cfg_hw.bin, the region descriptors, SFC block-encoded with the chip key. It ends before 0x86000
              (the user store), so the area's CRC never covers stored captures or cabinets.
   ota.bin    the Onyx update loader (loader/onyx_loader.c), LZ4-wrapped as the SPL loads it
 

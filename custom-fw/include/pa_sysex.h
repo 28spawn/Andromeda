@@ -51,7 +51,7 @@ enum pa_upload_target {
 /* The upload staging buffer. It holds ONE transfer (cmd 25 / cmd 34 / cmd 48),
  * so this is also the largest blob the SysEx path will accept - 32 KB, about
  * four times the largest real payload (8 KB IR, 7.5 KB WaveNet capture).
- * This is protocol-visible: custom-fw/test/test_mefcs_upload.py and the WASM
+ * This is protocol-visible: custom-fw/test/test_sysex_upload.py and the WASM
  * workbench send the same limit. It was 65,536 B, and two such buffers (this one
  * and the NAM flash reader) were 128 KB of RAM holding at most 8 KB each. */
 

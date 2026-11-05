@@ -44,7 +44,7 @@ _SCALE = np.float32(2097151.0)
 
 
 def _q(v):
-    # the DLL's (int)(v * 2097151.0f): a single-precision product, truncated toward zero
+    # Standard (int)(v * 2097151.0f): a single-precision product, truncated toward zero
     return int(np.float32(v) * _SCALE)
 
 

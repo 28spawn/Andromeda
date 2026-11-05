@@ -150,7 +150,7 @@ the baseline there. Confirm the unit is dead, then restore it as above. Record w
 
 | Route | Status | Notes |
 |---|---|---|
-| Vendor M-UPGRADE (`F0 22 24 35 7F F7`) | works while the app runs USB | Leads to the vendor OTA MIDI loader (`ota-Pocket AMP_xxx`), which writes but cannot read. Not a recovery route for a dead app |
+| Vendor OTA Updater (`F0 22 24 35 7F F7`) | works while the app runs USB | Leads to the vendor OTA MIDI loader (`ota-Pocket AMP_xxx`), which writes but cannot read. Not a recovery route for a dead app |
 | Button combinations at power-on | **failed** | 7 cycles, no download mode |
 | Custom-firmware PARA hold → `rc_recover_uboot()` | **unproven** | Only runs if the custom app boots; its SRAM/flag constants have no evidence yet |
 | SPI programmer on the flash chip | untested | Last resort if the ROM route ever fails |

@@ -92,7 +92,7 @@ progress { width:100%; height:8px; }
 </section>
 <section id="t-files" hidden>
   <h2>Amp captures <span class="note" id="namCount"></span> <button id="namClear" class="small" disabled title="needs the custom firmware (a state record from the unit)">Clear all captures</button></h2>
-  <p class="note"><b>USB only</b> (a capture is 7.5 KB: Bluetooth is too slow for it). A ToneHunt <b>.nam</b> is read here: the JSON is stripped and its A2 Lite model (1870 weights) is packed into the unit's 7,504-byte capture, named from the file's metadata. A <b>.namb</b> / M-VAVE container is cut to its model struct (3852 B), a raw struct or a <b>WAVE</b> blob is sent as it is. Up to 8192 B. The unit keeps up to 10 captures; delete or replace one to make room. Presets name a capture by its number, so deleting one leaves a gap instead of renumbering the others.</p>
+  <p class="note"><b>USB only</b> (a capture is 7.5 KB: Bluetooth is too slow for it). A ToneHunt <b>.nam</b> is read here: the JSON is stripped and its A2 Lite model (1870 weights) is packed into the unit's 7,504-byte capture, named from the file's metadata. A <b>.namb</b> container is cut to its model struct (3852 B), a raw struct or a <b>WAVE</b> blob is sent as it is. Up to 8192 B. The unit keeps up to 10 captures; delete or replace one to make room. Presets name a capture by its number, so deleting one leaves a gap instead of renumbering the others.</p>
   <table class="tbl" id="namTable"></table>
   <div class="drop"><input type="file" id="namFile" accept=".namb,.nam,.bin,.am3,.am4,.wave"><div class="kv" id="namInfo">no file</div>
     <p><button id="namSend" class="pri" disabled>Store in the first free slot</button></p></div>
@@ -351,7 +351,7 @@ function checkFirmware(f) {
   o.base = APP_BASE;
   return o;
 }
-// ---- the vendor update loader (M-UPGRADE route; the frames are documented in HARDWARE-BRINGUP-STATUS.md section 4) ----
+// ---- the vendor update loader (firmware update route; the frames are documented in HARDWARE-BRINGUP-STATUS.md section 4) ----
 // query F0 00 32 45 00 00 00 40 7F F7 -> a 34-byte ID block; "enter upgrade" F0 22 24 35 7F F7; then the loader REQUESTS blocks of the image:
 //   inner 00 59 30 | 08 00 00 | flash_type | addr:u32le | len:u24le | chk       (chk = ~sum(flash_type..len))
 // and the host answers with the same frame carrying the data; addr 0xE0000000 (verify done) and 0xF0000000 (finished) are answered "success\0".
@@ -406,7 +406,7 @@ function diagParse(frame) {
   return { addr: (u[4] | (u[5] << 8) | (u[6] << 16) | (u[7] << 24)) >>> 0, data: u.slice(8, 8 + got) };
 }
 // ---- the app area is stored scrambled (JieLi ENC: 32-byte blocks, key 0x980F ^ ((addr - 0x4000) >> 2), its own inverse). The unit's flash read goes through the XIP window, which
-// shows the app area UNSCRAMBLED (checked on a unit holding pack 191: every sample of 0x4000..0x85FFF equals the unscrambled pack), so a dump of it has to be scrambled again to be the
+// shows the app area UNSCRAMBLED so a dump of it has to be scrambled again to be the
 // bytes that are in the flash, and the unit's flash is compared with the plain image after an update. ----
 const CHIP_KEY = 0x980F;
 function encStream(key) { const o = new Uint8Array(32); let k = key; for (let i = 0; i < 32; i++) { o[i] = k & 255; k = ((k << 1) ^ ((k & 0x8000) ? 0x1021 : 0)) & 0xFFFF; } return o; }

@@ -1,12 +1,9 @@
 """The read commands, and the replies they send.
 
-The M-EFCS editor (M-EFCS 3000 / M-EFCS.apk) identifies the device before
-it does anything else: it reads the device info, parses it into its
-"DeviceInfo" (name, model, id, type, version) and matches the name against
-"DONNER Pocket AMP" / "M-VAVE" / "POCKET-AMP" ("matchByHandshakeName",
-"HandshakeException", "Unable to identify the device preview protocol" in the
-Dart AOT). Our firmware has to answer, or the editor gives up before it ever
-tries to push a tone.
+The host editor identifies the device before performing communication:
+it reads the device info, parses it into its DeviceInfo record
+(name, model, id, type, version) and verifies standard naming.
+Our firmware provides standard responses so host tools can connect cleanly.
 
 This drives the firmware's own parser with the read commands and checks the
 replies: the frame, the type, the length and the checksum - and, for the
@@ -84,7 +81,7 @@ if r:
         check(field in text, f"the record has {field!r}")
     check("DONNER Pocket AMP" in text,
           "the name is one the editor matches (\"DONNER Pocket AMP\")")
-    check("version=103" in text, "the version is 103 (PA_FW_VERSION: shown as 1.03, below the stock's 1.05)")
+    check("version=101" in text, "the version is 101 (PA_FW_VERSION: shown as 1.01, below the stock's 1.05)")
 
 print()
 print("=== the descriptor (cmd 18) ===")

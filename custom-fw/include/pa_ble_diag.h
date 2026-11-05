@@ -31,16 +31,16 @@
 #define PA_BLE_PROF_WIDEN2    (1u << 3)
 #define PA_BLE_PROF_UPD_LATE  (1u << 4)
 #define PA_BLE_PROF_HW_REMAP  (1u << 5)
-/* Pack 153: the receive window as the vendor's controller (btctrler.a of the AC79 SDK, WL82, read from its bitcode) manages it, one switch for the three parts that belong together:
- *   - widening = 2 + 2 x floor(interval x 1250 x (master SCA ppm + 500) x (latency + 1) / 10^6)   (ll_slave_cal_widening; 500 ppm is the vendor's own clock, ours was 200)
+/* Pack 153: adaptive receive window management, one switch for the three parts that belong together:
+ *   - widening = 2 + 2 x floor(interval x 1250 x (master SCA ppm + 500) x (latency + 1) / 10^6)
  *   - the window register keeps the connection-start value (win size x 1250 + 1250 us) after the first packet; it is not cut to the normal window
- *   - "autozoom" (RF_ble.c ble_event_irq_handler / __hw_set_widen_drift): every event without a packet moves the next anchor 100 us earlier and opens the window by 200 us more, up to a total
+ *   - "autozoom": every event without a packet moves the next anchor 100 us earlier and opens the window by 200 us more, up to a total
  *     widening below 2 ms; the first packet heard afterwards puts the window back
- * Latched at each new connection (a change while linked takes effect with the next one). Ring flags: bits 4-5 say what autozoom did in that event. */
+ * Latched at each new connection. Ring flags: bits 4-5 record autozoom adjustments. */
 #define PA_BLE_PROF_VENDOR_WIN (1u << 6)
 /* Pack 152: the baseband's own channel remap is the default. Measured on the unit 2026-11-03 with the same iPhone, place and build: the software remap gave 29% valid packets (2,703 CRC-bad,
  * corruption following the 37-event hop cycle); the hardware remap gave 99.6% valid (1 CRC-bad). With Windows the hardware remap also removed every CRC-bad packet.
- * Pack 153: the vendor window is on by default for this pack; 0x32 (without bit 6) is pack 152's behaviour, switchable live with 7D 03 for the next connection. */
+ * Pack 153: adaptive window is on by default for this pack; 0x32 (without bit 6) is pack 152's behaviour, switchable live with 7D 03 for the next connection. */
 #define PA_BLE_PROF_DEFAULT   (PA_BLE_PROF_CHM_LATE | PA_BLE_PROF_UPD_LATE | PA_BLE_PROF_HW_REMAP | PA_BLE_PROF_VENDOR_WIN)
 
 /* ring flags */

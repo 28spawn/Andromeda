@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lossless byte diff for two saved M-EFCS 80 x 92-byte preset banks.
+"""Lossless byte diff for two saved 80 x 92-byte preset banks.
 
 Use with controlled captures where exactly one editor/device setting changed.
 This reports changed bytes only; it does not assign semantic field names or
@@ -51,7 +51,7 @@ def main() -> int:
                             "before_raw_hex": left.hex(), "after_raw_hex": right.hex(),
                             "changes": changes})
     result = {
-        "schema": "mefcs-preset-byte-diff-v1",
+        "schema": "preset-byte-diff-v1",
         "semantic_interpretation": "none; byte offsets only",
         "baseline": {"file": args.baseline.name, "sha256": hashlib.sha256(before).hexdigest()},
         "changed": {"file": args.changed.name, "sha256": hashlib.sha256(after).hexdigest()},

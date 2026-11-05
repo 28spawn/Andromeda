@@ -61,7 +61,7 @@ has to be rebuildable from git.
 |---|---|---|---|
 | S-01 | The source manifest matches every build target | A module silently missing from one build broke the emulator three times | `check_sources.py` fails |
 | S-02 | Every build input is tracked in git | Core files (`pa_audio_core.c`, `pa_ota.c` …) existed only on one disk | Any untracked file under `src/`, `include/`, `tools/`, `test/` (FAIL with `--release`) |
-| S-03 | No file over 50 MB in git or waiting to be added | 287 MB of vendor APK/ZIP sat unignored in the root | Tracked: FAIL. Untracked and not ignored: WARN |
+| S-03 | No file over 50 MB in git or waiting to be added | Large external archives sat unignored in the root | Tracked: FAIL. Untracked and not ignored: WARN |
 | S-04 | No hard-coded personal paths in build tooling | Builds only worked on one machine | WARN, with the list |
 | S-05 | No two peripherals share a register base address | The watchdog feed once wrote Timer4's control register and stopped the clock | Two `JL_*_BASE` / `PA_*_BASE` defines with the same address |
 | S-06 | The PB0 profiling pin is off in release builds | A debug pin toggled in the ISR raced the LCD control pins | The pin isn't behind `PA_PROFILE_PIN`, or `build.ps1` defines it |
@@ -106,7 +106,7 @@ These run the **firmware's own code** (the same `pa_audio_core`, UI and DSP) on 
 | F-08 | `test/test_sysex_frame.py` | SysEx framing |
 | F-09 | `test/test_sysex_read.py` | Editor read commands against the DLL |
 | F-10 | `test/test_ble_midi_emu.py` | BLE-MIDI path into the firmware |
-| F-11 | `test/test_mefcs_upload.py` | M-EFCS upload session |
+| F-11 | `test/test_sysex_upload.py` | USB-MIDI upload session |
 | F-12 | `test/test_groove_pixels.py` | Groove Station screen is pixel-identical across bars |
 | F-13 | `emu/test_block_adapter.py` | Any host frame count: no crackle from partial 64-sample blocks |
 | F-14 | `emu/test_dly_rev.py` | Delay and reverb end to end: echo times equal the screen, stereo, dry level, tails |
@@ -121,11 +121,11 @@ These run the **firmware's own code** (the same `pa_audio_core`, UI and DSP) on 
 | I-01 | The artifacts exist and are newer than every source | Never test or flash a stale image |
 | I-02 | The app fits its 720,896-byte partition (WARN under 8 KB free) | An overrun runs into the VM/calibration partitions |
 | I-03 | `build_app.bin` is exactly `.text` + `.data` of the linked ELF | Catches packaging from leftover files |
-| I-04 | Container product marker, header CRC, table CRC, entry CRCs | M-UPGRADE rejects (or worse, half-accepts) a bad container |
+| I-04 | Container product marker, header CRC, table CRC, entry CRCs | The updater rejects (or worse, half-accepts) a bad container |
 | I-05a | The stock template is the known V105 file (SHA-256 baseline) | A wrong template means the wrong bootloader goes on the device |
 | I-05 / I-05b | Only the app window differs from stock. MBR + uboot (`0x0000–0x4FFF`) are byte-identical | **This is the anti-brick check.** If the bootloader bytes ever change, the device may not come back |
 | I-06 | The app bytes inside the container are exactly `build_app.bin` | |
-| I-07 | The image layout (plain or encrypted app, offset, entry) has **hardware proof** that it boots | The stock app region is encrypted and ours isn't. That only works if a device has been seen running this layout. Proof lives in the ledger's `layout_proofs` |
+| I-07 | The image layout (plain or encrypted app, offset, entry) has **hardware proof** that it boots | The stock app region has hardware encoding and ours is plain. That only works if a device has been seen running this layout. Proof lives in the ledger's `layout_proofs` |
 | I-08 | `_start` is at the bootloader's entry address `0x02000120` | The bootloader jumps there |
 | I-09 | Startup, ISR and section symbols are present | A link that dropped them won't boot |
 | I-10 | Section sizes are within 5 % of the baseline (WARN) | Catches accidental bloat; RAM growth eats the stacks |
@@ -159,7 +159,7 @@ read the results from `custom-fw/qa/hw_ledger.json`. Don't edit that file by han
 | **`custom-fw/tools/jl_safe_flash.py`** | Writes the flash from a PC-side ROM download session: identity check, protected regions, backup check, sector-by-sector verify (section 4.6). Not used on unit 1 | this repo |
 | `jl-uboot-tool` (kagaimiq, MIT) | The USB protocol layer `jl_safe_flash.py` uses. Has a **wl82 (AC791N)** loader; the FM-1 projects use it on the same chip | `Downloads\jl-uboot-tool-main\jl-uboot-tool-main` (its Python packages are installed) |
 | **USB_KEY dongle**: Seeed XIAO RP2040 + the FM-1 Transporter firmware (MIT), wired to the USB data lines (D+, D−, GND; VBUS left off) | Forces ROM download mode whatever is in the flash. The way out when the app is dead or has no USB. Use the **Pocket Amp build** (write window `0x0`–`0xB5000`, `custom-fw/tools/transporter/`); the upstream FM-1 build only writes `0x4000`–`0x93000` | **built; proven on unit 1 (2026-10-30)** |
-| M-UPGRADE + stock `Pocket AMP.fwsc` | The way out if the unit stays in upgrade mode; the `m_upgrade_stock` route | `Downloads\M-UPGRADE`, `Downloads\Pocket AMP.fwsc` |
+| Official updater + stock `Pocket AMP.fwsc` | The way out if the unit stays in upgrade mode; the `updater_stock` route | `Downloads\updater`, `Downloads\Pocket AMP.fwsc` |
 | A way into ROM download mode: a **JieLi USB updater dongle**, or a DIY one (Raspberry Pi Pico sending the `0x16EF` key, see `jl-uboot-tool/docs/how-to-enter-uboot.md`) | Dumping and restoring over USB even when the app is dead | **to buy or build** |
 | **CH341A programmer (3.3 V-fixed) + SOIC-8 clip** and NeoProgrammer / AsProgrammer / flashrom | Dump and restore when the flash is a separate 8-pin chip | **to buy, if 4.1 finds such a chip** |
 
@@ -214,7 +214,7 @@ This command:
   `.fwsc`'s encrypted bytes, the chip requires encryption on the app area, so a plain custom app can't
   work. The gate's I-07 check then fails with that evidence;
 - writes `custom-fw/qa/backups/<hash>/`: the full dump plus `BTIF.bin`, `USER.bin`, `VM.bin`
-  and a manifest. This folder is git-ignored;
+  and a manifest;
 - records the chip, the real size, the hash and the evidence in the ledger. The gate's flash
   size check (S-08) then uses the real size.
 
@@ -241,13 +241,13 @@ but no restore has been done yet. Only `proven` counts for R-03.
 | `usb_key_dongle` | Unit off, dongle on the USB data lines, replug the dongle, start `pa_transporter.py`, switch the unit on: it must come up in ROM download mode. Then `drill … --repair`, and the break-and-repair test for `proven`. **This is the route that works when the app is dead. Proven on unit 1; procedure in [RECOVERY.md](RECOVERY.md)** |
 | `uboot_update_mode` | Find how the bootloader enters update mode, enter it, flash stock |
 | `button_dfu` | The README's "hold VOL− or HOME while plugging in USB". Watch Device Manager and record the VID:PID. "Nothing appeared" is a valid and important result: `--status failed` |
-| `m_upgrade_stock` | M-UPGRADE flashing stock over stock. Works only while the running app speaks USB, which the custom app doesn't yet |
+| `updater_stock` | Official updater flashing stock over stock. Works only while the running app speaks USB, which the custom app doesn't yet |
 
 **The `stock_enter_upgrade` experiment.** It answers one question: when the stock firmware
-gets M-UPGRADE's "enter upgrade" command, does it land in the ROM download mode (good:
+gets the updater's "enter upgrade" command, does it land in the ROM download mode (good:
 `jl-uboot-tool` can then dump over USB) or in JieLi's OTA loader (not usable for dumping)?
 The script writes nothing itself, **but the stock firmware may keep the unit in upgrade mode
-until an update completes. Have M-UPGRADE and the stock `.fwsc` ready.**
+until an update completes. Have the official updater and the stock `.fwsc` ready.**
 ```bash
 python custom-fw/tools/enter_download_mode.py --list
 ```

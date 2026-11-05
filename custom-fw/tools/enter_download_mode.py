@@ -5,7 +5,7 @@ custom-fw/tools/enter_download_mode.py - find out where the STOCK firmware's
 "stock_enter_upgrade").
 
 This is an EXPERIMENT, not a recovery tool. It answers one question: when a stock
-Pocket Amp receives the frame M-UPGRADE sends to start an update, what does it turn
+Pocket Amp receives the frame sent to start an update, what does it turn
 into on USB?
 
   * a "UBOOT" mass-storage-style device  -> the JieLi ROM download mode.
@@ -13,7 +13,7 @@ into on USB?
   * a 4D4A:4155 MIDI/HID device           -> JieLi's OTA loader, which waits for an
     image to be served over USB MIDI. Not usable for dumping.
   * nothing new                           -> the frame was ignored (the stock may need
-    M-UPGRADE's authentication handshake first).
+    identification handshake query first).
 
 The script writes nothing to the device. It sends two frames:
   1. the OTA query  F0 00 32 45 00 00 00 40 7F F7  (a read: the device returns its ID)
@@ -24,7 +24,7 @@ The script writes nothing to the device. It sends two frames:
 
 What (2) can do, honestly: the stock firmware may store an "update pending" flag in its
 own settings before it reboots, and the device may then come back in upgrade mode on
-every power-up until an update completes. The way out is M-UPGRADE with the stock
+every power-up until an update completes. The way out is the stock firmware updater with the stock
 "Pocket AMP.fwsc" (stock over stock). Have that ready before you use --enter, and only
 do it on a unit with a stock firmware you can re-flash.
 
@@ -50,7 +50,7 @@ ROOT = FW.parent
 REPORTS = FW / "qa" / "reports"
 
 OTA_QUERY = [0xF0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7F, 0xF7]
-OTA_ENTER = {"7F": [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7],   # this repo's notes (M-UPGRADE)
+OTA_ENTER = {"7F": [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7],   # OTA upgrade frame
              "7D": [0xF0, 0x22, 0x24, 0x35, 0x7D, 0xF7]}   # verified on the FM-1 (lunar-modulator)
 UBOOT_VIDPID = "VID_4C4A&PID_8057"                          # WL82 UBOOT1.00 (FM-1, and the Pocket Amp via the Transporter)
 NAME_HINTS = ("pocket", "m-vave", "mvave", "jieli", "jl ", "uboot", "ac79")
@@ -197,9 +197,9 @@ def main() -> int:
 
     if a.enter and not a.i_understand:
         print("\n--enter needs --i-understand. Before you add it:\n"
-              "  * the unit runs STOCK firmware and you have 'Pocket AMP.fwsc' and M-UPGRADE ready;\n"
+              "  * the unit runs STOCK firmware and you have 'Pocket AMP.fwsc' ready;\n"
               "  * battery charged, USB straight into the PC, no hub;\n"
-              "  * if it then comes back in upgrade mode on every power-up, run M-UPGRADE with the stock .fwsc.")
+              "  * if it then comes back in upgrade mode on every power-up, re-flash with the stock .fwsc.")
         return 2
 
     before = pnp_devices()
@@ -225,9 +225,9 @@ def main() -> int:
         "rom_download": "ROM download mode: jl-uboot-tool can READ the flash. Use only 'read' until two "
                         "identical dumps are stored (TEST-PROTOCOL.md 4.2).",
         "ota_loader": "JieLi OTA loader (4D4A:4155): it waits for an image over USB MIDI. Not usable for "
-                      "dumping. Power-cycle; if it stays in this mode, run M-UPGRADE with the stock .fwsc.",
+                      "dumping. Power-cycle; if it stays in this mode, re-flash with the stock .fwsc.",
         "unknown": "Something new appeared, but not a known JieLi mode. Look at the list above.",
-        "nothing": "Nothing new appeared: the stock ignored the frame (it may need M-UPGRADE's "
+        "nothing": "Nothing new appeared: the stock ignored the frame (it may need updater's "
                    "authentication first). Power-cycle and try the other --frame variant before "
                    "marking the route 'failed'.",
     }[kind]

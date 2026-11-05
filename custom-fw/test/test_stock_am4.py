@@ -30,10 +30,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FW = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(FW, "tools"))
 import amx_gru_convert as C  # noqa: E402
-import mefcs_bundles  # noqa: E402
+import factory_bundles  # noqa: E402
 
-AM3 = mefcs_bundles.find("pocket-amp_am3_ampCab.bin")
-AM4 = mefcs_bundles.find("sk17_am4_ampCab.bin")
+AM3 = factory_bundles.find("pocket-amp_am3_ampCab.bin")
+AM4 = factory_bundles.find("stock_am4_assets.bin")
 AM3_SHIPPED_SHA = "3745c9028e4d5225b44a99ddd310c44a3cefcb46eeb27c7a3fba857c503114d7"
 fails = 0
 
@@ -112,7 +112,7 @@ if os.path.exists(inc_path):
         tab_cabs.append(np.array([int(v) for v in m.group(1).replace("\n", " ").split(",") if v.strip()], np.int64))
 else:
     import import_stock_assets as ISA
-    _, _, isa_cabs = ISA.load("sk17_am4_ampCab.bin")
+    _, _, isa_cabs = ISA.load("stock_am4_assets.bin")
     tab_cabs = [np.array(c[1], dtype=np.int64) for c in isa_cabs]
 
 cut, late = [], []

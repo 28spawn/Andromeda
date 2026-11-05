@@ -2,7 +2,7 @@
  *
  * The firmware's parser and its reply path, with the flash and the preset
  * store stubbed out, so the protocol can be checked without an emulator or a
- * device. The M-EFCS editor identifies the device with these reads before it
+ * device. The editor identifies the device with these reads before it
  * will push a tone (SysEx protocol specification), so they are the gate.
  *
  *   clang -O1 -Icustom-fw/include -o test_sysex_read.exe test_sysex_read.c \
@@ -127,7 +127,7 @@ int main(void) {
             check(strstr(text, "version=") != NULL,    "the record has version=");
             check(strstr(text, "DONNER Pocket AMP") != NULL,
                   "the name is one the editor matches (\"DONNER Pocket AMP\")");
-            check(strstr(text, "version=103") != NULL, "the version is 103 (PA_FW_VERSION: shown as 1.03, below the stock's 1.05)");
+            check(strstr(text, "version=101") != NULL, "the version is 101 (PA_FW_VERSION: shown as 1.01, below the stock's 1.05)");
         }
     }
 

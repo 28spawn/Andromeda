@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Read a region of the Pocket Amp's SPI NOR flash over USB MIDI.
 
-The device answers on a private diagnostic SysEx (manufacturer 0x7D), which the M-EFCS
-editor never sends:
+The device answers on a private diagnostic SysEx (manufacturer 0x7D):
 
     F0 7D 01 <addr u32 LE> <len u16 LE> F7      ->  F0 7D 81 <len u16 LE> <addr u32 LE> <data> F7
 

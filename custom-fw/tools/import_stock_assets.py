@@ -3,7 +3,7 @@
 custom-fw/tools/import_stock_assets.py - the 20 stock amps and 20 stock cabs
 
 Generates custom-fw/src/sys/stock_assets_embedded.inc for device and test builds.
-The bundle is found by tools/mefcs_bundles.py.
+The bundle is found by tools/factory_bundles.py.
 The emulator DLL can instead read the bundle from simulated flash at 0x0BF000
 (-DPA_STOCK_FLASH_LOADER, src/sys/stock_assets.c).
 
@@ -34,9 +34,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FW = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import amx_gru_convert as amx  # noqa: E402
-import mefcs_bundles  # noqa: E402
+import factory_bundles  # noqa: E402
 
-DEFAULT_BUNDLE = "sk17_am4_ampCab.bin"
+DEFAULT_BUNDLE = "stock_am4_assets.bin"
 N_AMP, N_CAB = 20, 20
 AMP_REC, CAB_REC, CAB_BASE = 0x2000, 0x1000, 0x28000
 CAB_TAP0 = 20
@@ -56,7 +56,7 @@ def c_str(s):
 
 
 def load(bundle_name):
-    data = open(mefcs_bundles.find(bundle_name), "rb").read()
+    data = open(factory_bundles.find(bundle_name), "rb").read()
     if len(data) != 0x3C000:
         raise SystemExit(f"{bundle_name}: {len(data)} bytes, expected 245,760")
     amps = []
@@ -124,7 +124,7 @@ def render(bundle_name, data, amps, cabs):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--bundle", default=DEFAULT_BUNDLE, help="bundle name (see tools/mefcs_bundles.py)")
+    ap.add_argument("--bundle", default=DEFAULT_BUNDLE, help="bundle name (see tools/factory_bundles.py)")
     ap.add_argument("--check", action="store_true", help="compare instead of writing")
     a = ap.parse_args()
     data, amps, cabs = load(a.bundle)

@@ -196,7 +196,7 @@ static int ota_memeq(const uint8_t *a, const uint8_t *b, uint32_t n)
 /* flash.bin's boot area [0, 0x4000), which a writer other than Felucca's puts on the flash: a broken one is the
  * failure only the USB_KEY dongle mends. It must be one the ROM boots: the flash header and the boot record at
  * +0x20 (each ENC 0xFFFF, CRC16), the boot file at 0xA0 a single-bank BANKCB container (its 16-byte header and its
- * payload each ciphered from their own start) loaded at 0x01C02000, the header's, the payload's and the record's
+ * payload each encoded from their own start) loaded at 0x01C02000, the header's, the payload's and the record's
  * CRCs right; a container that names its board (m-bootloader: "AC79BLID" + the board at payload +0x40) names the
  * FM-1's. Any bootloader so made: standard bootloader versions, m-bootloader. 0 valid, -5 not, -4 read */
 static int ota_boot_valid(uint32_t fl_off, uint32_t fl_len, uint8_t *b)

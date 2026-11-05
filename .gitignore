@@ -30,15 +30,11 @@ archive/
 ac79-sdk/
 jieli-toolchain/
 jieli-postbuild/
-m-efcs/
 fm1-re/
-disasm/
 unpacked/
 analysis/
 new_ui/
 /samples/
-/M-EFCS 3000.zip
-/M-EFCS.apk
 *.apk
 *.zip
 

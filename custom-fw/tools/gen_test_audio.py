@@ -20,7 +20,7 @@ Everything here is SYNTHESISED (fixed seeds), so it is the project's own materia
     python custom-fw/tools/gen_test_audio.py --check       # exit 1 if cab_default_table.inc differs
 
 The emulator's server calls ensure_emu_assets() at start-up, so the WAVs are generated on
-first use and never need to be committed (emu/samples/ and emu/irs/ are git-ignored).
+first use.
 """
 import argparse
 import io

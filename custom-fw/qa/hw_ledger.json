@@ -2010,7 +2010,7 @@
       "date": "2026-10-30",
       "image": "custom debug builds (Pocket_AMP_Custom_debug*.fwsc in custom-fw/qa/backups/unit1_v105_debugflash)",
       "proven": [
-        "the repacked vendor app area boots from a normal power-on (uboot accepts it, V1.05 trailer kept)",
+        "the repacked app area boots from a normal power-on (uboot accepts it, V1.05 trailer kept)",
         "pa_transporter flash/drill/blackbox work; black box at 0x01C7C000 survives a reset into UBOOT"
       ],
       "found": [

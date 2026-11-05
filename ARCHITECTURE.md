@@ -1014,7 +1014,7 @@ Flags: `-target pi32v2 -mcpu=r3 -O2 -Wall -ffreestanding -fno-builtin`.
 | `test_full_firmware.c` | 8-slot init + 30 blocks of 440 Hz, reclaim, tuner lock, drum trigger |
 | `test_drums.c` | The Groove Station: the generated pattern table's invariants (loop lengths on a 16th, a velocity on every hit, the lanes the reference library uses) and the engine's clock, which must walk the whole pattern, wrap at its own length and measure a loop as exactly that long |
 | `test_kit.c` | The kit: the balance of the twelve voices per unit of velocity, the cymbals' metal layer (measured as a spectral line against its neighbour), the bus level and the loop's silence |
-| `test_ota.c` | The app side of the JieLi OTA handshake: the two frames M-UPGRADE sends, and the 34-byte ID block the query is answered with |
+| `test_ota.c` | The app side of the JieLi OTA handshake: the two frames the updater sends, and the 34-byte ID block the query is answered with |
 | `test_groove_pixels.py` | The Groove Station screen vs the design's reference PNG, pixel for pixel, plus the later-bar playhead regression |
 | `test_robustness.c` | Blank flash, torn-save sweep (k = 0..9), 40 sequential saves, torn factory reset, protected-region probes, 200 000-op allocator churn |
 | `test_cpu_meter.c` | Per-stage cycle meter simulation (built by `build.ps1` only) |

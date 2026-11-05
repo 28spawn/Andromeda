@@ -4,6 +4,7 @@
 #ifndef PA_HW_H
 #define PA_HW_H
 #include <stdint.h>
+#include "pa_config.h"
 
 /* ---- MMIO access macros ---- */
 #define PA_READ8(addr)         (*(volatile uint8_t  *)(uintptr_t)(addr))
@@ -114,7 +115,7 @@
 #define PA_NODE_REGISTRY       0x01C1C1C8u  /* install_audio_node registry */
 /* node struct offsets used by the scheduler/control: */
 #define PA_NODE_NEXT           0            /* [node+0]  linked-list next (0 = end) */
-#define PA_NODE_ACTIVE         4            /* [node+4]  active flag (stock bypass toggles this) */
+#define PA_NODE_ACTIVE         4            /* [node+4]  active flag (slot bypass toggles this) */
 #define PA_NODE_SIZE           12           /* [node+12] buffer/frame size */
 #define PA_NODE_VTABLE         28           /* [node+28] op table; method[0]=ctrl, method[40]=run */
 #define PA_NODE_RUN_METHOD     40

@@ -4,7 +4,7 @@
 Uses the same reader as jl_ram_read.py (the ROM's READ_MEMORY command only: nothing is written to memory or flash, no loader is uploaded). The unit has to be
 in the ROM stage (WL82 UBOOT1.00): the SRAM keeps what the firmware left in it across the reset into that mode, which is how every other readout of this project works.
 
-    python custom-fw/tools/ram_dump.py --out "local_storage/bt_bench/ram_a_off.bin" --label "stock V1.05, BT off"
+    python custom-fw/tools/ram_dump.py --out "ram_snapshot.bin" --label "baseline, BT off"
 
     --start / --length   default the whole SRAM, 0x01C00000 .. 0x01C7FFFF (512 KB)
     --jl-tool / --device as for jl_ram_read.py
@@ -30,7 +30,7 @@ SRAM_LO, SRAM_HI = 0x01C00000, 0x01C80000
 
 
 def auto_dump(a, out: Path) -> int:
-    """Dump in several ROM-stage sessions. On the stock V1.05 a read at certain addresses (0x01C01000 on 2026-11-02) kills the ROM session: the unit resets and
+    """Dump in several ROM-stage sessions. On stock V1.05 a read at certain addresses (0x01C01000) causes a session timeout: the unit resets and
     boots its app again. This waits for the app, lets it settle for --settle seconds (the same every cycle, so the state is as repeatable as it can be), sends the 7D frame,
     reads until a read fails, then tries again from the same address once more; a second failure at the same address marks that page unreadable (filled with 0xA5, listed
     in the .json) and the dump goes on after it."""
@@ -124,7 +124,7 @@ def main() -> int:
 
     import time
     if a.send_7d:
-        # The stock firmware's ROM stage drops off the bus a few seconds after it starts when nobody talks to it (the 2026-11-02 bench: reads
+        # The hardware ROM stage drops off the bus a few seconds after start when no traffic is present:
         # failed at once when a minute passed between entering and dumping), so enter and read in one process with nothing slow in between.
         import enter_download_mode as edm
         name, _ = edm.send_and_listen([0xF0, 0x22, 0x24, 0x35, 0x7D, 0xF7], a.send_7d, 0.0)
@@ -144,7 +144,7 @@ def main() -> int:
             rom.read(a.start, 64)
         except Exception as e:
             print(f"  the ROM stage does not answer a 64-byte read at {a.start:#x}: {e}")
-            print("  the unit probably reset or is still settling: power-cycle it, wait for the stock app, send the 7D frame again, then dump at once.")
+            print("  the unit probably reset or is still settling: power-cycle it, wait for initialization, send the 7D frame again, then dump at once.")
             return 3
         step = a.step
         addr, left = a.start, a.length

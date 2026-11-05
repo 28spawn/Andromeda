@@ -5,8 +5,16 @@
 #   make cross   — Cross-compile all firmware objects for JieLi AC791N (pi32v2)
 #   make fw      — Link app.elf, extract app.bin, and package Pocket_AMP_Custom.fwsc
 
+BOARD ?= pocket_amp
+
+ifeq ($(BOARD),blackbox)
+  BOARD_DEF = -DBOARD_BLACKBOX=1
+else
+  BOARD_DEF = -DBOARD_POCKET_AMP=1
+endif
+
 HOST_CC   ?= cc
-HOST_CFLAGS = -O2 -Wall -Wextra -Iinclude -DPA_HOST_SIM=1
+HOST_CFLAGS = -O2 -Wall -Wextra -Iinclude -DPA_HOST_SIM=1 $(BOARD_DEF)
 
 # Auto-detect JieLi toolchain on Windows or Linux
 ifeq ($(OS),Windows_NT)
@@ -27,7 +35,7 @@ else
   PYTHON     ?= python3
 endif
 
-PI32_CFLAGS = -target pi32v2 -mcpu=r3 -O2 -Wall -ffreestanding -fno-builtin -isystem $(PI32_INC) -Iinclude
+PI32_CFLAGS = -target pi32v2 -mcpu=r3 -O2 -Wall -ffreestanding -fno-builtin -isystem $(PI32_INC) -Iinclude $(BOARD_DEF)
 
 DSP_SRCS = \
 	src/dsp/activation.c \

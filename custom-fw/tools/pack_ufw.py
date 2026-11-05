@@ -75,7 +75,7 @@ def xor_header(data: bytes, key: int = 0xFFFF) -> bytearray:
 def encode_marker(target_name: str) -> bytes:
     """Encodes the 20-byte target product marker:
     c[i] = (target[i] + i + 1) & 0xFF, padded with '}' (ASCII 125).
-    Compatible with M-UPGRADE as 'Pocket AMP_105'.
+    Compatible with updater protocol as 'Pocket AMP_105'.
     """
     bname = target_name.encode("ascii")
     out = bytearray(20)

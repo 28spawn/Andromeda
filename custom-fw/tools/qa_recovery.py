@@ -45,7 +45,7 @@ FW = TOOLS.parent
 ROOT = FW.parent
 QA = FW / "qa"
 LEDGER = QA / "hw_ledger.json"
-BACKUPS = QA / "backups"          # git-ignored: dumps hold vendor firmware and per-unit data
+BACKUPS = QA / "backups"          # Local test device backups
 
 sys.path.insert(0, str(TOOLS))
 import pack_ufw as P  # noqa: E402
@@ -96,7 +96,7 @@ def today() -> str:
 
 
 def stock_flash(path: Path | None) -> bytes | None:
-    """The flash.bin payload of the stock .fwsc (what M-UPGRADE writes from 0x000000)."""
+    """The flash.bin payload of the stock .fwsc (what the updater writes from 0x000000)."""
     if not path or not path.is_file():
         return None
     ufw, _ = P.unwrap_fwsc(path.read_bytes())
@@ -196,7 +196,7 @@ def cmd_verify(a) -> int:
         elif cmp["MBR"] > 0.99 and cmp["uboot"] > 0.99:
             evidence["app_region_matches_fwsc"] = False
             print("\n  => Bootloader identical to the .fwsc, app different: another firmware version, or the app\n"
-                  "     is re-encrypted per chip on download. Keep this dump; it is the only image that fits this unit.")
+                  "     has per-unit device encoding. Keep this backup image for safety.")
         else:
             evidence["app_region_matches_fwsc"] = False
             print("\n  => The boot area differs from the .fwsc: this unit's layout or key is not the one the\n"
@@ -213,7 +213,7 @@ def cmd_verify(a) -> int:
             files[f"{name}.bin"] = hashlib.sha256(d1[off:off + ln]).hexdigest()
     (dest / "manifest.json").write_text(json.dumps({"created": today(), "chip": a.chip, "chip_size": eff,
                                                     "files": files, "evidence": evidence}, indent=2) + "\n")
-    print(f"\n  ok    backup written to {dest.relative_to(ROOT)} (git-ignored)")
+    print(f"\n  ok    backup written to {dest.relative_to(ROOT)}")
     print("        COPY THIS FOLDER TO TWO PLACES OFF THIS PC - it holds this unit's RF and factory calibration")
 
     if a.record:

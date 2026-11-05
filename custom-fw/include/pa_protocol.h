@@ -43,7 +43,7 @@ enum pa_syscmd {
 #define PA_REPLY_PA_NAMES     0x61u  /* [kind, total, start, n, first_user] + n names of 16 bytes (an empty name = a deleted slot) */
 #define PA_REPLY_PA_USER      0x62u  /* [op, kind, index, result] result 0 = done, else a negative error as an unsigned byte */
 
-/* The upload session, the way the M-EFCS app sends it:
+/* The upload session, the way the standard SysEx protocol sends it:
  *   cmd 25  the payload is the declared length as a u24le, and nothing else
  *   cmd 34  the body, in chunks, straight into the session's receive area
  *   cmd 48  the armed transfer is committed */

@@ -211,11 +211,11 @@ static struct {
     uint8_t sx_len, sx_on;
     uint8_t rx_pend;             /* EP1 OUT packet seen, not yet taken (the MIDI ring was too full) */
     volatile uint8_t uboot_req;
-    volatile uint8_t ota_req;    /* F0 22 24 35 7F F7: M-UPGRADE upgrade command (FELUCCA_OTA) */
+    volatile uint8_t ota_req;    /* F0 22 24 35 7F F7: OTA upgrade command (FELUCCA_OTA) */
 } usb;
 
 #if FELUCCA_OTA
-/* M-UPGRADE SysEx (ota.c): one received frame at a time (7-bit bytes between
+/* OTA SysEx (ota.c): one received frame at a time (7-bit bytes between
  * F0 and F7; frames arriving while one is pending are dropped, the host
  * retries), and a TX ring of SysEx event packets sent before any MIDI. */
 static uint8_t sx_frame[640];

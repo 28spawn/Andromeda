@@ -1,4 +1,4 @@
-"""Host-side BLE monitor for a unit running the STOCK firmware (no diagnostic channel there, so everything is measured from the PC).
+"""Host-side BLE monitor for a baseline unit (measured from the PC).
 
 Read-only towards the unit: it only scans, connects, discovers services, subscribes to the BLE-MIDI characteristic and disconnects.
 
@@ -7,8 +7,8 @@ Read-only towards the unit: it only scans, connects, discovers services, subscri
 
 Per attempt it records: scan time, connect time, service-discovery time, whether the MIDI characteristic was found, notifications received (count, first, longest silence),
 whether the link dropped before the hold ended (when, and the error), the disconnect time, and how long until the unit advertises again.
-The stock unit uses a resolvable private address (it changes), so the unit is found by name / MIDI service UUID, never by MAC.
-Limits: the PC's Bluetooth stack does not expose the connection interval, channel map or CRC errors; take those from the Steam Deck (tools/deck_stock_capture.sh, btmon).
+The unit uses a standard resolvable private address, so the unit is found by name / MIDI service UUID.
+Limits: the PC's Bluetooth stack does not expose the connection interval, channel map or CRC errors.
 """
 from __future__ import annotations
 

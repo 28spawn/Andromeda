@@ -7,7 +7,7 @@ last preset at the end).
 A steady signal must go through the unit: cable an output of a PC audio interface to its input jack and let --tone-device play a quiet guitar-like tone, or plug in any steady source.
 
 Per swap it measures, from the 10 ms RMS envelope: the DIP (the level between 50 % of the signal before the swap and 50 % of the signal after it), the mute gap inside it, how long the level takes
-to come back to 90 % and to stay over 80 % (the "kicking in"), and the CRACKS: the largest second difference  x[n] - 2 x[n-1] + x[n-2]  in the dip and its recovery against the 99.9th percentile of the
+to come back to 90 % and to stay over 80 % (the "kicking in"), and the DISCONTINUITIES: the largest second difference  x[n] - 2 x[n-1] + x[n-2]  in the dip and its recovery against the 99.9th percentile of the
 same measure on the steady signal before and after (a swap is "glitched" over --limit times that), with the length of the glitched stretch and where it falls relative to the end of the dip, so a fade
 can be sized from the numbers.
 
@@ -95,7 +95,7 @@ def report(rows, limit):
     q("until it stays over 80 % for 40 ms (settled)", [r["settled"] for r in rows])
     q("level after the swap vs before (rms)", [100 * r["post"] / r["pre"] for r in rows], "%")
     rt = np.array([r["ratio"] for r in rows])
-    print(f"the cracks (worst step vs the steady level): median {np.median(rt):.1f}x, p90 {np.percentile(rt, 90):.1f}x, max {rt.max():.1f}x")
+    print(f"the discontinuities (worst step vs the steady level): median {np.median(rt):.1f}x, p90 {np.percentile(rt, 90):.1f}x, max {rt.max():.1f}x")
     bad = [r for r in rows if r["n_over"]]
     print(f"glitched swaps (over {limit:.0f}x): {len(bad)} of {len(rows)} ({100 * len(bad) / len(rows):.0f} %)")
     if bad:

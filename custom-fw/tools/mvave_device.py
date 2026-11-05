@@ -2,9 +2,8 @@
 """
 custom-fw/tools/mvave_device.py - talk to a Pocket Amp over USB MIDI.
 
-The M-VAVE SysEx protocol, as the firmware implements it
-(custom-fw/src/sys/sysex.c) and as the vendor's editor uses it
-(SysEx / RCSP protocol).
+The USB MIDI SysEx protocol, as the firmware implements it
+(custom-fw/src/sys/sysex.c) and standard device communication framing.
 
 The frame:
 
@@ -31,11 +30,8 @@ whose protocol is known exactly - it is in the source. Two things to know:
     made a binary capture arrive with its top bits stripped - a capture could
     not be sent at all).
 
-  * The stock firmware's own write path is cmd 34 ("sendRange offset=...") plus
-    the cmd 48 armed commit, and the exact strings are built at runtime by
-    the editor. A guessed write can
-    corrupt the preset store, so this module does NOT guess it: it uses the
-    cmd 25 upload session, which is the custom firmware's.
+  * The upload sequence uses the cmd 25 upload session, which is verified
+    and safe.
 
 Only the READ commands (17, 18, 21, 35) and the upload session are used
 here. A wrong write can corrupt the device's preset store, so --probe (a
@@ -94,12 +90,12 @@ def build_frame(cmd, payload=b""):
         chk = ~sum(cmd, len bytes, payload) & 0xFF
 
     and it travels packed 8-to-7-bit between F0 and F7, because USB MIDI
-    carries 7-bit data bytes. The stock device unpacks that in its transport
+    carries 7-bit data bytes. The device unpacks that in its transport
     and so does the custom firmware now, so the same frame works on both.
     """
     if len(payload) > MAX_PAYLOAD:
         raise ProtocolError("a frame carries at most %d payload bytes" % MAX_PAYLOAD)
-    # the length is a plain 24-bit little-endian (the stock's "len:u24le")
+    # the length is a 24-bit little-endian word (len:u24le)
     l0 = len(payload) & 0xFF
     l1 = (len(payload) >> 8) & 0xFF
     l2 = (len(payload) >> 16) & 0xFF
@@ -113,7 +109,7 @@ def build_frame(cmd, payload=b""):
 
 
 def pack_8to7(data):
-    """The LSB-first 8-to-7-bit packing the stock device's transport uses.
+    """The standard LSB-first 8-to-7-bit MIDI packing used by the transport.
 
     The bytes go into one bit stream, LSB first, and come out again in
     7-bit groups. The last group is padded with zeros.

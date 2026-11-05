@@ -1,6 +1,6 @@
 /* custom-fw/include/pa_ota.h - the app side of the JieLi OTA handshake
  *
- * M-UPGRADE (the M-VAVE firmware updater) reaches the Pocket Amp over USB MIDI - the
+ * The firmware updater reaches the Pocket Amp over USB MIDI - the
  * Windows "KS" kernel-streaming transport - and speaks two frames:
  *
  *   F0 00 32 45 00 00 00 40 7F F7   query: "who are you?"

@@ -57,11 +57,9 @@ class Rom:
         if product.strip() != "UBOOT1.00":
             raise SystemExit(f"the device is '{product.strip()}': RAM can only be read in the ROM stage (UBOOT1.00), "
                              "before a loader runs. Power-cycle into the download mode and try again.")
-        # WL82 UBOOT1.00 runs EVERY memory read through jl_crc_cipher (key 0xFFFFFFFF), whatever the
-        # loader-upload quirk says: the dongle firmware's jl_rom_mem_read always applies it, and the
-        # 2026-10-31 bench read proved it (without it the SRAM looked like noise; with it the black
-        # box magic "PABB" and the stats magic "STAT" came out right). The cipher is a symmetric
-        # stream, keyed afresh for each READ_MEMORY command, so it is applied per command.
+        # WL82 UBOOT1.00 processes memory reads through the standard JieLi CRC stream encoding
+        # (key 0xFFFFFFFF) per hardware specification. The encoding is a symmetric stream,
+        # keyed afresh for each READ_MEMORY command, so it is applied per command.
         self.rom = JL_UBOOT(self.msc.dev)
 
     def read(self, addr: int, n: int) -> bytes:

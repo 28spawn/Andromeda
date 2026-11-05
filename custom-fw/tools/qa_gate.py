@@ -150,7 +150,7 @@ FUNCTIONAL = [
     ("F-08", True,  ["{py}", "custom-fw/test/test_sysex_frame.py"], ""),
     ("F-09", True,  ["{py}", "custom-fw/test/test_sysex_read.py", "{dll}"], "dll"),
     ("F-10", True,  ["{py}", "custom-fw/test/test_ble_midi_emu.py", "{dll}"], "dll"),
-    ("F-11", True,  ["{py}", "custom-fw/test/test_mefcs_upload.py", "{dll}"], "dll"),
+    ("F-11", True,  ["{py}", "custom-fw/test/test_sysex_upload.py", "{dll}"], "dll"),
     ("F-12", True,  ["{py}", "custom-fw/test/test_groove_pixels.py"], "node"),
     # MIDI control over USB / BLE (CC, NRPN, save), driven through the real handler and the real tick; the map's proposals are not counted as implemented
     ("F-17", True,  ["{py}", "custom-fw/test/test_midi_control.py", "{dll}"], "dll"),

@@ -6,7 +6,7 @@
 .DESCRIPTION
     app.bin is a raw image with no ELF structure, so tools like `readelf`/`objdump -s` do not
     apply. This prints every printable run with its file offset and virtual address, optionally
-    filtered by regex — the same technique that produced the 7,311-string count in
+    filtered by regex — the same technique that produced the string inspection in
     documentation.
 
     On the Pocket Amp the XIP flash base is 0x02000000, so VA = offset + 0x02000000. Confirm against
@@ -25,7 +25,7 @@
     Virtual-address base. Default 0x02000000. Pass 0 to report offsets only.
 
 .EXAMPLE
-    .\bin-strings.ps1 -Path ..\..\disasm\disasm\app.bin
+    .\bin-strings.ps1 -Path .\build_pi32\app.bin
     .\bin-strings.ps1 -Path .\app.bin -Pattern 'adc|codec|input|capture'
     .\bin-strings.ps1 -Path .\app.bin -Pattern 'PATCHEND|@M3|LMT' -MinLength 3
 
