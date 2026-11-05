@@ -23,7 +23,7 @@ args = sys.argv[1:]
 if len(args) >= 2:
     pkg_path, app_path = args[0], args[1]
 else:
-    c = sorted(glob.glob(os.path.join(ROOT, "release", "Onyx-*", "Onyx-*.fwsc")))
+    c = sorted(glob.glob(os.path.join(ROOT, "release", "*", "*.fwsc")))
     if not c:
         print("  skip  no release package yet (build.ps1 writes it)"); sys.exit(0)
     pkg_path, app_path = c[-1], os.path.join(ROOT, "build_app.bin")

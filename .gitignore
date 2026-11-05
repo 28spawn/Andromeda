@@ -105,6 +105,7 @@ custom-fw/qa/noise/
 custom-fw/qa/usb-etw/*.csv
 
 # release outputs and SDK tools
+!custom-fw/release/**
 custom-fw/third_party/jieli_sdk_files/
 
 # agent / editor local settings
