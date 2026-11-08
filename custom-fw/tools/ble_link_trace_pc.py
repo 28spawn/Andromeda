@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ble_link_trace_pc.py - a live, state-by-state trace of the unit's Bluetooth link, and a gated one-central test run.
 

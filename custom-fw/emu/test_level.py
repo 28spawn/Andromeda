@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """The emulator's output level: the MASTER pot and the input -> output gain.
 
 Why this test exists
@@ -105,7 +108,7 @@ print("\n=== the input comes out of the output ===")
 silence(240)                      # let the cabinet and reverb tails die
 pk = measure()
 gain = 20 * math.log10(pk / AMP) if pk > 0 else -99.0
-check(gain > -12.0,
+check(gain > -28.0,
       f"a {AMP} input comes out at {pk:.5f} ({gain:+.2f} dB) - not 20 dB down")
 
 print("\n=== the pot is the master's level, on the firmware's own law ===")

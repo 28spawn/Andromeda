@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/board/cpu1.c - starting and testing the chip's second core (CPU1).
  *
  * The facts come from the open FM-1 firmware (charlesvestal/fm1-x0x, firmware/hal/fm1_cpu1.h, fm1_guard.h, fm1_sys.h;

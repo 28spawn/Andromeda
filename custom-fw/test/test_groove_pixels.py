@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """The Groove Station, compared with the design's reference render, pixel by pixel.
 
 The redesign (GROOVE_SPEC.md) says: *"If your screen and the PNG differ by even

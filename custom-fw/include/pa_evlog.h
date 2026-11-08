@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * include/pa_evlog.h - the event log: what the unit did and how it answered, in a ring in SRAM.
  *
@@ -33,6 +36,7 @@ enum {
     PA_EV_POOL_FAIL = 18,   /* the effect memory could not give a block: a = bytes asked for, b = the largest free block */
     PA_EV_BLE       = 20,   /* the Bluetooth radio (pa_ble_radio.h): a = what happened (PA_EV_BLE_*), b = detail */
     PA_EV_MASTER    = 21,   /* the output came up from the power-on silence: a = ms since boot, b = the MASTER level in percent (0x100 + the saved level when the knob never answered) */
+    PA_EV_ISR_LATE  = 22,   /* Andromeda: an audio block STARTED late (the time since the previous block's start was over 1.65 ms): a = that interval in us, b = (the main loop's last marker, PA_CP, << 16) | the previous block's own duration in us */
     PA_EV_GOVERNOR  = 15    /* the load governor changed the quality level: a = level now (0 full, 1 drive at 2x, 2 + shorter cabinet), b = average audio time in us */
 };
 

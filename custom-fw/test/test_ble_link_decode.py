@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """custom-fw/test/test_ble_link_decode.py - tools/ble_link_decode.py on a synthetic ble_dg block built from tools/ble_diag_layout.json."""
 import json
 import struct

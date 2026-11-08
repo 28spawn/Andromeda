@@ -1,7 +1,18 @@
-/* The chord combos in the headless harness: press BOTH buttons at once, as
- * the workbench does, and check that the combo fires exactly once. */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Andromeda contributors
+
+/* The chord combos in the headless harness (Project Andromeda):
+ * Press BOTH buttons at once, as the workbench does, and check that the combo
+ * fires exactly once.
+ *
+ * In Andromeda:
+ *   - VOL- & VOL+ is the universal Tuner chord combo (toggles Tuner mode, view 4)
+ *   - Bank mode (< & >) and Groove station (HOME & VOL-) are Onyx features
+ *     disabled under Andromeda.
+ */
 const fs = require('fs');
-const buf = fs.readFileSync(process.argv[2]);
+const wasmPath = process.argv[2] || (fs.existsSync('custom-fw/wasm/out/andromeda.wasm') ? 'custom-fw/wasm/out/andromeda.wasm' : 'custom-fw/wasm/out/pocket_amp.wasm');
+const buf = fs.readFileSync(wasmPath);
 const mem = new WebAssembly.Memory({ initial: 512, maximum: 4096 });
 const imp = {
   env: { memory: mem,
@@ -25,8 +36,6 @@ const HOME = 1, VOLM = 2, VOLP = 4, LEFT = 8, RIGHT = 16;
 
 const COMBOS = [
   ['tuner  (VOL- & VOL+)', VOLM | VOLP, 4],
-  ['bank   (< & >)',      LEFT | RIGHT, 3],
-  ['groove (HOME & VOL-)', HOME | VOLM, 7],
 ];
 
 let fails = 0;

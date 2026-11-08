@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ble_matrix_pc.py - the Bluetooth experiment matrix, run from the PC with the unit on USB.
 

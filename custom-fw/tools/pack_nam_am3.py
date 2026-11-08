@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 pack_nam_am3.py — Pocket Amp NAM A2-Lite (Q21 GRU) + IR Cabinet (@M3/@M4) Packer & SysEx Builder
 

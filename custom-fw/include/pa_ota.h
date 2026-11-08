@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/include/pa_ota.h - the app side of the JieLi OTA handshake
  *
  * The firmware updater reaches the Pocket Amp over USB MIDI - the

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """The BLE-MIDI path, end to end, through the firmware.
 
 The custom firmware has one MIDI ingress: a 512-byte ring that both the USB

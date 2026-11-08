@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/pa_transporter.py - dump the Pocket Amp's flash through the FM-1 Transporter
 

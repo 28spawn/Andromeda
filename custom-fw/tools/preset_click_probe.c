@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/tools/preset_click_probe.c - Preset Switching Discontinuity & Click Verifier
  *
  * Verifies that the firmware's mute/unmute crossfade handshake suppresses pops/clicks

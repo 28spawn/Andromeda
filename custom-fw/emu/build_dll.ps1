@@ -1,6 +1,10 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 [CmdletBinding()]
 param(
-    [string]$Board = "pocket_amp"
+    [string]$Board = "pocket_amp",
+    [ValidateSet("andromeda", "onyx")][string]$Product = "andromeda"
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,6 +12,7 @@ $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $RepoRoot
 
 $BoardDef = if ($Board -eq "blackbox") { "-DBOARD_BLACKBOX=1" } else { "-DBOARD_POCKET_AMP=1" }
+$ProductDef = if ($Product -eq "andromeda") { "-DPA_PRODUCT_ANDROMEDA=1" } else { "-DPA_PRODUCT_ANDROMEDA=0" }
 
 $clangExe = Get-Command clang.exe -ErrorAction SilentlyContinue
 if (-not $clangExe) {
@@ -15,7 +20,7 @@ if (-not $clangExe) {
     $env:PATH = "$clangDir;$env:PATH"
 }
 
-Write-Host "Compiling Pocket Amp Firmware into Native Emulator DLL (pocket_amp_emu.dll)..." -ForegroundColor Cyan
+Write-Host "Compiling Andromeda Firmware into Native Emulator DLL (andromeda_emu.dll)..." -ForegroundColor Cyan
 
 # ---- the source list -------------------------------------------------------
 # Globbed through custom-fw/sources.txt, so a new module can never be
@@ -28,13 +33,14 @@ $sources = @(Get-SourceFiles -Target "emu" -Sections $manifest | ForEach-Object 
 # PA_STOCK_FLASH_LOADER: the emulator reads the stock amps and cabs from its simulated flash
 # (0x0BF000, loaded via src/board/spi_nor.c); the device build
 # keeps the embedded tables (src/sys/stock_assets.c says why)
-clang -O3 -shared -Wall -Wextra -Icustom-fw/include $BoardDef -DPA_HOST_SIM=1 -DPA_EMU_DLL=1 -DPA_STOCK_FLASH_LOADER=1 `
+clang -O3 -shared -Wall -Wextra -Icustom-fw/include $BoardDef $ProductDef -DPA_HOST_SIM=1 -DPA_EMU_DLL=1 -DPA_STOCK_FLASH_LOADER=1 `
   custom-fw/emu/emu_bridge.c `
   $sources `
-  -o custom-fw/emu/pocket_amp_emu.dll
+  -o custom-fw/emu/andromeda_emu.dll
+    Copy-Item -Force "custom-fw/emu/andromeda_emu.dll" "custom-fw/emu/pocket_amp_emu.dll"
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "SUCCESS: pocket_amp_emu.dll compiled!" -ForegroundColor Green
+    Write-Host "SUCCESS: andromeda_emu.dll compiled!" -ForegroundColor Green
 } else {
-    Write-Error "FAILED to compile pocket_amp_emu.dll"
+    Write-Error "FAILED to compile andromeda_emu.dll"
 }

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """custom-fw/test/test_embedded_user.py - imported NAM / IR content, end to end (pa_import.py -> .inc -> firmware C)
 
 Builds a fixture from emu/test_capture.nam and a synthetic 48 kHz IR in a temp folder (never touches the owner's

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/include/pa_ui.h — Pocket Amp Front Panel, Bank Mode, Save/Swap & Tuner Interface
  *
  * Matches User Manual Pages 5–7:
@@ -45,7 +48,9 @@ typedef enum {
     PA_UI_VIEW_TELEMETRY    = 12,/* Settings: Performance (CPU%, SRAM, per-block load) */
     PA_UI_VIEW_SYS_INFO     = 13,/* Settings: System */
     PA_UI_VIEW_FACTORY_RESET= 14,/* Settings: Factory Reset / Clean User Presets Confirmation Dialog */
-    PA_UI_VIEW_STOMP_ASSIGN = 15 /* STOMP mode: pick the effect a key (VOL-, VOL+, <, >) toggles */
+    PA_UI_VIEW_STOMP_ASSIGN = 15, /* STOMP mode: pick the effect a key (VOL-, VOL+, <, >) toggles */
+    PA_UI_VIEW_COSMIC_RADAR = 16, /* ANDROMEDA: Cosmic Granular Radar & Orbit HUD */
+    PA_UI_VIEW_CHAIN        = 17  /* ANDROMEDA: the signal chain of the slot (effect, layer, space) */
 } pa_ui_view_t;
 
 #define PA_TUNER_RING 1024u   /* the decimated input ring: 702 samples for a detection plus what arrives while it is computed */
@@ -114,7 +119,7 @@ typedef struct {
     uint8_t          out_level_pct;       /* 0..100% output master level */
     uint8_t          io_output_type;      /* 0 = PHONES, 1 = LINE */
     uint8_t          io_cab_on_line;      /* 0 = OFF, 1 = ON */
-    uint8_t          display_brightness;  /* 0..100% (default 80%) */
+    uint8_t          display_brightness;  /* 0..100% (default 100%) */
     uint8_t          display_auto_dim;    /* 0 = OFF, 1 = 30s, 2 = 1m, 3 = 5m */
     uint8_t          display_battery_pct; /* 0 = OFF, 1 = ON */
     uint8_t          theme;               /* IMP-06: 0 = ONYX, 1 = HIGH CONTRAST */
@@ -172,8 +177,38 @@ typedef struct {
     uint32_t         sram_used_bytes;
     uint32_t         cpu_total_permille;
     pa_tuner_state_t tuner;
+#if PA_PRODUCT_ANDROMEDA
+    uint8_t          and_detail;          /* 1 = the play screen was opened from the chain page ("a block's page"): VOL- / VOL+ walk the blocks that are on, PARA hovers and clicks to edit */
+    uint8_t          and_edit;            /* in that mode: 1 = the PARA turn changes the hovered value, 0 = it moves the hover */
+#endif
 } pa_ui_ctx_t;
 
+#if PA_PRODUCT_ANDROMEDA
+/* Andromeda: the shared tokens point at the cosmic palette (ui_cosmic_theme.h), so every screen
+ * that still uses them - settings, tuner, dialogs - is drawn in the Andromeda colours. */
+#include "ui_cosmic_theme.h"
+#define ONYX_COL_BG        AND_VOID
+#define ONYX_COL_PANEL     AND_NEBULA
+#define ONYX_COL_PANEL_HI  AND_NEBULA_HI
+extern uint16_t g_onyx_greys[3];              /* line, dim, mute: AND_DUST / AND_STARDUST / AND_HAZE (pa_ui_set_theme) */
+#define ONYX_COL_LINE      (g_onyx_greys[0])
+#define ONYX_COL_DIM       (g_onyx_greys[1])
+#define ONYX_COL_TEXT      AND_STARLIGHT
+#define ONYX_COL_MUTE      (g_onyx_greys[2])
+#define ONYX_COL_SELECT    AND_SOLAR
+#define ONYX_COL_OK        AND_AURORA
+#define ONYX_COL_WARN      AND_CORONA
+#define ONYX_COL_BAD       AND_RED_GIANT
+#define ONYX_COL_BLUETOOTH AND_ION
+#define ONYX_COL_DYN       AND_AURORA
+#define ONYX_COL_DRIVE     AND_CORONA
+#define ONYX_COL_AMP       AND_RED_GIANT
+#define ONYX_COL_MOD       AND_VIOLET
+#define ONYX_COL_DLY       AND_ION        /* the granular engine lives in the DELAY slot */
+#define ONYX_COL_REV       AND_MAGENTA
+#define ONYX_COL_CAB       AND_STARDUST
+#define ONYX_COL_EQ        AND_PULSAR_PINK
+#else
 /* Onyx 240x240 RGB565 Palette Tokens (matching tokens.py) */
 #define ONYX_COL_BG        0x0000u  /* #000000 Screen background */
 #define ONYX_COL_PANEL     0x18C3u  /* #181818 Cards, tiles, selected row */
@@ -200,6 +235,7 @@ extern uint16_t g_onyx_greys[3];
 #define ONYX_COL_REV       0x7F19u  /* #7fe0c8 Reverb (Mint) */
 #define ONYX_COL_CAB       0x5B7Eu  /* #5b6cf0 Cabinet (Blue) */
 #define ONYX_COL_EQ        0xF356u  /* #f06bb0 EQ (Pink) */
+#endif
 
 void pa_tuner_init(pa_tuner_state_t *t);
 void pa_tuner_process_block(pa_tuner_state_t *t, int32_t *buf, int n);
@@ -220,6 +256,9 @@ void pa_ui_render(pa_ui_ctx_t *ui, const pa_fx_chain_t *chain,
 struct pa_settings_s;
 void    pa_ui_load_preset(pa_ui_ctx_t *ui, pa_fx_chain_t *chain, uint8_t idx);   /* click-free */
 void    pa_ui_sync_from_preset(pa_ui_ctx_t *ui, const pa_preset_t *pr);
+#if PA_PRODUCT_ANDROMEDA
+void    pa_ui_meas_service(pa_ui_ctx_t *ui, pa_fx_chain_t *chain);   /* the measurement channel's commands, from the main loop (pa_meas.h) */
+#endif
 void    pa_ui_apply_io_settings(pa_ui_ctx_t *ui, pa_fx_chain_t *chain);
 void    pa_ui_midi_control(pa_ui_ctx_t *ui, pa_fx_chain_t *chain, const pa_midi_ev_t *e);   /* one MIDI control event (CC / NRPN over USB or BLE, decoded in usb_ble.c) */
 void    pa_ui_mark_settings_dirty(pa_ui_ctx_t *ui);

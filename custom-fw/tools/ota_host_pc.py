@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """custom-fw/tools/ota_host_pc.py - the web editor's one-click update, from the PC without a browser: serves a package to the unit's update session over USB MIDI and logs every request, so a stop can be placed.
     python custom-fw/tools/ota_host_pc.py "<package.fwsc>" [--go]        (without --go only the handshake and step 1 run, up to the unit's own decision; nothing is written by the host)
 Close the browser editor and every other MIDI program first. Step 1 only stages the loader inside the unit: nothing is committed before the 'success' answer."""

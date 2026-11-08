@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/boot_timeline_pc.py - what did the unit do in its first seconds? READ-ONLY. Run it right after a power-on (it waits for the USB-MIDI port, which appears 1.5 - 4 s after boot).
 

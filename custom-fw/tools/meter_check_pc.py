@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/meter_check_pc.py - does the OUT level bar on the screen show how loud the output really is? READ-ONLY.
 

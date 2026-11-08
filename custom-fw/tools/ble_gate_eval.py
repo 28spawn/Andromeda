@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ble_gate_eval.py - the numbers behind hardware test HW-18 (BLE-MIDI link, per host) of TEST-PROTOCOL.md.
 

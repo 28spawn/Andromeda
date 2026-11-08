@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/wasm/pa_wasm.c - WebAssembly board shim for the Pocket Amp firmware.
  *
  * This is NOT an emulator of the firmware. It is the firmware's own portable
@@ -22,6 +25,8 @@
 #include <math.h>
 
 #include "../include/pa_audio_core.h"
+#include "../include/pa_granular.h"
+#include "../include/ui_cosmic.h"
 #include "../include/pa_config.h"
 #include "../include/pa_fx.h"
 #include "../include/pa_model.h"
@@ -481,7 +486,11 @@ int pa_wasm_init(void) {
     pa_hw_accel_init();
     cpu_meter_init(&g_cpu_meter, PA_CPU_HZ, PA_BLOCK_N, PA_SAMPLE_RATE);
 
+#if PA_PRODUCT_ANDROMEDA
+    fx_node_t *amp_nd = NULL;
+#else
     fx_node_t *amp_nd = pa_amp_node_create(&g_nam_model, &g_wn_model, &g_active_amp_engine);
+#endif
     g_cab_node = fx_cab_ir_new();
     pa_fx_chain_init(&g_fx_chain, amp_nd, g_cab_node);
     g_fx_chain.meter = &g_cpu_meter;
@@ -571,6 +580,7 @@ typedef struct {
     uint32_t drum_playing, drum_bpm, drum_pattern;
     uint32_t bt_state, in_peak, out_peak;
     uint32_t cursor_slot, editor_cursor, view2;
+    uint32_t looper_state, frozen, and_ui_state;
 } wasm_telemetry_t;
 
 static wasm_telemetry_t s_tel;
@@ -602,4 +612,97 @@ void pa_wasm_update_telemetry(void) {
     s_tel.slot_active_mask = mask;
     s_tel.cursor_slot   = g_ui.cursor_slot_idx;
     s_tel.editor_cursor = (uint32_t)(int32_t)g_ui.editor_cursor;
+#if PA_PRODUCT_ANDROMEDA
+    gran_telemetry_t gt;
+    memset(&gt, 0, sizeof(gt));
+    if (g_fx_chain.slots[PA_SLOT_DELAY]) fx_granular_get_telemetry(g_fx_chain.slots[PA_SLOT_DELAY], &gt);
+    s_tel.looper_state = (uint32_t)gt.looper_state;
+    s_tel.frozen       = gt.frozen ? 1u : 0u;
+    s_tel.and_ui_state = (g_ui.and_detail ? 1u : 0u) | (g_ui.and_edit ? 2u : 0u);
+#else
+    s_tel.looper_state = 0;
+    s_tel.frozen       = 0;
+    s_tel.and_ui_state = 0;
+#endif
+}
+
+/* ---- Andromeda WASM Exports ---- */
+WASM_EXPORT("pa_wasm_andromeda_action")
+void pa_wasm_andromeda_action(int action) {
+#if PA_PRODUCT_ANDROMEDA
+    if (g_fx_chain.slots[PA_SLOT_DELAY]) {
+        fx_andromeda_action(g_fx_chain.slots[PA_SLOT_DELAY], action);
+    }
+#else
+    (void)action;
+#endif
+}
+
+WASM_EXPORT("pa_wasm_andromeda_looper_state")
+int pa_wasm_andromeda_looper_state(void) {
+#if PA_PRODUCT_ANDROMEDA
+    gran_telemetry_t t;
+    memset(&t, 0, sizeof t);
+    if (g_fx_chain.slots[PA_SLOT_DELAY]) fx_granular_get_telemetry(g_fx_chain.slots[PA_SLOT_DELAY], &t);
+    return (int)t.looper_state;
+#else
+    return 0;
+#endif
+}
+
+WASM_EXPORT("pa_wasm_andromeda_frozen")
+int pa_wasm_andromeda_frozen(void) {
+#if PA_PRODUCT_ANDROMEDA
+    gran_telemetry_t t;
+    memset(&t, 0, sizeof t);
+    if (g_fx_chain.slots[PA_SLOT_DELAY]) fx_granular_get_telemetry(g_fx_chain.slots[PA_SLOT_DELAY], &t);
+    return t.frozen ? 1 : 0;
+#else
+    return 0;
+#endif
+}
+
+WASM_EXPORT("pa_wasm_select_preset")
+void pa_wasm_select_preset(uint8_t idx) {
+    if (idx >= PA_PRESET_COUNT) idx = PA_PRESET_COUNT - 1;
+    g_ui.preset_index = idx;
+    g_ui.bank_group = idx / 4u;
+    pa_preset_t pr;
+    if (pa_preset_load(idx, &pr) == 0) {
+        pa_preset_apply_to_chain(&pr, &g_fx_chain);
+        pa_ui_sync_from_preset(&g_ui, &pr);
+    }
+    g_ui.dirty = 1;
+}
+
+WASM_EXPORT("pa_wasm_set_slot_param")
+void pa_wasm_set_slot_param(int slot, int param_id, int val_0_to_100) {
+    if (slot < 0 || slot >= PA_SLOT_COUNT || param_id < 0 || param_id >= 6) return;
+    if (val_0_to_100 < 0) val_0_to_100 = 0;
+    if (val_0_to_100 > 100) val_0_to_100 = 100;
+    int32_t q21_val = (int32_t)(((int64_t)val_0_to_100 * PA_Q21_ONE) / 100);
+    g_ui.slot_params[slot][param_id] = q21_val;
+    pa_fx_chain_set_param(&g_fx_chain, (pa_fx_slot_id_t)slot, param_id, q21_val);
+    g_ui.dirty = 1;
+}
+
+WASM_EXPORT("pa_wasm_get_slot_param")
+int pa_wasm_get_slot_param(int slot, int param_id) {
+    if (slot < 0 || slot >= PA_SLOT_COUNT || param_id < 0 || param_id >= 6) return 50;
+    int32_t q = g_ui.slot_params[slot][param_id];
+    int pct = (int)((((int64_t)q * 100) + (PA_Q21_ONE >> 1)) / PA_Q21_ONE);
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    return pct;
+}
+
+WASM_EXPORT("pa_wasm_get_slot_type")
+int pa_wasm_get_slot_type(int slot) {
+    if (slot < 0 || slot >= PA_SLOT_COUNT) return 0;
+    return (int)g_ui.slot_type[slot];
+}
+
+WASM_EXPORT("pa_wasm_preset_count")
+int pa_wasm_preset_count(void) {
+    return (int)PA_PRESET_COUNT;
 }

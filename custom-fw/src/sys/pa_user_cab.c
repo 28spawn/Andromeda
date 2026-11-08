@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* src/sys/pa_user_cab.c - the stored cabinets (include/pa_user_cab.h). */
 #include <string.h>
 #include "../../include/pa_user_cab.h"

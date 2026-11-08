@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/wn_render.c - render a float32 mono file through a WaveNet capture with the block engine (what the unit's engine computes).
  * Usage: wn_render <wave-blob> <in.f32> <out.f32>      (tools/wn_render.py wraps it: .nam + .wav in, .wav out) */
 #include <stdio.h>

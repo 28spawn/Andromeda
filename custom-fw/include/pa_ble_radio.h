@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * include/pa_ble_radio.h - the Bluetooth LE radio (the imported Optimist stack; src/board/ble_radio.c, BLE-PORT-PLAN.md).
  *

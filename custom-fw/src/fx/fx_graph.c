@@ -1,9 +1,15 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/fx/fx_graph.c — Customizable-Order 6+1 Effect Graph + Stereo/Tail/Limiter */
 
 #include "../../include/pa_hw.h"
 #include "../../include/pa_evlog.h"
 #include "pa_config.h"
 #include "pa_fx.h"
+#if PA_PRODUCT_ANDROMEDA
+#include "../../include/pa_granular.h"
+#endif
 #include "pa_cpu_meter.h"
 #include "pa_dsp_cost.h"
 #include "../dsp/fixedpoint.h"
@@ -143,6 +149,18 @@ void pa_fx_chain_init(pa_fx_chain_t *chain, fx_node_t *amp_node, fx_node_t *cab_
     chain->fizz_s1_R[0] = chain->fizz_s1_R[1] = 0;
     chain->fizz_s2_R[0] = chain->fizz_s2_R[1] = 0;
 
+#if PA_PRODUCT_ANDROMEDA
+    (void)amp_node; (void)cab_node;
+    chain->slots[PA_SLOT_DYNAMICS] = fx_dynamics_new();
+    chain->slots[PA_SLOT_DRIVE]    = (fx_node_t *)0;
+    chain->slots[PA_SLOT_AMP]      = (fx_node_t *)0;
+    chain->slots[PA_SLOT_CAB]      = (fx_node_t *)0;
+    chain->slots[PA_SLOT_EQ]       = fx_eq_new();
+    chain->slots[PA_SLOT_MOD]      = fx_andromeda_layer_new();   /* the MOD slot hosts the GLASS layer */
+    chain->slots[PA_SLOT_DELAY]    = fx_granular_new();     /* the DELAY slot hosts the granular engine */
+    chain->slots[PA_SLOT_REVERB]   = fx_andromeda_space_new();   /* the REVERB slot hosts the shared FDN reverb with its shimmer */
+#else
+    (void)amp_node; (void)cab_node;
     chain->slots[PA_SLOT_DYNAMICS] = fx_dynamics_new();
     chain->slots[PA_SLOT_DRIVE]    = fx_drive_new();
     chain->slots[PA_SLOT_AMP]      = amp_node;
@@ -151,9 +169,21 @@ void pa_fx_chain_init(pa_fx_chain_t *chain, fx_node_t *amp_node, fx_node_t *cab_
     chain->slots[PA_SLOT_MOD]      = fx_mod_new();
     chain->slots[PA_SLOT_DELAY]    = fx_delay_new();
     chain->slots[PA_SLOT_REVERB]   = fx_reverb_new();
+#endif
 
     /* Default order matching User Manual Page 4 diagram:
      * IN -> FX (Dynamics + Drive) -> AMP -> EQ -> MOD -> DLY -> REV -> CAB -> OUT */
+#if PA_PRODUCT_ANDROMEDA
+    /* Andromeda: DYN -> GRANULAR -> EQ -> MOD -> REV; DRIVE / AMP / CAB stay last and off */
+    chain->slot_order[0] = PA_SLOT_DYNAMICS;
+    chain->slot_order[1] = PA_SLOT_DELAY;
+    chain->slot_order[2] = PA_SLOT_EQ;
+    chain->slot_order[3] = PA_SLOT_MOD;
+    chain->slot_order[4] = PA_SLOT_REVERB;
+    chain->slot_order[5] = PA_SLOT_DRIVE;
+    chain->slot_order[6] = PA_SLOT_AMP;
+    chain->slot_order[7] = PA_SLOT_CAB;
+#else
     chain->slot_order[0] = PA_SLOT_DYNAMICS;      /* IMP-13: keep mono CAB/EQ before stereo FX */
     chain->slot_order[1] = PA_SLOT_DRIVE;
     chain->slot_order[2] = PA_SLOT_AMP;
@@ -162,6 +192,7 @@ void pa_fx_chain_init(pa_fx_chain_t *chain, fx_node_t *amp_node, fx_node_t *cab_
     chain->slot_order[5] = PA_SLOT_MOD;
     chain->slot_order[6] = PA_SLOT_DELAY;
     chain->slot_order[7] = PA_SLOT_REVERB;
+#endif
 
     for (int s = 0; s < PA_SLOT_COUNT; s++) {
         if (chain->slots[s]) {
@@ -207,6 +238,9 @@ void pa_fx_chain_swap_order(pa_fx_chain_t *chain, uint8_t pos_a, uint8_t pos_b) 
  * (pa_audio_is_muted()) - used by pa_preset_apply_to_chain(). */
 void pa_fx_chain_set_slot_enabled_now(pa_fx_chain_t *chain, pa_fx_slot_id_t slot, int on) {
     if (!chain || slot >= PA_SLOT_COUNT) return;
+#if PA_PRODUCT_ANDROMEDA
+    if (slot == PA_SLOT_AMP || slot == PA_SLOT_CAB) on = 0;     /* locked off: no amp model, a stub cabinet, and the memory went to the tape */
+#endif
     fx_node_t *nd = chain->slots[slot];
     if (!nd) return;
     nd->fade_dir = 0; nd->pending_destroy = 0;
@@ -237,6 +271,9 @@ void pa_fx_chain_set_slot_enabled_now(pa_fx_chain_t *chain, pa_fx_slot_id_t slot
  * DLY/REV with tail_enabled keep ringing (tail_draining) instead of fading. */
 void pa_fx_chain_set_slot_enabled(pa_fx_chain_t *chain, pa_fx_slot_id_t slot, int on) {
     if (!chain || slot >= PA_SLOT_COUNT) return;
+#if PA_PRODUCT_ANDROMEDA
+    if (slot == PA_SLOT_AMP || slot == PA_SLOT_CAB) on = 0;     /* locked off: no amp model, a stub cabinet, and the memory went to the tape */
+#endif
     fx_node_t *nd = chain->slots[slot];
     if (!nd) return;
     if (on) {
@@ -318,7 +355,11 @@ uint8_t pa_fx_slot_type_count(pa_fx_slot_id_t slot) {
         case PA_SLOT_DRIVE:    return 6;
         case PA_SLOT_MOD:      return 7;
         case PA_SLOT_EQ:       return 3;     /* 5-BAND, LOW/HIGH CUT, PARAMETRIC-3 */
+#if PA_PRODUCT_ANDROMEDA
+        case PA_SLOT_DELAY:    return 12;    /* the 12 granular algorithms (gran_preset_t) */
+#else
         case PA_SLOT_DELAY:    return 9;     /* + DIGITAL, PING PONG, REVERSE, SLAPBACK */
+#endif
         case PA_SLOT_REVERB:   return 8;     /* + PLATE, AMBIENCE */
         default:               return 1;
     }
@@ -578,12 +619,27 @@ static void node_xfade_post(fx_node_t *nd, int32_t *L, int32_t *R, int n, const 
 /* BENCH: measured time per slot, in TIMER4 ticks (24 MHz; the block budget is 34,800 ticks = 1.451 ms).
  * SRAM 0x01C7C500, 4 words per slot (0 DYN 1 DRV 2 AMP 3 CAB 4 EQ 5 MOD 6 DLY 7 REV): max, sum, calls, last.
  * Read in download mode with tools/jl_ram_read.py slots. Device builds only. */
+#if PA_PRODUCT_ANDROMEDA
+/* The core allocator's cost model: a fast moving average of what each slot really takes (24 MHz ticks x 16), kept by whichever core ran the slot. */
+static volatile uint32_t s_cost_ema16[PA_SLOT_COUNT];
+static inline __attribute__((unused)) void alloc_note(unsigned s, uint32_t d) {
+    if (s >= PA_SLOT_COUNT) return;
+    if (d > 0x00FFFFFFu) d = 0x00FFFFFFu;
+    const int32_t e = (int32_t)s_cost_ema16[s];
+    s_cost_ema16[s] = (uint32_t)(e + ((((int32_t)(d << 4)) - e) >> 2));
+}
+#define PA_ALLOC_NOTE(s, d) alloc_note((unsigned)(s), (d))
+#else
+#define PA_ALLOC_NOTE(s, d) ((void)0)
+#endif
+
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
 extern uint32_t plat_ticks24(void);
 #define PA_SLOT_T0() uint32_t pa_slot_t0 = plat_ticks24()
 #define PA_SLOT_T1(s) do { \
         volatile uint32_t *w_ = (volatile uint32_t *)(uintptr_t)(0x01C7C500u + 16u * (uint32_t)(s)); \
         uint32_t d_ = plat_ticks24() - pa_slot_t0; \
+        PA_ALLOC_NOTE((s), d_); \
         if (d_ > w_[0]) w_[0] = d_; \
         w_[1] += d_ >> 4; w_[2]++; w_[3] = d_;         if (w_[1] >= 0xC0000000u) { w_[1] >>= 1; w_[2] >>= 1; } } while (0)   /* the sum is in 16-tick units: the plain sum wrapped after 3 minutes of the amp, and this one after about an hour of it         (7 hours for the 12 % slots: an overnight readout showed DRV 2 us, REV 1 us). Before it can wrap, the sum and the call count are halved: the average stays right for any length of run, the "calls" word is then a weight, not an exact count. */
 #else
@@ -821,6 +877,9 @@ static void chain_tail(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R, int
 /* Set by core 0 when it has conditioned the block it is about to hand over (the conditioning is 20-30 us a block that the WaveNet engine's core 1 can not spare).
  * Core 1 reads it as its job starts, and core 0 only changes it for the NEXT block, after that job has started. */
 static volatile uint8_t s_pre_cond;
+#if PA_PRODUCT_ANDROMEDA
+static volatile uint8_t s_front_ss;       /* did the front's last slot leave the signal in stereo? (core 1 writes it at the end of its job, core 0 reads it for the block that comes back) */
+#endif
 
 void pa_fx_chain_run_front(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R, int n, int lo, int to, int32_t *dry_L, int32_t *dry_R) {
     int ss = 0;
@@ -832,6 +891,9 @@ void pa_fx_chain_run_front(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R,
     const uint32_t ft1 = plat_ticks24();
 #endif
     run_slot_range(chain, buf_L, buf_R, n, lo < 0 ? 0 : lo, to, &ss, dry_L, dry_R, s_fizz_core0);
+#if PA_PRODUCT_ANDROMEDA
+    s_front_ss = (uint8_t)(ss ? 1 : 0);
+#endif
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
     {   /* where core 1's job goes (SRAM 0x01C7E7C0, TIMER4 ticks): [1] this function in all, last, [2] longest, [3] the slot loop, last, [4] the part before it, last */
         volatile uint32_t *F = (volatile uint32_t *)(uintptr_t)0x01C7E7C0u;
@@ -843,6 +905,7 @@ void pa_fx_chain_run_front(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R,
     if (dbg_scan_now(PA_SLOT_AMP)) PA_LVL(2, buf_L, n);
 }
 
+#if !PA_PRODUCT_ANDROMEDA
 /* Measured cost of each slot on the device, microseconds per 64-sample block (the AMP is the GRU model; see the slot timings readout). */
 static const uint16_t k_slot_cost_us[PA_SLOT_COUNT] = { 45u, 330u, 1210u, 340u, 190u, 75u, 85u, 270u };   /* DYN DRV AMP CAB EQ MOD DLY REV */
 static uint32_t s_core1_budget_us = 1300u;
@@ -864,6 +927,93 @@ static int choose_core1_lo(const pa_fx_chain_t *chain, int cut) {
     }
     return lo;
 }
+#endif
+
+#if PA_PRODUCT_ANDROMEDA
+/* ---- the core allocator (Andromeda) ---------------------------------------------------------------------------------------------------------------------------
+ * Two cores, one pipeline: core 1 runs the input conditioning and slot_order[0..cut) on this block while core 0 runs slot_order[cut..) and the tail on the PREVIOUS
+ * block's result (one block, 1.45 ms, more latency - dry and wet alike). cut = 0 means no hand-over: everything on core 0, no extra latency.
+ * Every 64 blocks (93 ms) the allocator prices each active slot from what it really took (s_cost_ema16, measured by whichever core ran it), and picks the cut
+ * that gives the smaller of the two cores' loads - or none at all while one core is comfortable (under about 72 % of the block). A new cut must win by 8 % in two
+ * evaluations in a row (no flip-flopping); a cut that pushes core 1 past its block is left at once. A change waits for core 1 to go idle and drops the block
+ * in flight (one silent block), so no slot ever runs twice or not at all on a block. */
+#define ALLOC_C0_BASE_US    230u      /* core 0's fixed work: the interrupt's own (0.214 ms measured on the unit with every block off, conditioning included), the hand-over */
+#define ALLOC_C1_BASE_US    30u       /* core 1's: the input conditioning */
+#define ALLOC_SINGLE_ENTER_US 900u    /* all on core 0 up to this (62 % of the block): no hand-over. Above it the chain is split */
+#define ALLOC_SINGLE_LEAVE_US 780u    /* a split chain goes back to core 0 (and loses the block of latency) when everything fits under this */
+#define ALLOC_C1_MAX_US     1350u     /* what core 1 may be asked for in a 1451 us block */
+#define ALLOC_EVAL_BLOCKS   64u
+static const uint16_t k_alloc_default_us[PA_SLOT_COUNT] = { 45u, 330u, 0u, 0u, 190u, 300u, 600u, 350u };   /* until measured: DYN DRV AMP CAB EQ MOD DLY REV */
+static int8_t  s_cut_applied;         /* the cut the last block ran with */
+static int8_t  s_cut_cand;
+static uint8_t s_cut_votes;
+static uint8_t s_eval_ctr;
+static int8_t  s_force_cut = -1;      /* tests and the measurement tool: -1 = automatic */
+volatile uint8_t g_pa_alloc_cut;      /* the readout */
+
+void pa_fx_alloc_force_cut(int cut) { s_force_cut = (int8_t)(cut < 0 ? -1 : (cut > PA_SLOT_COUNT ? PA_SLOT_COUNT : cut)); }
+int  pa_fx_alloc_cut(void) { return (int)g_pa_alloc_cut; }
+void pa_fx_chain_set_core1_budget_us(uint32_t us) { (void)us; }   /* the allocator prices the cores from measurement now */
+__attribute__((weak)) void pa_smp_wait_idle(void) {}
+
+static uint32_t alloc_slot_us(const pa_fx_chain_t *chain, uint8_t s) {
+    if (s >= PA_SLOT_COUNT) return 0u;
+    const fx_node_t *nd = chain->slots[s];
+    if (!nd || (!nd->active && !nd->tail_draining)) return 0u;
+    if (s == PA_SLOT_CAB && chain->force_cab_off) return 0u;
+    const uint32_t e = s_cost_ema16[s];
+    return e ? (e + 191u) / 384u : (uint32_t)k_alloc_default_us[s];                         /* ticks x 16 -> us, rounded up */
+}
+
+/* the load of the two cores for a cut, in microseconds per block */
+static void alloc_loads(const uint32_t *c, int cut, uint32_t *c0, uint32_t *c1) {
+    uint32_t front = ALLOC_C1_BASE_US, rear = ALLOC_C0_BASE_US;
+    for (int i = 0; i < PA_SLOT_COUNT; i++) { if (i < cut) front += c[i]; else rear += c[i]; }
+    if (cut <= 0) front = 0u;
+    *c0 = rear; *c1 = front;
+}
+
+static int alloc_best_cut(const uint32_t *c, int cur, uint32_t *best_max) {
+    uint32_t a, b;
+    alloc_loads(c, 0, &a, &b);
+    int best = 0;
+    const uint32_t single = a;
+    uint32_t bm = a;
+    if (a <= (cur > 0 ? ALLOC_SINGLE_LEAVE_US : ALLOC_SINGLE_ENTER_US)) { *best_max = bm; return 0; }      /* hysteresis: a split chain needs the lower figure to go back */
+    for (int cut = 1; cut <= PA_SLOT_COUNT; cut++) {
+        alloc_loads(c, cut, &a, &b);
+        if (b > ALLOC_C1_MAX_US) continue;
+        const uint32_t m = a > b ? a : b;
+        if (m < bm) { bm = m; best = cut; }
+    }
+    if (best > 0 && bm * 100u >= single * 92u) { best = 0; bm = single; }               /* a hand-over costs a block of latency: it has to win by 8 % */
+    *best_max = bm;
+    return best;
+}
+
+/* the plan for a set of slot costs (us, in slot_order), for the tests: the cut, and the larger of the two cores' loads it gives */
+int pa_fx_alloc_best_cut(const uint32_t *us, int cur, uint32_t *max_us) { uint32_t m = 0u; const int c = alloc_best_cut(us, cur, &m); if (max_us) *max_us = m; return c; }
+
+static int alloc_update(const pa_fx_chain_t *chain) {
+    if (s_force_cut >= 0) return (int)s_force_cut;
+    if (++s_eval_ctr < ALLOC_EVAL_BLOCKS) return (int)s_cut_applied;
+    s_eval_ctr = 0u;
+    uint32_t c[PA_SLOT_COUNT];
+    for (int i = 0; i < PA_SLOT_COUNT; i++) c[i] = alloc_slot_us(chain, chain->slot_order[i]);
+    uint32_t bm = 0u, c0, c1;
+    const int cur = (int)s_cut_applied;
+    const int best = alloc_best_cut(c, cur, &bm);
+    alloc_loads(c, cur, &c0, &c1);
+    const uint32_t cur_max = cur > 0 ? (c0 > c1 ? c0 : c1) : c0;
+    const int must = (cur > 0 && c1 > ALLOC_C1_MAX_US);                                     /* core 1 would miss its block: leave at once */
+    if (best == cur) { s_cut_votes = 0u; return cur; }
+    if (!must && best != 0 && !(bm * 100u < cur_max * 92u)) { s_cut_votes = 0u; return cur; }   /* not a clear win (going back to one core needs none: it is the comfort figure that decides) */
+    if (must) { s_cut_votes = 0u; return best; }
+    if (s_cut_cand == best) { if (s_cut_votes < 255u) s_cut_votes++; } else { s_cut_cand = (int8_t)best; s_cut_votes = 1u; }
+    if (s_cut_votes >= 2u) { s_cut_votes = 0u; return best; }
+    return cur;
+}
+#endif /* PA_PRODUCT_ANDROMEDA */
 
 /* Execute chain in customizable `slot_order[0..7]` with true stereo propagation.
  * With the second-core hook installed: the hook takes this block's input and runs the front of the chain (conditioning and every
@@ -873,14 +1023,41 @@ void pa_fx_chain_run_stereo(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R
     if (!chain || !buf_L) return;
     g_pa_cab_stereo = 0;
     int stereo_split = 0;
+#if PA_PRODUCT_ANDROMEDA
+    int cut = 0;                                                          /* the allocator's cut: core 1 runs slot_order[0..cut), 0 = everything here */
+    if (s_post_handoff) {
+        cut = alloc_update(chain);
+        if (cut != (int)s_cut_applied) {                                  /* a change: core 1 goes idle and the block in flight is dropped first */
+            pa_smp_wait_idle();
+            s_cut_applied = (int8_t)cut; g_pa_alloc_cut = (uint8_t)cut;
+        }
+    } else if (s_cut_applied) { s_cut_applied = 0; g_pa_alloc_cut = 0u; }  /* core 1 is gone: single core */
+#else
     int cut = -1;                                                         /* slot_order index just after the amp, if we hand the front over */
     if (s_post_handoff) {
         for (int idx = 0; idx < PA_SLOT_COUNT; idx++) if (chain->slot_order[idx] == PA_SLOT_AMP) { cut = idx + 1; break; }
     }
+#endif
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
     const uint32_t rs_t0 = plat_ticks24();
     uint32_t rs_t1 = rs_t0, rs_t2 = rs_t0;
 #endif
+#if PA_PRODUCT_ANDROMEDA
+    if (cut > 0) {
+        const int ss_prev = s_front_ss;                                   /* what the front of the block that comes back left behind (core 1 is about to start the next) */
+        s_pre_cond = 0;                                                   /* core 1 does the input conditioning too */
+        s_post_handoff(chain, buf_L, buf_R, n, cut, 0);
+#if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
+        rs_t2 = plat_ticks24();
+#endif
+        stereo_split = ss_prev ? 1 : 0;
+        PA_LVL(3, buf_L, n);
+        run_slot_range(chain, buf_L, buf_R, n, cut, PA_SLOT_COUNT, &stereo_split, s_dry_L, s_dry_R, 0);
+    } else {
+        chain_condition(chain, buf_L, buf_R, n);
+        run_slot_range(chain, buf_L, buf_R, n, 0, PA_SLOT_COUNT, &stereo_split, s_dry_L, s_dry_R, 0);
+    }
+#else
     if (cut > 0) {
         const int lo = choose_core1_lo(chain, cut);
         if (lo > 0) {                                                     /* what does not fit core 1 runs here first */
@@ -916,6 +1093,7 @@ void pa_fx_chain_run_stereo(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R
         chain_condition(chain, buf_L, buf_R, n);
         run_slot_range(chain, buf_L, buf_R, n, 0, PA_SLOT_COUNT, &stereo_split, s_dry_L, s_dry_R, 0);
     }
+#endif
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
     {   const uint32_t rs_t3 = plat_ticks24();
         pa_timing(2, rs_t1 - rs_t0);       /* what runs on this core before the hand-over (conditioning + the slots in front of the amp) */
@@ -937,7 +1115,7 @@ void pa_fx_chain_run_stereo(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R
                 if (nd && nd->reset) nd->reset(nd);
             }
             for (int i = 0; i < n; i++) { buf_L[i] = 0; if (buf_R) buf_R[i] = 0; }
-            uint32_t which = 0xFFu;
+            uint32_t which = 0xFFu; (void)which;
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
             for (int idx = from; idx < PA_SLOT_COUNT && which == 0xFFu; idx++) {
                 const uint32_t sl = chain->slot_order[idx];

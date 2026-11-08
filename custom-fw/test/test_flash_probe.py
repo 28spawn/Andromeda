@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """Host test of the PA_FLASH_PROBE readout (tools/jl_ram_read.py fp_decode) and of the probe block's layout.
 
 The probe itself (src/board/flash_probe.c) runs on the unit only; this checks that the viewer's word offsets mirror the C struct

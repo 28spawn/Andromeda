@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_activation.h — Pocket Amp 512-Entry Piecewise-Linear Sigmoid & Tanh Activation LUTs
  *

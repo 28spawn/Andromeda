@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
-custom-fw/tools/gen_editor_tables.py - the model and knob names of the web editor (web/Onyx_Web_Editor.html), taken from the firmware's own tables in src/board/ui_app.c, so the page can not drift
+custom-fw/tools/gen_editor_tables.py - the model and knob names of the web editor (web/Andromeda_Web_Editor.html), taken from the firmware's own tables in src/board/ui_app.c, so the page can not drift
 from the unit's screen. The amp and cabinet names are NOT here: the page reads them from the unit (cmd 81).
 
-    python custom-fw/tools/gen_editor_tables.py            rewrite the block between the TABLES markers in web/Onyx_Web_Editor.html
+    python custom-fw/tools/gen_editor_tables.py            rewrite the block between the TABLES markers in web/Andromeda_Web_Editor.html
     python custom-fw/tools/gen_editor_tables.py --check    exit 1 when the page's block differs from the firmware (the gate runs this)
 """
 import json, re, sys
@@ -11,7 +13,7 @@ from pathlib import Path
 
 FW = Path(__file__).resolve().parent.parent
 SRC = FW / "src" / "board" / "ui_app.c"
-PAGE = FW / "web" / "Onyx_Web_Editor.html"
+PAGE = FW / "web" / "Andromeda_Web_Editor.html"
 BEGIN, END = "/*TABLES-BEGIN (tools/gen_editor_tables.py: do not edit)*/", "/*TABLES-END*/"
 
 
@@ -55,11 +57,11 @@ def main():
     page = PAGE.read_text(encoding="utf-8")
     a, b = page.find(BEGIN), page.find(END)
     if a < 0 or b < 0:
-        print("web/Onyx_Web_Editor.html has no TABLES markers"); return 1
+        print("web/Andromeda_Web_Editor.html has no TABLES markers"); return 1
     new = page[:a] + block() + page[b + len(END):]
     if "--check" in sys.argv:
         if new != page:
-            print("web/Onyx_Web_Editor.html: the model and knob tables differ from src/board/ui_app.c (run tools/gen_editor_tables.py)"); return 1
+            print("web/Andromeda_Web_Editor.html: the model and knob tables differ from src/board/ui_app.c (run tools/gen_editor_tables.py)"); return 1
         print("editor tables: in sync with the firmware"); return 0
     PAGE.write_text(new, encoding="utf-8", newline="\n")
     print("editor tables written")

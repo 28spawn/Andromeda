@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 # pack.sh — build + pack a flashable .ufw from the SDK (run inside the linux/amd64 VM).
 # Hardened: Removed silent error suppressions to ensure build integrity.
 set -euo pipefail

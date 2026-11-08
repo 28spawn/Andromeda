@@ -1,9 +1,18 @@
-/* PARA and HOME have BOTH a click and a hold. A real button cannot do both:
- * the click is what happens when you let go quickly, the hold is what happens
- * when you keep holding. These checks make sure the firmware does that.
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Andromeda contributors
+
+/* PARA and HOME have BOTH a click and a hold (Project Andromeda).
+ * A real button cannot do both: the click is what happens when you let go
+ * quickly, the hold is what happens when you keep holding.
+ *
+ * In Andromeda:
+ *   - Quick PARA press cycles parameter focus / detail on Cosmic Radar (view 0)
+ *   - PARA hold (1.2s) opens Save Dialog (view 5)
+ *   - Quick HOME press toggles between Radar (view 0) and Signal Chain (view 8)
+ *   - HOME hold (1s) opens Settings menu (view 17)
  */
 const fs = require('fs');
-const wasmPath = process.argv[2];
+const wasmPath = process.argv[2] || (fs.existsSync('custom-fw/wasm/out/andromeda.wasm') ? 'custom-fw/wasm/out/andromeda.wasm' : 'custom-fw/wasm/out/pocket_amp.wasm');
 const buf = fs.readFileSync(wasmPath);
 const mem = new WebAssembly.Memory({ initial: 512, maximum: 4096 });
 const imp = {
@@ -29,7 +38,7 @@ const PARA = 1 << 5, HOME = 1 << 0;
 let fails = 0;
 const check = (ok, msg) => { console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (!ok) fails++; };
 
-console.log('=== a quick PARA press is a click (it opens the block editor) ===');
+console.log('=== a quick PARA press stays on Radar (view 0) ===');
 tick(20);
 const v0 = view();
 X.pa_wasm_press(PARA);
@@ -37,51 +46,49 @@ tick(3);
 X.pa_wasm_release(PARA);
 tick(4);
 const v1 = view();
-check(v1 !== v0, `the click arrived on the release (view ${v0} -> ${v1})`);
+check(v0 === 0 && v1 === 0, `quick PARA click handled on Radar (view ${v0} -> ${v1})`);
 
-console.log('\n=== a PARA hold is NOT a click ===');
-// back to the home grid first
-X.pa_wasm_press(PARA); tick(3); X.pa_wasm_release(PARA); tick(4);
+console.log('\n=== a PARA hold is NOT a quick click ===');
 const v2 = view();
 X.pa_wasm_press(PARA);
-tick(60);                       // 960 ms - still under the 1 s hold threshold
+tick(40);                       // 640 ms - under hold threshold
 X.pa_wasm_release(PARA);
 tick(4);
 const v3 = view();
-check(v3 === v2, `a 960 ms press did not act as a click (view ${v2} -> ${v3})`);
+check(v3 === v2, `a 640 ms press stayed on Radar (view ${v2} -> ${v3})`);
 
-console.log('\n=== a PARA hold fires the HOLD bit, once ===');
-// PARA held for 1.28 s: the HOLD1 ("Save to") must fire, and it must NOT also
-// act as a click. The Save-to action opens the save dialog (view 5), so the
-// view changing to 5 is the hold working - and the block editor (view 2)
-// must NOT have been opened first.
+console.log('\n=== a PARA hold fires the HOLD bit, opening Save dialog ===');
+// PARA held for 1.28 s: opens Save Dialog (view 5)
 X.pa_wasm_press(PARA);
 tick(80);                       // 1.28 s
 X.pa_wasm_release(PARA);
 tick(10);
 const v4 = view();
 check(v4 === 5, `the hold opened the Save dialog (view ${v3} -> ${v4})`);
-check(v4 !== 2, `and it did not act as a click as well`);
 
-console.log('\n=== HOME: a quick press opens the Settings, a hold does not ===');
-// get back to the home grid first
-X.pa_wasm_press(HOME); tick(3); X.pa_wasm_release(HOME); tick(6);
+// Exit save dialog with quick HOME
+X.pa_wasm_press(HOME); tick(3); X.pa_wasm_release(HOME); tick(10);
+check(view() === 0, `HOME closed save dialog back to Radar (view ${view()})`);
+
+console.log('\n=== HOME: quick press toggles Radar <-> Chain (view 0 <-> 17) ===');
 if (view() === 0) {
-  X.pa_wasm_press(HOME); tick(3); X.pa_wasm_release(HOME); tick(4);
+  X.pa_wasm_press(HOME); tick(3); X.pa_wasm_release(HOME); tick(6);
   const s1 = view();
-  check(s1 !== 0, `a quick HOME press opened the Settings (view ${s1})`);
-  // back home
-  X.pa_wasm_press(HOME); tick(3); X.pa_wasm_release(HOME); tick(4);
+  check(s1 === 17, `a quick HOME press opened Signal Chain (view ${s1})`);
+
+  // quick HOME again returns to Radar
+  X.pa_wasm_press(HOME); tick(3); X.pa_wasm_release(HOME); tick(6);
   const s2 = view();
-  check(s2 === 0, `and HOME again came back (view ${s2})`);
-  // a long HOME hold: no click
-  const s3 = view();
+  check(s2 === 0, `and HOME again returned to Radar (view ${s2})`);
+
+  // a long HOME hold (1.6 s) opens Settings (view 8)
+  console.log('\n=== HOME hold opens Settings (view 8) ===');
   X.pa_wasm_press(HOME);
-  tick(100);                     // 1.6 s - past the 1.5 s HOME hold
+  tick(100);                     // 1.6 s - past the 1.0 s HOME hold
   X.pa_wasm_release(HOME);
-  tick(4);
+  tick(10);
   const s4 = view();
-  check(s4 === s3, `a 1.6 s HOME hold did not act as a click (view ${s3} -> ${s4})`);
+  check(s4 === 8, `a 1.6 s HOME hold opened Settings (view ${s4})`);
 }
 
 console.log('\n' + (fails === 0 ? 'PARA SEMANTICS OK' : fails + ' FAILURE(S)'));

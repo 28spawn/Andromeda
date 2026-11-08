@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """Generate the Groove Station's drum kit: custom-fw/src/dsp/drum_kit.inc.
 
 Every voice is SYNTHESISED here - oscillators, noise and filters, with fixed random seeds -

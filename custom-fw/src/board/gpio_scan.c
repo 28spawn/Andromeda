@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/board/gpio_scan.c — Pocket Amp Buttons, Rotary Encoder & SARADC Scanner (QW-6 / BR-4)
  *

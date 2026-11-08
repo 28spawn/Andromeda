@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/jl_safe_flash.py - the safe flash writer for the JieLi ROM download mode
 (UBOOT1.00), modelled on the FM-1 community's Transporter/unbricker rules.

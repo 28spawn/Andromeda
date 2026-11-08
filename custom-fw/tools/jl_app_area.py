@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/jl_app_area.py - Pocket Amp application area: JieLi file table, CRCs, SFC encoding
 

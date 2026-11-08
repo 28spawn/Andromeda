@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_stock_assets.h - Dynamic Flash Loader & Fallback for Stock Amps and Cabs
  *

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/dsp/drums_synth.c — Groove Station drum machine
  *
  * Plays the project's own rhythm library (src/dsp/drum_patterns.inc, written in
@@ -15,7 +18,9 @@
 #include "pa_evlog.h"
 #include "fixedpoint.h"
 
+#if PA_FEAT_DRUMS
 #include "drum_codec.h"
+
 #include "drum_patterns.inc"
 #include "drum_kit.inc"
 
@@ -418,3 +423,18 @@ void pa_drums_mix_block(pa_drums_t *d, int32_t *q21_buf, int n) {
         q21_buf += m; n -= m;
     }
 }
+
+#else
+#include <string.h>
+
+void pa_drums_init(pa_drums_t *d) { if (d) memset(d, 0, sizeof(*d)); }
+void pa_drums_mix_block(pa_drums_t *d, int32_t *out, int n) { (void)d; (void)out; (void)n; }
+void pa_drums_set_bpm(pa_drums_t *d, uint16_t bpm) { (void)d; (void)bpm; }
+void pa_drums_set_style(pa_drums_t *d, uint8_t style) { (void)d; (void)style; }
+void pa_drums_set_level(pa_drums_t *d, uint8_t level) { (void)d; (void)level; }
+void pa_drums_set_playing(pa_drums_t *d, uint8_t playing) { (void)d; (void)playing; }
+const char *pa_drums_get_style_name(uint8_t style) { (void)style; return ""; }
+uint16_t pa_drums_style_length(uint8_t style) { (void)style; return 0; }
+uint16_t pa_drums_sounding_step(const pa_drums_t *d) { (void)d; return 0; }
+uint32_t pa_drums_voice_decode(uint32_t voice, float *out, uint32_t max) { (void)voice; (void)out; (void)max; return 0; }
+#endif

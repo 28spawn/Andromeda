@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/board/entry.S — JieLi AC791N (pi32v2 / q32DSP) Startup & Section Relocation (QW-3)
  *
@@ -260,7 +263,11 @@ pa_c1_land:                             /* the first code core 1 runs after the 
     .size pa_c1_land, . - pa_c1_land
 
 
+#if PA_PRODUCT_ANDROMEDA
+    .section .lowram.c1stack, "aw", @nobits     /* Andromeda: the low SRAM (app_andromeda.ld); the .pool region is the tape's */
+#else
     .section .pool.c1stack, "aw", @nobits
+#endif
     .p2align 3
     .global _c1_ustack
 _c1_ustack:

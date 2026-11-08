@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/board/usb_dev.c - the Pocket Amp's USB device driver (full speed, class-compliant MIDI).
  *
  * Written from register-level facts proven on this chip family by the open FM-1 firmware (the FM-1 is
@@ -69,8 +72,13 @@ static struct {
 /* ---- the descriptors ----------------------------------------------------------------------------- */
 /* The device and configuration descriptors are in include/pa_usb_desc.h (shared with the host test that checks them): an audio function (interfaces 0..2) and the MIDI function (3..4). */
 static const uint8_t STR0[4] = { 4, 3, 0x09, 0x04 };
+#if PA_PRODUCT_ANDROMEDA
+static const uint8_t STR1[] = { 20, 3, 'A',0,'n',0,'d',0,'r',0,'o',0,'m',0,'e',0,'d',0,'a',0 };
+static const uint8_t STR2[] = { 30, 3, 'A',0,'n',0,'d',0,'r',0,'o',0,'m',0,'e',0,'d',0,'a',0,' ',0,'A',0,'u',0,'d',0,'i',0,'o',0 };
+#else
 static const uint8_t STR1[] = { 34, 3, 'P',0,'o',0,'c',0,'k',0,'e',0,'t',0,' ',0,'A',0,'m',0,'p',0,' ',0,'b',0,'e',0,'n',0,'c',0,'h',0 };
 static const uint8_t STR2[] = { 26, 3, 'C',0,'u',0,'s',0,'t',0,'o',0,'m',0,' ',0,'M',0,'I',0,'D',0,'I',0,' ',0 };
+#endif
 
 /* ---- the SIE indirect port ----------------------------------------------------------------------- */
 /* sie_wr / sie_rd stay real calls: inlined at -O2 -mcpu=r3 the SIE accesses ran a few cycles apart and EP1 IN stopped after a packet or two on the same chip family

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/board/usb_ble.c — Pocket Amp USB Composite, Loopback & Chocolate Plus MIDI Pedal Driver */
 
 #include "pa_usb_ble.h"
@@ -139,14 +142,30 @@ static void midi_ev_push(pa_usb_ble_ctx_t *ctx, uint8_t kind, uint8_t a, uint8_t
     ctx->midi_ev_w++;                                                               /* published last */
 }
 
-/* the direct knobs, CC 102..118: (firmware slot, native knob). AMP knobs: GAIN 0, BASS 1, MID 2, TREBLE 3, PRES 4, MASTER 5 (= the stock's Level); DRIVE: DRIVE 0; DLY: TIME 0, FDBK 1, MIX 2;
- * REV: DECAY 0, LOWCUT 1, TONE 2, MIX 3; MOD: RATE 0, DEPTH 1; CAB: LEVEL 0, LOWCUT 1, HICUT 2. */
+/* the direct knobs, CC 102..118: (firmware slot, native knob). */
+#if PA_PRODUCT_ANDROMEDA
+/* Andromeda direct CC knobs (CC 102..118):
+ * 102..105: EFFECT macros 0..3 (DELAY slot, knobs 0..3)
+ * 106:      EFFECT mix (DELAY slot, knob 4)
+ * 107..110: LAYER macros 0..3 (MOD slot, knobs 0..3)
+ * 111:      LAYER level (MOD slot, knob 4)
+ * 112..117: SPACE decay, size, tone, send, shimmer fdbk, shimmer interval (REVERB slot, knobs 0..5)
+ * 118:      EFFECT space send (DELAY slot, knob 5)
+ */
+static const uint8_t k_cc_knob[17][2] = {
+    { PA_SLOT_DELAY, 0 }, { PA_SLOT_DELAY, 1 }, { PA_SLOT_DELAY, 2 }, { PA_SLOT_DELAY, 3 }, { PA_SLOT_DELAY, 4 }, /* 102..106: EFFECT */
+    { PA_SLOT_MOD, 0 },   { PA_SLOT_MOD, 1 },   { PA_SLOT_MOD, 2 },   { PA_SLOT_MOD, 3 },   { PA_SLOT_MOD, 4 },   /* 107..111: LAYER */
+    { PA_SLOT_REVERB, 0 }, { PA_SLOT_REVERB, 1 }, { PA_SLOT_REVERB, 2 }, { PA_SLOT_REVERB, 3 }, { PA_SLOT_REVERB, 4 }, { PA_SLOT_REVERB, 5 }, /* 112..117: SPACE */
+    { PA_SLOT_DELAY, 5 },                                                                                           /* 118: EFFECT Space Send */
+};
+#else
 static const uint8_t k_cc_knob[17][2] = {
     { PA_SLOT_AMP, 0 }, { PA_SLOT_AMP, 5 }, { PA_SLOT_AMP, 1 }, { PA_SLOT_AMP, 2 }, { PA_SLOT_AMP, 3 }, { PA_SLOT_AMP, 4 },       /* 102..107 */
     { PA_SLOT_DRIVE, 0 }, { PA_SLOT_DELAY, 0 }, { PA_SLOT_DELAY, 1 }, { PA_SLOT_DELAY, 2 },                                       /* 108..111 */
     { PA_SLOT_REVERB, 0 }, { PA_SLOT_REVERB, 3 }, { PA_SLOT_MOD, 0 }, { PA_SLOT_MOD, 1 },                                         /* 112..115 */
     { PA_SLOT_CAB, 0 }, { PA_SLOT_CAB, 1 }, { PA_SLOT_CAB, 2 },                                                                   /* 116..118 */
 };
+#endif
 
 static void nrpn_apply(pa_usb_ble_ctx_t *ctx, uint16_t d, int fine) {
     const uint8_t mod = ctx->nrpn_mod, par = ctx->nrpn_par;
@@ -176,7 +195,7 @@ static void handle_midi_cc(pa_usb_ble_ctx_t *ctx, uint8_t d1, uint8_t d2) {
         return;
     }
     if (d1 == 7u) { midi_ev_push(ctx, PA_MEV_PRESET_VOL, 0u, 0u, (uint16_t)(((uint32_t)d2 * 100u + 63u) / 127u)); return; }
-    if (d1 >= 102u && d1 <= 118u) {
+    if (d1 >= 102u && d1 < (102u + (uint8_t)(sizeof(k_cc_knob) / sizeof(k_cc_knob[0])))) {
         const uint8_t *k = k_cc_knob[d1 - 102u];
         midi_ev_push(ctx, PA_MEV_KNOB, k[0], k[1], (uint16_t)((uint32_t)d2 * 16383u / 127u));
         return;
@@ -201,7 +220,7 @@ static void handle_midi_cc_off(pa_usb_ble_ctx_t *ctx, uint8_t d1, uint8_t d2) {
 static void handle_midi_pedal_event(pa_usb_ble_ctx_t *ctx, uint8_t status, uint8_t d1, uint8_t d2) {
     uint8_t type = status & 0xF0u;
     if (type == 0xB0u) { handle_midi_cc(ctx, d1, d2); handle_midi_cc_off(ctx, d1, d2); }      /* the controls of MIDI-MAP-CUSTOM.md; the older ones below stay as they were */
-    if (type == 0xC0u && d1 < 80u) {
+    if (type == 0xC0u && d1 < PA_PRESET_COUNT) {
         ctx->midi_pedal_preset_req = (int8_t)d1;
     } else if (type == 0xB0u && d2 >= 64u) {
         if (d1 >= 20u && d1 <= 27u) {
@@ -218,6 +237,14 @@ static void handle_midi_pedal_event(pa_usb_ble_ctx_t *ctx, uint8_t status, uint8
             ctx->midi_pedal_enc_delta -= 1;
         } else if (d1 == 67u) {
             ctx->midi_pedal_enc_delta += 1;
+        } else if (d1 == 68u) {
+            ctx->midi_pedal_btn_events |= PA_BTN_LEFT;
+        } else if (d1 == 69u) {
+            ctx->midi_pedal_btn_events |= PA_BTN_RIGHT;
+        } else if (d1 == 70u) {
+            ctx->midi_pedal_btn_events |= PA_BTN_HOME_HOLD;
+        } else if (d1 == 71u) {
+            ctx->midi_pedal_btn_events |= PA_BTN_PARA_HOLD2;
         }
     }
 }

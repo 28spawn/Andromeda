@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* tools/amp_level_calib.c : AMP(GAIN 50 % = 0 dB, flat) + matching CAB, DI peak -10 dBFS.
  * Build with -DPA_AMP_TRIM_DISABLE; prints k_amp_out_trim_db[] for target -18 dBFS RMS. */
 #include <stdio.h>

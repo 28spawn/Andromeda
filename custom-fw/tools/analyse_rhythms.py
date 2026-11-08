@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """Analyse the reference rhythm library: the bar structure of every style, whether the
 content is a repeating phrase, and how much silence is left at the end of the loop.
 

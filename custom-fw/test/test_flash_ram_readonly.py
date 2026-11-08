@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """The flash controller probe (src/board/flash_ram.c) is READ-ONLY and is entered through the right address; the driver operation (step 3) sends only the allowed commands and writes only inside the map windows.
 
 1. The only SPI NOR commands it sends are the reads: 0x9F (JEDEC id), 0x05 / 0x35 (status registers), 0x0B (fast read). Never write enable (0x06), program (0x02), erase (0x20 / 0x52 / 0xD8 / 0xC7 / 0x60),

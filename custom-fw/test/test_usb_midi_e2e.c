@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_usb_midi_e2e.c - the USB-MIDI receive-to-response pipeline, end to end, on the PRODUCTION code.
  *
  *   pa_usb_midi_rx_packet() -> midi_rx_ring -> pa_usb_ble_poll() -> pa_diag_feed() / pa_sysex_input_byte() (+ the OTA scanner)
@@ -499,14 +502,14 @@ int main(void)
         struct { uint8_t cin, st, d1, d2; } t[] = {
             { 0x0B, 0xB0, 64, 127 }, { 0x0B, 0xB0, 65, 127 }, { 0x0B, 0xB0, 66, 64 }, { 0x0B, 0xB0, 67, 127 },       /* HOME, PARA click, encoder - / + */
             { 0x0B, 0xB0, 20, 63 },                                                                                  /* value < 64: ignored */
-            { 0x0C, 0xC0, 79, 0 }, { 0x0C, 0xC0, 80, 0 },                                                            /* preset 79 accepted, 80 ignored */
+            { 0x0C, 0xC0, (uint8_t)(PA_PRESET_COUNT - 1), 0 }, { 0x0C, 0xC0, (uint8_t)PA_PRESET_COUNT, 0 },           /* max preset accepted, next ignored */
         };
         pa_usb_ble_ctx_t *c = &g_ctx; (void)c;
         for (unsigned i = 0; i < sizeof t / sizeof t[0]; i++) { uint8_t e[4] = { t[i].cin, t[i].st, t[i].d1, t[i].d2 }; pa_usb_midi_rx_packet(&g_ctx, e, 4); }
         EXPECT(g_ctx.midi_pedal_btn_events == (PA_BTN_HOME | PA_BTN_PARA_CLICK), "button events %#x", (unsigned)g_ctx.midi_pedal_btn_events);
         EXPECT(g_ctx.midi_pedal_enc_delta == 0, "encoder delta %d (expect -1 + 1 = 0)", (int)g_ctx.midi_pedal_enc_delta);
         EXPECT(g_ctx.midi_pedal_toggle_slot == -1, "CC 20 value 63 toggled a slot");
-        EXPECT(g_ctx.midi_pedal_preset_req == 79, "preset request %d (expect 79; PC 80 must be ignored)", (int)g_ctx.midi_pedal_preset_req);
+        EXPECT(g_ctx.midi_pedal_preset_req == (int8_t)(PA_PRESET_COUNT - 1), "preset request %d (expect %u; next must be ignored)", (int)g_ctx.midi_pedal_preset_req, PA_PRESET_COUNT - 1);
     }
     T_END();
 

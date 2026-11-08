@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """The effect window: the < and > buttons must adjust the setting under the
 cursor.
 

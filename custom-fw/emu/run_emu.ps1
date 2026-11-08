@@ -1,4 +1,7 @@
-# custom-fw/emu/run_emu.ps1 — Build & Launch Pocket Amp Live Emulator + ASIO Audio Workbench
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
+# custom-fw/emu/run_emu.ps1 — Build & Launch Andromeda Live Emulator + ASIO Audio Workbench
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $RepoRoot
@@ -9,20 +12,11 @@ if (-not $clangExe) {
     $env:PATH = "$clangDir;$env:PATH"
 }
 
-Write-Host "[1/2] Compiling Pocket Amp Firmware into Native Emulator DLL (pocket_amp_emu.dll)..." -ForegroundColor Cyan
-
-# ---- the source list -------------------------------------------------------
-# Globbed through custom-fw/sources.txt, so a new module can never be
-# silently forgotten by one target. The only difference between the targets is
-# which board files they replace themselves, and that is written down ONCE.
-. custom-fw\tools\Read-Sources.ps1
-$manifest = Read-SourceManifest
-$sources = @(Get-SourceFiles -Target "emu" -Sections $manifest | ForEach-Object { "custom-fw/" + $_ })
-
-clang -O3 -shared -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 -DPA_EMU_DLL=1 `
-  custom-fw/emu/emu_bridge.c `
-  $sources `
-  -o custom-fw/emu/pocket_amp_emu.dll
+Write-Host "[1/2] Compiling Andromeda Firmware into Native Emulator DLL (andromeda_emu.dll)..." -ForegroundColor Cyan
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build_dll.ps1") -Product andromeda
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to compile andromeda_emu.dll"
+}
 
 # Pick the first free port in 8080..8099. 8080 is commonly taken by some other
 # dev server; before this the emulator just died with "address already in use".

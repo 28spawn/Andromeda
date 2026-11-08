@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_fft_conv2.c - the two-channel convolver (fc_block2) against two independent one-channel convolvers: the left output and the right output must match
  * fc_block with each IR on its own, bit for bit, for IRs of 1,024, 300 and 64 taps and with the partition limit set. */
 #include <stdio.h>

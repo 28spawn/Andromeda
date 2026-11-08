@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/comms_sysex_stubs.c - the storage and settings hooks src/sys/sysex.c calls, stubbed for the host communications tests.
  * Only the flash, preset and settings boundary is stubbed here; the SysEx parser and its dispatch (sysex.c) are the production code.
  * The same stubs are inlined in test_sysex_read.c; this file lets the communications suite link sysex.c without copying them again. */
@@ -26,3 +29,7 @@ int      pa_user_nam_clear(void) { return -1; }
 int      pa_user_cab_clear(void) { return -1; }
 int      pa_user_cab_rename(uint8_t i, const char *n) { (void)i; (void)n; return -1; }
 
+int      pa_meas_diag(const uint8_t *in, uint32_t len, void (*reply)(uint8_t, const uint8_t *, uint32_t)) {
+    (void)in; (void)len; (void)reply;
+    return 0;
+}

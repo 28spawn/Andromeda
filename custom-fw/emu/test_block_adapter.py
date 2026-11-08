@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/emu/test_block_adapter.py - the emulator must not crackle whatever frame count
 the host's audio API delivers.

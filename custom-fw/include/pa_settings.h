@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* pa_settings.h — persistent system settings (IMP-10)
  * Stored in the System Settings sector (include/pa_flash_map.h: one 4 KB sector, updated in place), sequence + CRC-protected,
  * written 2 s after the last change so encoder turns don't wear the flash. */

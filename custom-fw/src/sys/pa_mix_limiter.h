@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/sys/pa_mix_limiter.h - the limiter on the guitar + drums sum
  *
  * Header-only: pa_audio_core.c uses it, and test/test_mix_limiter.c measures the same code.

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_flash_map.h - the Pocket Amp's SPI NOR flash, as it really is: ONE MEGABYTE (JEDEC ID 0x856014).
  *

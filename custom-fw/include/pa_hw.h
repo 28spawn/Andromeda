@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* pa_hw.h — hardware memory map & MMIO contract.
  * Hardware register definitions for JieLi AC791N SoC.
  * JieLi AC791N / pi32v2. XIP flash base 0x02000000, RAM from 0x01C00000. */

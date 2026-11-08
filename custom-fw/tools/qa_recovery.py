@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/qa_recovery.py - recovery-readiness evidence (TEST-PROTOCOL.md section 4).
 

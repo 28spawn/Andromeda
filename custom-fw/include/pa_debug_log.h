@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * custom-fw/include/pa_debug_log.h — Pocket Amp Real-Time Firmware & Emulator Logger
  */

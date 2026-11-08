@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """The Onyx release package (tools/onyx_pkg_make.py) is built from scratch and carries no M-VAVE material:
 
     python custom-fw/test/test_onyx_package.py [package.fwsc app.bin]       (default: the newest custom-fw/release/Onyx-*/Onyx-*.fwsc and custom-fw/build_app.bin)
@@ -23,7 +26,7 @@ args = sys.argv[1:]
 if len(args) >= 2:
     pkg_path, app_path = args[0], args[1]
 else:
-    c = sorted(glob.glob(os.path.join(ROOT, "release", "*", "*.fwsc")))
+    c = sorted(glob.glob(os.path.join(ROOT, "release", "*", "*.fwsc")), key=os.path.getmtime)
     if not c:
         print("  skip  no release package yet (build.ps1 writes it)"); sys.exit(0)
     pkg_path, app_path = c[-1], os.path.join(ROOT, "build_app.bin")

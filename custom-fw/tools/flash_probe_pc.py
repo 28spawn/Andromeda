@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/flash_probe_pc.py - what did the READ-ONLY flash controller probe (src/board/flash_ram.c) find? Reads the result block from the RUNNING unit over the USB-MIDI diagnostic channel.
 Nothing is written to the unit.

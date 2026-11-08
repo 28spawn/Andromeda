@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """Lossless byte diff for two saved 80 x 92-byte preset banks.
 
 Use with controlled captures where exactly one editor/device setting changed.

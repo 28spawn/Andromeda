@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 import tempfile
 """
 Build the Pocket Amp firmware core to WebAssembly.
@@ -121,7 +124,7 @@ def main():
         obj = os.path.join(OUT, rel.replace("/", "_").replace(".c", ".o"))
         cmd = [zig, "cc", "--target=" + target, "-Oz", "-Wall", "-fPIC",
                "-ffreestanding", "-fno-builtin",
-               "-DPA_HOST_SIM=1", "-DPA_EMU_DLL=1", "-DPA_POOL_TEST=1",
+               "-DBOARD_POCKET_AMP=1", "-DPA_PRODUCT_ANDROMEDA=1", "-DPA_HOST_SIM=1", "-DPA_EMU_DLL=1", "-DPA_POOL_TEST=1", "-DPA_STOCK_FLASH_LOADER=1",
                "-I", os.path.join(FW, "include"),
                "-c", src, "-o", obj]
         r = subprocess.run(cmd, capture_output=True, text=True)
@@ -132,7 +135,7 @@ def main():
             for line in r.stderr.strip().splitlines():
                 if "warning" in line: print(f"  [warn] {rel}: {line.strip()}")
         objs.append(obj)
-    wasm = os.path.join(OUT, "pocket_amp.wasm")
+    wasm = os.path.join(OUT, "andromeda.wasm")
     cmd = [zig, "cc", "--target=" + target, "-Oz", "-shared", "-fPIC",
            "-Wl,--no-entry", "-Wl,--export-dynamic",
            "-o", wasm, *objs]
@@ -146,7 +149,9 @@ def main():
     import shutil
     page_dir = os.path.join(FW, "wasm")
     try:
+        shutil.copy2(wasm, os.path.join(page_dir, "andromeda.wasm"))
         shutil.copy2(wasm, os.path.join(page_dir, "pocket_amp.wasm"))
+        shutil.copy2(wasm, os.path.join(OUT, "pocket_amp.wasm"))
     except Exception as e:
         print(f"  [warn] could not copy the wasm next to workbench.html: {e}")
 

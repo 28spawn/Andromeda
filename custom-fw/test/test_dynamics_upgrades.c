@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_dynamics_upgrades.c — Test suite for dynamics processor upgrades:
  * 1. Smooth Peak/RMS Hybrid Detector (transient capture & low-frequency ripple elimination)
  * 2. Expander Range Limit (configurable floor / downward expansion)

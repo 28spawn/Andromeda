@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/sys/pa_pool.c - deterministic static-pool allocator for effect state (see notes below).
  */

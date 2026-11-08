@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """The emulator's front-panel buttons: press, release, click and HOLD.
 
 Why this test exists

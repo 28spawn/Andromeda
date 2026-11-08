@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ble_midi_send_pc.py - connect to the Pocket Amp over BLE from the PC, turn the BLE-MIDI notifications on and send it MIDI messages.
 

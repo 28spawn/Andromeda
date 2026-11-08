@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/usb_diag_trace_pc.py - when diagnostic replies stop, does the unit stop transmitting, or does the PC lose them?
 

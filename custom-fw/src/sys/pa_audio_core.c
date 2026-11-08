@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
+#include "pa_meas.h"
 #include "../../include/pa_config.h"
 /* src/sys/pa_audio_core.c - the portable audio core (see pa_audio_core.h).
  *
@@ -32,6 +36,9 @@ volatile uint8_t g_pa_gov_level;           /* set by the audio interrupt's load 
 volatile uint16_t g_pa_in_trace[PA_IN_TRACE_N];        /* the raw input's peak per 46 ms since the audio started (>> 8 of the 24-bit value) */
 volatile int16_t  g_pa_in_trace_mean[PA_IN_TRACE_N];  /* ... and its mean */
 volatile uint8_t g_pa_overload_force;     /* tests: 1 = behave as overloaded (the popup) */
+#if PA_PRODUCT_ANDROMEDA
+volatile uint32_t g_pa_set_save[4];       /* settings saves since power-on: [0] count, [1] the last one's duration in us, [2] the longest, [3] failures (read by tools/module_probe.py through the ELF) */
+#endif
 static volatile uint32_t s_swap_done_seq;   /* counts the swaps the audio thread has applied: the main loop redraws the screen for each one (the screen is drawn from the chain, which a swap changes) */
 static uint32_t pa_perf_permille(uint32_t modelled);   /* the measured CPU load on the device, the model elsewhere (below) */
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
@@ -261,6 +268,12 @@ static void amp_slot_run(fx_node_t *nd, int32_t *buf, int n) {
     amp_post_run(c, buf, n);
 }
 
+#if PA_PRODUCT_ANDROMEDA
+fx_node_t *pa_amp_node_create(pa_nam_model_t *gru, pa_wavenet_model_t *wn, int *engine_flag) {
+    (void)gru; (void)wn; (void)engine_flag;
+    return (fx_node_t *)0;
+}
+#else
 fx_node_t *pa_amp_node_create(pa_nam_model_t *gru, pa_wavenet_model_t *wn, int *engine_flag) {
     static fx_node_t node;
     s_gru    = gru;
@@ -268,7 +281,9 @@ fx_node_t *pa_amp_node_create(pa_nam_model_t *gru, pa_wavenet_model_t *wn, int *
     s_engine = engine_flag;
 
     nam_model_init(gru);
+#if PA_FEAT_WAVENET
     pa_wavenet_init_default(wn);
+#endif
 
     node.next        = 0;
     node.active      = 1;
@@ -291,6 +306,7 @@ fx_node_t *pa_amp_node_create(pa_nam_model_t *gru, pa_wavenet_model_t *wn, int *
     g_amp_live = g_amp_next; g_amp_live_seq = g_amp_next_seq;
     return &node;
 }
+#endif
 
 /* ---- the click-free mute crossfade (Blk-02) --------------------------------
  * The UI thread must never rewrite chain state while the audio thread is
@@ -511,6 +527,10 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
                         uint32_t buttons, int32_t enc_delta, const uint16_t *pots) {
     if (bsp && bsp->feed_wdt) bsp->feed_wdt();
     const uint32_t now = (bsp && bsp->now_ms) ? bsp->now_ms() : 0;
+#if PA_PRODUCT_ANDROMEDA
+    pa_ui_meas_service(ui, chain);                         /* commands from the measurement channel, run here in the main loop like the front panel's */
+    pa_meas_tick(now);
+#endif
 
     PA_CP(0x61);
     /* 1. Battery: the real SARADC reading, the LiPo curve, two warning levels. */
@@ -566,6 +586,7 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
         if (pct > 100u) pct = 100u;
         /* The LAST CHANGE wins: compare with the reading the knob last set, not with the level, so a level set from the menu or over MIDI stays until the knob is turned (2 % of noise margin). */
         static uint8_t s_pot_last = 255u;
+        static uint32_t s_pot_ui_ms;
         const int dpct = (s_pot_last == 255u) ? 100 : (int)pct - (int)s_pot_last;
         if (g_pa_master_hold) {
             s_pot_last = (uint8_t)pct;                              /* the first reading: take it whatever the saved level was, and let the output up */
@@ -575,6 +596,7 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
             g_pa_master_hold = 0;
             pa_evlog(PA_EV_MASTER, now, pct);
             ui->dirty = 1;
+            s_pot_ui_ms = now;
         } else if (dpct >= 2 || dpct <= -2 || (pct == 0u && s_pot_last != 0u) || (pct == 100u && s_pot_last != 100u)) {
             s_pot_last = (uint8_t)pct;
             /* The pot and the Settings OUTPUT LEVEL are the same control on the
@@ -583,7 +605,10 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
             ui->out_level_pct = (uint8_t)pct;
             g_pa_audio.master_vol_q15 = pa_audio_core_master_q15((uint8_t)pct);
             pa_ui_mark_settings_dirty(ui);
-            ui->dirty = 1;
+            if (pct == 0u || pct == 100u || (uint32_t)(now - s_pot_ui_ms) >= 50u) {
+                ui->dirty = 1;
+                s_pot_ui_ms = now;
+            }
         }
     }
 #endif
@@ -638,7 +663,12 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
      * and synthesises the combo and HOLD bits. The board layer only has to
      * report which buttons are down. */
     pa_input_set_raw(&g_input, buttons);
+#if PA_PRODUCT_ANDROMEDA
+    /* Andromeda: on the play screen and the chain page the four keys act on release and a long press (0.8 s) is its own event: < held resets the effect, VOL- / VOL+ held change the preset */
+    g_input.keys_hold_mode = (uint8_t)(ui->view == PA_UI_VIEW_MAIN_GRID || ui->view == PA_UI_VIEW_CHAIN);
+#else
     g_input.keys_hold_mode = (uint8_t)(ui->play_mode == 1u && ui->view == PA_UI_VIEW_MAIN_GRID);   /* STOMP mode: the four keys act on release, a long press assigns */
+#endif
     uint32_t mask = pa_input_update(&g_input, now);
 
     /* The USB/BLE MIDI footswitch events are folded into the same input path
@@ -660,6 +690,15 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
         if (usb->midi_pedal_toggle_slot >= 0) {
             int s = usb->midi_pedal_toggle_slot;
             usb->midi_pedal_toggle_slot = -1;
+#if PA_PRODUCT_ANDROMEDA
+            if (s == PA_SLOT_CAB) {
+                /* CC 25: In Andromeda, toggles SHIMMER! */
+                int32_t *fb = &ui->slot_params[PA_SLOT_REVERB][4];
+                *fb = (*fb > 0) ? 0 : 1048576;
+                pa_fx_chain_set_param(chain, PA_SLOT_REVERB, 4, *fb);
+                ui->dirty = 1;
+            } else
+#endif
             if (s < PA_SLOT_COUNT && chain->slots[s]) {
                 fx_node_t *nd = chain->slots[s];
                 pa_fx_chain_set_slot_enabled(chain, (pa_fx_slot_id_t)s, !(nd->active && nd->fade_dir >= 0));
@@ -711,7 +750,7 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
          * (a rising edge) and not again for 8 s; it stays 3 s, on any screen, and tells the player what to do. */
         extern volatile uint8_t g_pa_stereo_allow;
         static uint8_t s_ol_prev;
-        static uint32_t s_ol_until, s_ol_last, s_xr_prev, s_xr_t0, s_xr_burst_t, s_sw_prev;
+        static uint32_t s_ol_until, s_ol_last, s_xr_prev, s_xr_t0, s_xr_burst_t, s_sw_prev, s_ol_hold_t;
         if ((uint32_t)(now - s_xr_t0) >= 1000u) {
             const uint32_t xr = g_pa_audio.xrun_count;
             const uint32_t sw = s_swap_done_seq;
@@ -720,10 +759,17 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
         }
         const uint8_t ol = (uint8_t)(g_pa_audio.bypass || !g_pa_stereo_allow || g_pa_gov_level >= 2u || g_pa_overload_force ||
                                      (s_xr_burst_t != 0u && (uint32_t)(now - s_xr_burst_t) < 1500u));
-        if (ol && !s_ol_prev && (s_ol_last == 0u || (uint32_t)(now - s_ol_last) >= 8000u)) {
-            ui->overload_ms = 3000u; s_ol_until = now + 3000u; s_ol_last = now; ui->dirty = 1;
+        if (ol) {
+            if (!s_ol_hold_t) s_ol_hold_t = now;
+            const int sustained = g_pa_overload_force || ((uint32_t)(now - s_ol_hold_t) >= 250u);
+            if (sustained && !s_ol_prev && (s_ol_last == 0u || (uint32_t)(now - s_ol_last) >= 8000u)) {
+                ui->overload_ms = 3000u; s_ol_until = now + 3000u; s_ol_last = now; ui->dirty = 1;
+            }
+            if (sustained) s_ol_prev = 1;
+        } else {
+            s_ol_hold_t = 0u;
+            s_ol_prev = 0;
         }
-        s_ol_prev = ol;
         if (ui->overload_ms && (int32_t)(now - s_ol_until) >= 0) { ui->overload_ms = 0u; ui->dirty = 1; }
     }
 
@@ -764,6 +810,7 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
      * any more (the 9 METRO styles are unreachable from the screen, and the
      * engine's own METRO handling is keyed off the style number, so the old
      * pa_drums_set_click() switch has gone). */
+#if PA_FEAT_DRUMS
     pa_drums_set_bpm(drums, ui->drum_bpm);
     pa_drums_set_style(drums, (uint8_t)(ui->drum_pattern % PA_DRUM_GROOVE_STYLE_COUNT));
     pa_drums_set_level(drums, ui->drum_volume);
@@ -774,6 +821,9 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
     if (ui->view == PA_UI_VIEW_DRUMS && ui->drum_step != sounding) {
         ui->drum_step = sounding; ui->dirty = 1;
     }
+#else
+    (void)drums;
+#endif
 
     /* 6. Auto-dim (OFF / 30 s / 1 min / 5 min) to 15 % backlight. */
     static const uint32_t k_dim_ms[4] = { 0u, 30000u, 60000u, 300000u };
@@ -786,10 +836,28 @@ void pa_audio_core_tick(pa_fx_chain_t *chain, pa_ui_ctx_t *ui, pa_drums_t *drums
 
     PA_CP(0x6D);
     /* 7. Persist the settings 2 s after the last change (one 4 KB sector write). */
-    if (ui->settings_dirty && (uint32_t)(now - ui->settings_dirty_ms) > 2000u &&
+#if PA_PRODUCT_ANDROMEDA
+    /* SIGNED difference. `now` is read at the top of this tick, and the MASTER pot handler above (and the UI) stamp settings_dirty_ms with plat_ms() LATER in the same tick: the stamp is then a
+     * few ms AFTER `now`, and the unsigned difference wrapped to about 4 billion, which is "more than 2 s ago": every pot step wrote the flash at once instead of 2 s after the last change.
+     * Bench 2026-11-07: about 20 saves a second while the knob moved, each 6.7 ms (37 ms every 64th), each holding the audio interrupt off for about 1.3 ms = codec overruns and the popup. */
+    const int sv_due = (int32_t)(now - ui->settings_dirty_ms) > 2000;
+#else
+    const int sv_due = (uint32_t)(now - ui->settings_dirty_ms) > 2000u;
+#endif
+    if (ui->settings_dirty && sv_due &&
         !(bsp && bsp->battery_brownout && bsp->battery_brownout())) {
         settings_from_ui(&g_settings, ui);
-        if (pa_settings_save(&g_settings) == 0) ui->settings_dirty = 0;
+#if PA_PRODUCT_ANDROMEDA && !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
+        PA_CP(0x6E);                                         /* the flash write starts (crumb; the late-start events carry the last crumb) */
+        const uint32_t sv_t0 = plat_ticks24();
+#endif
+        const int sv_rc = pa_settings_save(&g_settings);
+#if PA_PRODUCT_ANDROMEDA && !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
+        PA_CP(0x6F);
+        {   const uint32_t us = (plat_ticks24() - sv_t0) / 24u;   /* settings saves: how many, the last one's time, the longest, the failures (tools/module_probe.py) */
+            g_pa_set_save[0]++; g_pa_set_save[1] = us; if (us > g_pa_set_save[2]) g_pa_set_save[2] = us; if (sv_rc) g_pa_set_save[3]++; }
+#endif
+        if (sv_rc == 0) ui->settings_dirty = 0;
         else ui->settings_dirty_ms = now;                    /* retry later */
     }
 
@@ -845,7 +913,14 @@ static uint8_t        s_swap_slot, s_swap_type;
 static void pa_audio_core_apply_model(pa_fx_chain_t *chain, pa_ui_ctx_t *ui,
                                       uint8_t slot, uint8_t type) {
     extern pa_nam_model_t     g_nam_model;
+#if PA_FEAT_WAVENET
     extern pa_wavenet_model_t g_wn_model;
+#define PA_WN_MODEL_PTR (&g_wn_model)
+#define PA_WN_OFF() (g_wn_model.active = 0)
+#else
+#define PA_WN_MODEL_PTR ((pa_wavenet_model_t *)0)
+#define PA_WN_OFF() ((void)0)
+#endif
     extern int                g_active_amp_engine;
 
     if (slot == PA_SLOT_AMP) {
@@ -854,16 +929,16 @@ static void pa_audio_core_apply_model(pa_fx_chain_t *chain, pa_ui_ctx_t *ui,
             if (chain->slots[PA_SLOT_AMP] && chain->slots[PA_SLOT_AMP]->state)
                 pa_stock_load_amp(type, (pa_nam_model_t *)chain->slots[PA_SLOT_AMP]->state, NULL);
             g_active_amp_engine = 0;
-            g_wn_model.active = 0;
+            PA_WN_OFF();
         } else {
             uint8_t u_idx = (uint8_t)(type - PA_STOCK_AMP_COUNT);
-            const int ld_rc = pa_user_nam_load_into_dsp(u_idx, &g_nam_model, &g_wn_model);
+            const int ld_rc = pa_user_nam_load_into_dsp(u_idx, &g_nam_model, PA_WN_MODEL_PTR);
             if (ld_rc != 0) {
                 pa_evlog(PA_EV_LOAD_FAIL, (uint32_t)(-ld_rc), u_idx);          /* otherwise the fallback below is silent */
                 /* Fallback to stock amp model 0 if user capture is missing or corrupted */
                 pa_stock_load_amp(0, &g_nam_model, NULL);
                 g_active_amp_engine = 0;
-                g_wn_model.active = 0;
+                PA_WN_OFF();
                 effective_type = 0;
                 if (ui) ui->slot_type[PA_SLOT_AMP] = 0;
             } else {
@@ -877,12 +952,14 @@ static void pa_audio_core_apply_model(pa_fx_chain_t *chain, pa_ui_ctx_t *ui,
             pa_nam_prewarm((const pa_nam_model_t *)chain->slots[PA_SLOT_AMP]->state);
         }
     } else if (slot == PA_SLOT_CAB) {
+#if !PA_PRODUCT_ANDROMEDA   /* Andromeda: the cabinet is a stub, locked off (fx_cab_ir.c) */
         static int32_t c_taps[PA_STOCK_CAB_TAPS];
         uint32_t n_taps = PA_STOCK_CAB_TAPS;
         if (pa_cab_load(type, c_taps, &n_taps) == 0 && chain->slots[PA_SLOT_CAB]) {
             fx_cab_ir_load_q18(chain->slots[PA_SLOT_CAB], c_taps, n_taps);
             fx_cab_ir_set_stock_trim(chain->slots[PA_SLOT_CAB], type);
         }
+#endif
     } else if (slot < PA_SLOT_COUNT) {
         /* DRIVE, MOD, DLY, REV, EQ, DYN: a type change of a slot that is sounding. Done live it reset the effect's state in the middle of the signal: the emulator click probe measured
          * MOD 5 of 7, DLY 3 of 9 and EQ 2 of 3 type changes at 7-68x the steady step. Here the output is muted, like an amp change. */
@@ -1177,8 +1254,20 @@ PA_HOT void pa_audio_core_process_half(const int32_t *rx_half, int32_t *tx_half)
     int32_t v_target = (int32_t)out_vol;
     int32_t v_step = (v_target - v_start) / (int)PA_AUDIO_BLOCK_FRAMES;
     int32_t v_cur = v_start;
+#if PA_PRODUCT_ANDROMEDA
+    /* The MASTER knob is read 20 times a second, so the target moves in steps (several dB when it is turned fast). A one-block (1.45 ms) ramp to each step is a gain stair at 20 Hz: it
+     * is heard as chopping / a robotic tremolo. Between the knob and the output the gain now follows the target with a one-pole smoother (time constant about 23 ms, a little under half
+     * of the 50 ms reading period). A mute (the output held for a flash write) and the start from silence keep the one-block ramp. */
+    static int32_t s_vol_acc;                                   /* Q27: the running gain, finer than the Q15 the rest of the code reads */
+    const int vol_slow = !g_pa_master_hold && v_start != 0 && v_target != 0;   /* to 0 % (the knob at its end) the output still goes silent within one block */
+    const int32_t vol_t27 = v_target << 12;
+    if (vol_slow && (s_vol_acc >> 12) != v_start) s_vol_acc = v_start << 12;    /* somebody else set the gain (start, hold): follow from there */
+#endif
 
     for (int i = 0; i < (int)PA_AUDIO_BLOCK_FRAMES; i++) {
+#if PA_PRODUCT_ANDROMEDA
+        if (vol_slow) { s_vol_acc += (vol_t27 - s_vol_acc) >> 10; v_cur = s_vol_acc >> 12; } else
+#endif
         v_cur += v_step;
         int64_t acc_l = (int64_t)s_out_l_q28[i] * v_cur;
         int64_t acc_r = (int64_t)s_out_r_q28[i] * v_cur;
@@ -1200,7 +1289,11 @@ PA_HOT void pa_audio_core_process_half(const int32_t *rx_half, int32_t *tx_half)
         tx_half[2 * i + 0] = l24 & 0x00FFFFFF;
         tx_half[2 * i + 1] = r24 & 0x00FFFFFF;
     }
+#if PA_PRODUCT_ANDROMEDA
+    g_pa_audio.master_vol_cur_q15 = (uint16_t)(vol_slow ? (s_vol_acc >> 12) : v_target);
+#else
     g_pa_audio.master_vol_cur_q15 = (uint16_t)v_target;
+#endif
     g_pa_audio.output_peak_s24 = out_peak;
     g_pa_audio.irq_count++;
     PA_ISR_CP(0x15);
@@ -1215,7 +1308,9 @@ PA_HOT void pa_audio_core_process_half(const int32_t *rx_half, int32_t *tx_half)
 #define PT_VAR(v) uint32_t v = 0u
 #define PT_SET(v) ((void)(v))
 #endif
+#if PA_FEAT_DRUMS
 static pa_mixlim_t s_mixlim;     /* the guitar + drums sum limiter (zeroed: inits itself) */
+#endif
 
 int32_t pa_soft_ceiling_q21(int32_t x) {
     /* Above -1 dBFS compress 4:1 up to a hard ceiling of 0 dBFS (only active
@@ -1235,6 +1330,9 @@ PA_HOT void pa_audio_core_process_block(pa_fx_chain_t *chain, pa_ui_ctx_t *ui,
     PA_ISR_CP(0x21);
     pa_audio_core_run_pending(chain, ui);
     PA_ISR_CP(0x22);
+#if PA_PRODUCT_ANDROMEDA
+    pa_meas_inject(buf_L, buf_R, n);                       /* the measurement channel's test source replaces the guitar while it is on */
+#endif
 
     /* 1. Chromatic Tuner (pre-FX clean guitar signal on the left channel) */
     if (ui && ui->tuner.active) {
@@ -1290,19 +1388,19 @@ PA_HOT void pa_audio_core_process_block(pa_fx_chain_t *chain, pa_ui_ctx_t *ui,
     /* 3. Mix the Groove Station drums through the sum limiter (pa_mix_limiter.h): it
      *    turns the guitar + drums sum down a little when a hit would not fit, instead of
      *    letting the soft ceiling below clip it. Silent drums: the guitar is untouched. */
+#if PA_FEAT_DRUMS
     if (drums && drums->playing) {
         int32_t drum_tmp[PA_AUDIO_BLOCK_FRAMES] = {0};
         PA_DRUMDBG_T(dt0);
         pa_drums_mix_block(drums, drum_tmp, n);
         PA_DRUMDBG_T(dt1);
         PA_DRUMDBG_TIME(2, dt1 - dt0);
-        /* A block in which no drum sounded adds nothing: hand the limiter no input then, so its idle check can return at once (it still
-         * drains the look-ahead while a hit is in it). The result is the same as feeding it a block of zeros. */
         pa_mixlim_process(&s_mixlim, buf_L, buf_R, drums->bus_idle ? 0 : drum_tmp, n);
         PA_DRUMDBG_TIME(3, plat_ticks24() - dt1);
     } else {
         pa_mixlim_process(&s_mixlim, buf_L, buf_R, 0, n);   /* drains the look-ahead */
     }
+#endif
     PT_SET(pt3);
     PA_ISR_CP(0x26);
     /* + USB backing track */

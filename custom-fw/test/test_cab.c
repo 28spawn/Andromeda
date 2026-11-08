@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_cab.c — Cabinet IR Convolver verification suite.
  * Tests partitioned FIR vs scalar reference, pre-delay stripper with pre-roll,
  * half-Hann tail windowing, L2-norm matching, and DF2T biquad post-filters.

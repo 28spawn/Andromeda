@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* pa_plat.h — Pocket Amp hardware abstraction seam (roadmap QW-1).
  * Pattern adapted from charlesvestal/fm1-x0x (firmware/src/app/plat.h).
  * Portable code in src/dsp, src/nam, src/cab, src/fx, src/sys NEVER touches MMIO directly. */

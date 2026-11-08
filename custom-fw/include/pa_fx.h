@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* pa_fx.h — common effect-node interface & V105 Customizable 6+1 Stereo/Tail Chain Manager.
  * Matches Pocket Amp User Manual (Pages 4, 6, 7–13) and V105 Release Notes. */
 #ifndef PA_FX_H
@@ -152,11 +155,18 @@ void pa_fx_chain_run_front(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R,
 /* How much of the front core 1 may take, in microseconds of its block (default 1300). The slots before the amp that do not fit run on
  * core 0 before the hand-over (a drive pedal in front of the amp would otherwise push core 1 past its block). 1 = the amp alone. */
 void pa_fx_chain_set_core1_budget_us(uint32_t us);
+/* Andromeda's core allocator (src/fx/fx_graph.c): which slot_order index is the first to stay on core 0 (core 1 runs conditioning and the slots before it);
+ * 0 = everything on core 0. It re-prices the slots from their measured times every 93 ms. pa_fx_alloc_force_cut: a fixed cut for tests and the measurement tool,
+ * -1 = automatic. */
+void pa_fx_alloc_force_cut(int cut);
+int  pa_fx_alloc_cut(void);
+int  pa_fx_alloc_best_cut(const uint32_t *us, int cur, uint32_t *max_us);   /* the pure plan: slot costs in slot_order (8 entries, us), the cut now in force -> the cut */
 
 fx_node_t *fx_drive_new(void);
 fx_node_t *fx_eq_new(void);
 fx_node_t *fx_dynamics_new(void);
 fx_node_t *fx_delay_new(void);
+fx_node_t *fx_granular_new(void);
 fx_node_t *fx_reverb_new(void);
 fx_node_t *fx_mod_new(void);
 fx_node_t *fx_cab_ir_new(void);

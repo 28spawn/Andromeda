@@ -1,53 +1,52 @@
-# Pocket Amp Custom Firmware — Engine & Architecture
+# Andromeda firmware: source tree
 
-A maintainable, modular C firmware source tree for the **M-VAVE Pocket Amp** targeting the **JieLi AC791N / pi32v2** SoC at **360 MHz assumed** (`PA_CPU_HZ` in `include/pa_config.h`; the data-sheet rate is 320 MHz).
+The firmware source for the Pocket AMP's JieLi AC791N (pi32v2, two cores; `PA_CPU_HZ` in `include/pa_config.h` assumes 360 MHz, the data sheet lists 320 MHz). The project overview, the effects and the installation steps are in the [root README](../README.md); the module map is in [../ARCHITECTURE.md](../ARCHITECTURE.md).
 
----
+## Layout
 
-## 🏗️ Architecture & Subsystems
+| Directory | Contents |
+|---|---|
+| `include/` | Interfaces and configuration (`pa_config.h` holds the product switch). |
+| `src/board/` | Hardware drivers, the UI, USB and BLE, the interrupt body. |
+| `src/dsp/` | Filters, fixed-point helpers, tuner. |
+| `src/fx/` | The effect graph and allocator, the effect host and the six engines, reverb, shimmer. |
+| `src/sys/` | Audio core, presets, settings, SysEx, diagnostic and measurement channels, core 1 worker. |
+| `test/` | C and Python regression suites. |
+| `emu/` | The native emulator and browser front panel (`pocket_amp_emu.dll`, `server.py`, `ui.html`). |
+| `wasm/` | WebAssembly build and tests. |
+| `tools/` | Build, packaging, QA, measurement and recovery tools. |
+| `web/` | The web editor. |
+| `qa/` | Hardware ledger, baselines and gate reports. |
 
-### 1. DSP Audio Pipeline (`src/dsp/`, `src/fx/`, `src/nam/`)
-- **Block Size**: 64 samples @ 44.1 kHz ($\approx 1.45\text{ ms}$ latency).
-- **Fixed-Point Precision**: Q21 (integer `1 << 21` = 2,097,152) for all audio math, saturating addition, and non-linear tube GRU saturation curves.
-- **Hardware Acceleration**: The `0x01EE0400` SIMD vector coprocessor executes 16-element parallel matrix MAC operations in hardware.
-- **Dynamic Reclaim**: `pa_fx_chain_set_slot_enabled()` dynamically frees memory buffers for bypassed nodes (reclaiming 115,008 B SRAM and ~25% CPU load: reverb 49,384 + delay 65,624).
-- **Groove Station drum machine** (`src/dsp/drums_synth.c`): 49 rhythm patterns authored in a 48-step-per-4/4-bar grid (`src/dsp/drum_patterns.inc`). The twelve drum voices are procedurally synthesised by `tools/gen_drum_kit.py` from deterministic oscillators, noise, and filters into `src/dsp/drum_kit.inc` (original material, no product recordings).
+## Audio
 
-### 2. Physical Front Panel & UI (`src/board/ui_app.c`)
-- **ST7735S Display**: 240x240 RGB565 display driver using the Onyx dark design system.
-- **5 Physical Illuminated Buttons**: `HOME`, `VOL-`, `VOL+`, `<`, `>`.
-- **Rotary PARA Encoder + Click**: Adjusts radial parameters, navigates menus, and confirms selections with hover retention.
-- **Master Volume SARADC Potentiometer**: Analog input attenuation tracked in real-time.
-- **Simultaneous Combos**:
-  - `VOL- + VOL+`: Chromatic Tuner mode.
-  - `< + >`: Bank Mode 01.
-  - `HOME + VOL-`: Groove Station (Acoustic 808/909 drum machine).
-  - `HOME + VOL+`: Signal Chain Sequence reordering.
-  - `HOME`: From any sub-screen returns Home; from Home enters Settings Menu.
+- 64-sample blocks at the codec's 44,118 Hz (1.45 ms). Audio inside the effects is single-precision float; the block interface and the chain's dry path use Q21 fixed point (`1 << 21` = full scale).
+- The effects are the six engines in `src/fx/v1_*.c`, hosted by `src/fx/fx_andromeda.c` (see the architecture document), followed by the shared reverb with shimmer.
+- Both cores are used: an allocator in `src/fx/fx_graph.c` splits the chain when one core would not fit it (see [../docs/ANDROMEDA-PERF.md](../docs/ANDROMEDA-PERF.md)).
 
-### 3. Hardware-in-the-Loop (HIL) Emulator (`emu/`)
-- **`pocket_amp_emu.dll`**: C firmware compiled as a native shared library for Windows.
-- **`server.py`**: PortAudio ASIO server streaming real-time guitar input from any USB audio interface through the live firmware DSP engine.
-- **`ui.html`**: Front-panel web interface rendering the 240x240 LCD framebuffer, dual rotary knobs, live oscilloscope, peak meters, and drag-and-drop `.nam` and `.wav` IR hot-loaders.
+## Front panel
 
----
+A 240 x 240 display, five keys (`HOME`, `VOL-`, `VOL+`, `<`, `>`), the PARA push-encoder and the MASTER pot. The gestures are in the root README; `src/board/ui_app.c` is the UI state machine and `src/board/ui_cosmic.c` draws the play screen.
 
-## 🔧 Building & Verifying
+## Building and verifying
 
-### Master Automated Build
 ```powershell
-powershell -ExecutionPolicy Bypass -File "build.ps1"
+powershell -ExecutionPolicy Bypass -File build.ps1 -Product andromeda
 ```
-The script will:
-1. Compile and run host verification test suites (`test/test_chain.c`, `test/test_tuner.c`, etc.).
-2. Cross-compile all 24 C modules using JieLi Clang:
-   ```
-   clang -target pi32v2 -mcpu=r3 -O2 -Iinclude -nostdlib ...
-   ```
-3. Link into `build_app.bin` with `app.ld`.
-4. Package valid `Pocket_AMP_Custom.ufw` and `Pocket_AMP_Custom.fwsc` firmware containers.
 
-### Emulator DLL Compilation
+The script:
+
+1. Compiles and runs the host test suites.
+2. Cross-compiles the device build with the JieLi clang and links it with `app_andromeda.ld`.
+3. Checks the image against the app slot, runs the effect matrix on the emulator DLL, and packages the release to `release/Pocket_AMP_Andromeda_<version>/`.
+
+Then `python tools/qa_gate.py` runs the full gate ([../TEST-PROTOCOL.md](../TEST-PROTOCOL.md)).
+
+## Emulator
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File "emu/build_dll.ps1"
+powershell -ExecutionPolicy Bypass -File emu/build_dll.ps1 -Product andromeda
+powershell -ExecutionPolicy Bypass -File emu/run_emu.ps1
 ```
+
+The first builds the emulator DLL from the same sources as the firmware; the second serves the front panel at `http://localhost:8080`. See [emu/README.md](emu/README.md).

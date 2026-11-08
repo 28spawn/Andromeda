@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ble_midi_e2e_pc.py - BLE-MIDI end to end against the unit: connect over BLE (bleak), turn the MIDI notifications on, and check on ONE link that
   1. the identity query is answered with a SysEx notification,

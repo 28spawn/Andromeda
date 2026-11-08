@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* Bluetooth LE radio: the unity build of the imported Optimist stack (third_party/optimist_ble, see its README and
  * NOTICE.md for the authors and licences) with this firmware's platform glue (ble_platform/), the start-up policy and
  * the debug log. BLE-PORT-PLAN.md has the plan; include/pa_ble_radio.h the contract.

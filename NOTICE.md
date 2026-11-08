@@ -2,12 +2,11 @@
 
 ## What this repo is
 Original open-source custom firmware and DSP project authored for interoperability and
-personal-modding research on a device the author owns (Donner / M-VAVE Pocket Amp, JieLi AC791N).
+personal-modding research on a device the author owns (the Pocket AMP, JieLi AC791N). The firmware in this repository is Andromeda.
 
 ## What is deliberately NOT included (and where to obtain it)
 To avoid redistributing third-party copyrighted software, none of the following is in this repo:
-- **M-VAVE / Donner firmware** (the stock `.fwsc` or vendor updates). Obtain from the vendor's official updater.
-- **Vendor editor / updater software** (binaries, DLLs, models). Obtain directly from the vendor.
+- **Third-party firmware images and vendor software** of any kind. A release package contains only this project's own application, an update loader and three public SDK files (see the last section).
 - **JieLi pi32v2 toolchain & post-build tools** — https://pkgman.jieliapp.com/s/linux-toolchain and
   https://pkgman.jieliapp.com/s/linux-postbuild
 - **JieLi AC79 AIoT SDK** — https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK (Apache-2.0; commit
@@ -22,24 +21,13 @@ To avoid redistributing third-party copyrighted software, none of the following 
   framing and the message-length table.
 
 The hardware implementation references the public JieLi AC79 SDK (Apache-2.0). Only public protocol identifiers,
-standard UUIDs, and hardware register mappings are referenced for interoperability; no proprietary vendor source is
+standard UUIDs, and hardware register mappings are referenced for interoperability; no third-party source beyond what is listed in this file is
 redistributed here.
 
-## Factory preset baseline parameters (retained, with reason)
-`custom-fw/src/sys/factory_presets.inc` holds 40 factory preset baseline configurations —
-plain-text integer knob percentages (40 rows x 8 slots x 6 knobs), not audio, weights, binaries
-or any creative content. The values represent baseline gain/EQ percentages to allow user edits
-to start from familiar reference positions. If a rights holder objects, remove that one file
-(`git rm --cached` + regenerate at build time) and nothing else changes. Stock amplifier models
-and cabinet impulse responses are never embedded in the firmware image; they are read directly
-from the user's physical onboard device flash partition at runtime.
-
-## Third-Party Datasets & Audio Assets
-The emulator and WASM workbench include clean guitar direct input (DI) audio test samples adapted from the open **GuitarSet** dataset:
-- **GuitarSet**: A Dataset for Guitar Transcription (Qingyang Xi, Rachel M. Bittner, Johan Pauwels, Xuzhou Ye, and Juan P. Bello).
-- **Source**: Zenodo Record 3371780 (`https://zenodo.org/records/3371780`).
-- **License**: Creative Commons Attribution 4.0 International (**CC-BY 4.0**).
-- **Usage**: Used for offline and real-time auditioning of dynamics, tone stacks, amplifier neural models, and cabinet impulse responses in `custom-fw/emu/samples/`.
+## Audio Assets & Dry Guitar Captures
+The desktop emulator and WASM test workbench include clean guitar direct input (DI) audio captures for auditioning effects, level checks, and regression tests:
+- **Dry Guitar Captures**: Self-captured dry electric guitar DI loops (chords, melodic licks, rhythm riffs) in custom-fw/emu/samples/ (jh_*.wav), courtesy of **Jonas Hemmersbach**. Provided and used with permission.
+- **Synthesised DI Phrases**: Plucked-string simulation models generated on the host by custom-fw/tools/gen_test_audio.py (di_*.wav).
 
 ## Bluetooth LE stack (from Optimist) — third-party code, imported with our marked changes
 The BLE-MIDI stack for the AC791N / WL82 radio in `custom-fw/third_party/optimist_ble/` is **not ours**. We changed it in a few places, every one marked `PA-MOD` in the source: `src/ble_hw_wl82.c`, `src/ble_ll.c`, `src/ble_smp.c`, `src/pa_prof.h`, `hal/fm1_ble_rf.h` (and the note in its `README.md`); the changes are published under the same terms as the files. It comes from
@@ -64,17 +52,17 @@ The BLE-MIDI stack for the AC791N / WL82 radio in `custom-fw/third_party/optimis
 `custom-fw/tools/pack.sh` and `custom-fw/README.md`.
 
 ## License
-This project's original source code, firmware application layer, and tools are distributed under the terms of the **GNU General Public License v3.0** (GPL-3.0-or-later). See the root [LICENSE](LICENSE) file for the full license text.
+This project's original source code, firmware application layer, and tools are distributed under the terms of the **GNU General Public License v3.0** (GPL-3.0-or-later). See the root [LICENSE](LICENSE) file for the full license text and [LICENSING.md](LICENSING.md) for full provenance, third-party component terms, and the technical breakdown of our build system.
 
 ## Disclaimer
 Provided as-is, for research and interoperability. Flashing custom firmware is at your own risk and may
-void warranties or brick the device. All trademarks (including M-VAVE, Donner, JieLi, and TONE3000) belong to their respective owners; this project is an independent interoperability and research effort and is not affiliated with or endorsed by M-VAVE, Donner, JieLi, or TONE3000.
+void warranties or brick the device. All trademarks belong to their respective owners; this project is an independent interoperability and research effort and is not affiliated with or endorsed by them.
 
-## The Onyx update loader and the release package - third-party code and files
-The release package (`custom-fw/release/Onyx-<pack>/`, built by `custom-fw/build.ps1`) is built from scratch by `custom-fw/tools/onyx_pkg_make.py` and contains **no M-VAVE firmware**: only our own app, an update loader, and three files of
+## The update loader and the release package - third-party code and files
+The release package (`custom-fw/release/Pocket_AMP_Andromeda_<version>/`, built by `custom-fw/build.ps1`) is built from scratch by `custom-fw/tools/onyx_pkg_make.py` and contains **no third-party firmware**: only our own app, an update loader, and three files of
 the public JieLi AC79 SDK. The package builder (`tools/onyx_pkg_make.py`, `tools/lz4blk.py`) and the layout of the package are taken from the **Pendel** project (<https://github.com/hugelton/Pendel>, `tools/pa_pkg_make.py`,
 GPL-3.0-only, (C) 2026 Leo Kuroshita (@kurogedelic), Hugelton Instruments), which builds its own Pocket AMP packages the same way; they stay GPL-3.0-only here, like the rest of this repository.
-- **The update loader and the firmware's side of the vendor's MIDI update.** `custom-fw/third_party/pendel_loader/` is the **pendel-bsp** hardware layer (<https://github.com/hugelton/pendel-bsp>), **MPL-2.0**, (C) 2026 Leo Kuroshita, Hugelton
+- **The update loader and the firmware's side of the MIDI update.** `custom-fw/third_party/pendel_loader/` is the **pendel-bsp** hardware layer (<https://github.com/hugelton/pendel-bsp>), **MPL-2.0**, (C) 2026 Leo Kuroshita, Hugelton
   Instruments, imported unmodified with its `LICENSING.md`, `NOTICE` and licence text. `custom-fw/loader/onyx_loader.c` (MPL-2.0, from its `boards/pocketamp/pa_loader.c`) and `custom-fw/src/sys/pa_ota_session.c` (MPL-2.0, from its
   `chip/ota.c`) are our changes of those files: they stay MPL-2.0 with their headers, and their source is in this repository. MPL-2.0 is file-level: it does not change the licence of the rest of the firmware (GPL-3.0-only); MPL-2.0 allows the
   combination (Pendel's `LICENSING.md` records that its files carry no "Incompatible With Secondary Licenses" notice).

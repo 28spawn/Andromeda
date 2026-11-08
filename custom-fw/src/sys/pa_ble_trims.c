@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* src/sys/pa_ble_trims.c - the radio calibration read from the unit's own record log (include/pa_ble_trims.h). */
 #include <string.h>
 #include "../../include/pa_ble_trims.h"

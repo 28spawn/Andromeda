@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_delay.c - Delay module (fx_delay.c) unit test suite
  *
  * Covers:

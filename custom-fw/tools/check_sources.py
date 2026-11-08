@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """tools/check_sources.py - the source-list drift guard.
 
 Every build target compiles the tree in custom-fw/src minus the board files it
@@ -44,7 +46,7 @@ def script_globs(path):
         txt = open(path, encoding="utf-8", errors="replace").read()
     except OSError:
         return False
-    return ("sources.txt" in txt) or ("Get-ChildItem" in txt and "src" in txt)
+    return ("sources.txt" in txt) or ("Get-ChildItem" in txt and "src" in txt) or ("build_dll.ps1" in txt)
 
 
 def main():

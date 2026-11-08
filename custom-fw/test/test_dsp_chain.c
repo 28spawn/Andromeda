@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * test/test_dsp_chain.c — Host Verification Test for NAM A2 GRU, 512-Entry LUTs, and 8-Slot FX Chain
  */

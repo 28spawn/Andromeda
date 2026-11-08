@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """test_wn_asm_emu.py - the WaveNet CPU-stage assembly (src/nam/pa_wavenet_asm.c) run in an interpreter of its instruction subset (pi32emu.py) against the C reference.
 
 The assembly is device-only, so no host suite ever executed it; only the unit's load-time self-test did. This assembles it with the pi32 toolchain, runs wn_asm_mix and

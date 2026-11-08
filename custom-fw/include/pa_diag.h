@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/include/pa_diag.h - a private diagnostic channel
  *
  * A manufacturer SysEx (0x7D, the "educational/non-commercial" ID) used for host

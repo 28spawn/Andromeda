@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * test/test_smp_pipeline.c - the two-core pipeline's logic, with a synchronous stand-in for core 1.
  *

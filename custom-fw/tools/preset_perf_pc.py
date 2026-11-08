@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/preset_perf_pc.py - per-preset performance test (pack 158): select each preset by MIDI Program Change, let it settle, and report the audio block time, the governor level, whether core 1 is still
 online, the overruns it added and the swap probe's numbers for that swap. It only selects presets (nothing is stored) and reads RAM.

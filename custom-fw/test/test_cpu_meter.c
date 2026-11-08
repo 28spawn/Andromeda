@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test_cpu_meter.c — PC SIMULATION of the CPU meter (runs natively on host; no device/VM).
  * Proves the meter logic before flashing: injects a mock cycle clock and a per-stage cost scenario,
  * then renders the load meter exactly as the on-device ST7789 routine would read it.

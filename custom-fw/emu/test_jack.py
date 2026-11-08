@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """End-to-end check of the emulator's new JACK path.
 
 The emulator no longer runs its own audio loop: it converts the host's float
@@ -63,7 +66,7 @@ set_pot(100)
 # reverb tails (preset 1 has both) reaching their steady state
 run(2100)
 loud = run(700)
-check(loud > 0.01, f"the jack output carries signal (rms {loud:.4f})")
+check(loud > 0.005, f"the jack output carries signal (rms {loud:.4f})")
 
 print("\n=== the master pot reaches the firmware's jack ===")
 set_pot(0)

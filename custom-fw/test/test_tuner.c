@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_tuner.c — Chromatic Tuner verification suite.
  * Tests string pitch detection (Low E2 to High E4), filter response,
  * A4 calibration (430..450 Hz), bypass volume, and input meter dots.

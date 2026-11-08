@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """Delay and reverb, end to end through the firmware's audio core (the emulator DLL).
 
   [1] DELAY: every type's echo lands at the TIME the screen shows (pa_dly_time_ms), on

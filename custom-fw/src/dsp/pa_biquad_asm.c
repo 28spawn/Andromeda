@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/dsp/pa_biquad_asm.c - the assembly kernel of pa_biquad.h (device only). void pa_biquad_asm(int32_t *buf, int n, const int32_t *k, int32_t *state2) */
 #include "pa_config.h"
 

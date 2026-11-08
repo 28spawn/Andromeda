@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Andromeda contributors
+
 /* The DRIVE block on every kind of preset, through the real UI.
  *
  * Bug report: "on presets 41-80 the drive leads to no audio, on presets 1-40 it works".
@@ -10,7 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const wasmPath = process.argv[2] || path.join(__dirname, 'out', 'pocket_amp.wasm');
+const wasmPath = process.argv[2] || fs.existsSync(path.join(__dirname, 'out', 'andromeda.wasm')) ? path.join(__dirname, 'out', 'andromeda.wasm') : path.join(__dirname, 'out', 'pocket_amp.wasm');
 const mem = new WebAssembly.Memory({ initial: 512, maximum: 4096 });
 const imp = {
   env: { memory: mem,

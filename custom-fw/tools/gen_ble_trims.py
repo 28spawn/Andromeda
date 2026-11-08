@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """gen_ble_trims.py - read this unit's stored radio calibration from a verified flash backup and write it as a C header.
 
     python custom-fw/tools/gen_ble_trims.py [--dump custom-fw/qa/backups/unit1_v105/dump1.bin]

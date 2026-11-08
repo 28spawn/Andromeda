@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ble_diagnose_pc.py - one read-only report of the unit's Bluetooth: is the radio up and advertising, is a central connected, what do the link counters say, which Bluetooth events did
 the unit log (bond restored / saved / forgotten, connects, disconnects, errors), and what is in the bond log in the flash (pa_bond.h). It sends nothing but RAM and flash READS over the USB diag channel.

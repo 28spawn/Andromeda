@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_user_cab.h - the cabinets the owner stored in the flash (the editor page, or any host that sends the cabinet upload).
  *

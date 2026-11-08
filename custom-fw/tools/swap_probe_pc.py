@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/swap_probe_pc.py - READ-ONLY: the swap probe of pack 158 (src/sys/smp_cpu1.c SWAP PROBE, SRAM 0x01C7D240): how long did each preset / model swap take, and how long did core 1's first
 amp job after it take? Why did a swap switch the amp core off? Prints the last swaps, oldest first, in microseconds.

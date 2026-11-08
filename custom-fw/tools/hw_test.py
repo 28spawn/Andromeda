@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/hw_test.py - drive and inspect the Pocket Amp over its USB-MIDI port, and say what
 happened if it stops answering.

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/fx/fx_delay.c — Pocket Amp V105 Stereo 5-Mode Delay + Wet Modulation + "Delay Tail"
  *
  * Matches the official Pocket Amp User Manual (Pages 10–11) & V105 Release Notes:
@@ -27,12 +30,12 @@
 #include <string.h>
 #include "pa_fx.h"
 #include "pa_config.h"
-#include "../dsp/fixedpoint.h"
 
-/* 32,768 int16 = 64 KB. Power of two, so DLY_BUF_MASK stays valid; the longest
- * delay is 32,767 samples = 743 ms (it was 16,384 = 371 ms). This is the whole
- * reason the delay line is a power of two: a 44,100-sample (1 s) line would need
- * a mask rewrite and 131 KB of RAM. */
+#if PA_PRODUCT_ANDROMEDA
+fx_node_t *fx_delay_new(void) {
+    return (fx_node_t *)0;
+}
+#else
 #define DLY_BUF_LEN  32768u
 #define DLY_BUF_MASK (DLY_BUF_LEN - 1u)
 
@@ -498,3 +501,5 @@ fx_node_t *fx_delay_new(void) {
     n.tail_draining= 0;
     return &n;
 }
+
+#endif /* !PA_PRODUCT_ANDROMEDA */

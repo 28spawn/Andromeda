@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/usb_editor_pc.py - the web editor's USB-MIDI path against the real unit, without a browser (the page's own protocol code runs in Node, python-rtmidi is only the port):
 identity, state record, name lists, 40 repeated state reads (reliability + latency), a control written and read back and RESTORED, a preset change and back, and a live cabinet.
@@ -12,7 +14,7 @@ import rtmidi
 
 FW = Path(__file__).resolve().parent.parent
 TMP = tempfile.mkdtemp(prefix="pa_usb_editor_")
-page = (FW / "web" / "Onyx_Web_Editor.html").read_text(encoding="utf-8")
+page = (FW / "web" / "Andromeda_Web_Editor.html").read_text(encoding="utf-8")
 (Path(TMP) / "page.js").write_text(re.search(r"<script>(.*)</script>", page, re.S).group(1), encoding="utf-8")
 (Path(TMP) / "run.js").write_text("const c=require('./page.js');const ops=JSON.parse(require('fs').readFileSync(0,'utf8'));"
     "console.log(JSON.stringify(ops.map(([f,...a])=>{const r=c[f](...a);return ArrayBuffer.isView(r)?Array.from(r):r;})));")

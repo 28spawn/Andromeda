@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/usb_timing_pc.py - the USB 1 ms service experiment (pack 159, USB-AUDIO-PLAN.md step B): is the recording endpoint served better by a 2 kHz timer interrupt than by the main loop?
 

@@ -1,8 +1,10 @@
 @echo off
+:: SPDX-License-Identifier: GPL-3.0-or-later
+:: Copyright (C) 2026 Andromeda contributors
 REM ---------------------------------------------------------------------------
-REM  Pocket Amp - live firmware emulator.
+REM  Andromeda - live firmware emulator.
 REM
-REM  Runs the REAL firmware (compiled as pocket_amp_emu.dll) with the board
+REM  Runs the REAL firmware (compiled as andromeda_emu.dll) with the board
 REM  layer replaced, and serves the front panel in your browser.
 REM
 REM    Start-Emulator.bat            serve the panel (builds the DLL if missing)
@@ -34,10 +36,10 @@ set PORT=8080
 for /f %%p in ('powershell -NoProfile -Command "$u=@((Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue).LocalPort); $p=8080; while(($u -contains $p) -and ($p -lt 8100)){$p++}; $p"') do set PORT=%%p
 
 if /I "%~1"=="--rebuild" goto build
-if not exist "custom-fw\emu\pocket_amp_emu.dll" goto build
+if not exist "custom-fw\emu\andromeda_emu.dll" if not exist "custom-fw\emu\pocket_amp_emu.dll" goto build
 
 echo.
-echo   Emulator DLL found - starting the panel on http://localhost:%PORT%
+echo   Andromeda Emulator DLL found - starting the panel on http://localhost:%PORT%
 echo.
 start "" "http://localhost:%PORT%"
 python "custom-fw\emu\server.py" --port %PORT%

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/perf_monitor_pc.py - USB performance monitor: what makes the unit overload when effects are switched on and off fast? READ-ONLY on the unit (RAM reads over the USB diag channel);
 the only thing it sends is the load it is asked to generate (MIDI "set module on / off", CC 28..35), or nothing at all in --mode watch, where YOU press the buttons.

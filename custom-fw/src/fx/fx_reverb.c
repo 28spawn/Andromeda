@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/fx/fx_reverb.c — Pocket Amp 6-Algorithm Stereo Reverb + "Reverb Tail"
  *
  * Matches the official Pocket Amp User Manual (Pages 12–13) & V105 Release Notes:
@@ -24,9 +27,16 @@
 #include <math.h>
 #include "pa_fx.h"
 #include "pa_config.h"
-#include "../dsp/fixedpoint.h"
-#include "pa_prof.h"
 
+#if PA_PRODUCT_ANDROMEDA
+extern fx_node_t *fx_andromeda_space_new(void);
+fx_node_t *fx_reverb_new(void) {
+    return fx_andromeda_space_new();
+}
+uint32_t pa_rev_regions(int type, uint32_t *off, uint32_t *len, uint32_t max) { (void)type; (void)off; (void)len; (void)max; return 0; }
+uint32_t pa_rev_state_regions(const fx_node_t *nd, uint32_t *off, uint32_t *len, uint32_t max) { (void)nd; (void)off; (void)len; (void)max; return 0; }
+int32_t pa_rev_decay_gain(const fx_node_t *nd) { (void)nd; return 0; }
+#else
 #ifndef PA_REV_CLASSIC_FLOAT
 #define PA_REV_CLASSIC_FLOAT 1   /* 1: Room / Hall / Swell / Spring / Cloud run in float (reverb_run_classic_f); 0: the original integer loop */
 #endif
@@ -1076,3 +1086,5 @@ int32_t pa_rev_decay_gain(const fx_node_t *nd) {
     const reverb_state_t *s = nd ? (const reverb_state_t *)nd->state : 0;
     return s ? s->decay : 0;
 }
+
+#endif /* !PA_PRODUCT_ANDROMEDA */

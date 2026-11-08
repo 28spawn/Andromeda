@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """Read a region of the Pocket Amp's SPI NOR flash over USB MIDI.
 
 The device answers on a private diagnostic SysEx (manufacturer 0x7D):

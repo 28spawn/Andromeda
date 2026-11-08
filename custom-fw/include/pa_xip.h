@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * include/pa_xip.h - verified reads of constant data that lives in the flash (XIP).
  *

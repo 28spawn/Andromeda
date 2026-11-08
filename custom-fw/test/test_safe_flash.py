@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/test/test_safe_flash.py - every safety rule of tools/jl_safe_flash.py, on a
 simulated flash. No device, no network, nothing outside a temp directory is touched.

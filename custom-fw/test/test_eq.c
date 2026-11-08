@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_eq.c - the EQ block's three types, measured.
  *
  *   [1] 5-BAND: flat with every band at 50 %; a band at 100 % is +12 dB at its centre

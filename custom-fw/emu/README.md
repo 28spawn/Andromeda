@@ -24,9 +24,8 @@ the front-panel buttons into one-tick action pulses:
   and repeat after 350 ms while they are held;
 * **PARA and HOME fire their CLICK on the RELEASE edge** — a quick press is a
   click, a long one is a hold, and the two are mutually exclusive;
-* the HOLD durations are read at the release too: PARA 1 s → "Save to",
-  PARA 2 s → "Move block", HOME 1.5 s →
-  "Live Stomp Lock";
+* the HOLD durations are read at the release too: PARA 1 s → the save dialog,
+  PARA 3 s → the effect's clear, HOME 1 s → Settings;
 * a chord consumes the buttons it is made of, so they do not also click.
 
 **A button that is never released never clicks and never holds.** That is why
@@ -77,7 +76,7 @@ Two level controls, and they are not the same thing:
 | control | where | what it does |
 |---|---|---|
 | the **MASTER pot** (and the Settings OUTPUT LEVEL) | the front panel / the Settings menu | the master taper: **-40 dB at 0 % .. 0 dB at 100 %** (`pa_audio_core_master_q15`) |
-| the **preset volume** (the home screen's VOL-/VOL+) | the home screen | a linear **0..100 %** gain inside the chain, stored per preset (`pa_fx_chain_set_preset_vol`) |
+| the **preset volume** (MIDI CC 7 or NRPN) | MIDI | a linear **0..100 %** gain inside the chain, stored per preset (`pa_fx_chain_set_preset_vol`) |
 
 The emulator's MASTER pot starts at **full scale** — the firmware's factory
 default. It used to start at 2048 (the middle of the 12-bit range), so the
@@ -93,8 +92,7 @@ so the emulator cannot quietly go quiet again.
 ```
 python custom-fw\emu\test_buttons.py   # the front panel: click, hold, chord, repeat
 python custom-fw\emu\test_input.py     # the input model: one tap = one action
-python custom-fw\emu\test_editor.py    # the effect window
-python custom-fw\emu\test_ir.py        # every cabinet IR in the bank parses
+python custom-fw\emu\test_editor.py    # the editor protocol
 python custom-fw\emu\test_level.py     # the MASTER pot and the output level
 ```
 
@@ -109,18 +107,15 @@ asserts the effect the firmware documents — the screen it switches to.
 |---|---|
 | the 5 physical buttons | press/release, so holding them repeats like the real switch |
 | the chord buttons | one complete gesture each |
-| `🔒 STOMP LOCK` | HOME held 1.5 s |
-| `Save (1s)` / `Move (2s)` / `Reset (3s)` | PARA held 1 / 2 / 3 s |
+| `Save (1s)` / `Clear (3s)` | PARA held 1 / 3 s |
 | `● CLICK` | a PARA click |
-| the NAM / IR drop zones | load a capture or a cabinet into the running firmware |
-| the keyboard | `H` HOME, `-`/`=` VOL-/VOL+, `←`/`→` cursor, `Enter` PARA, `T` tuner, `B` bank, `C` chain, `D` drums, `S` settings, `L` stomp lock, `M` move, `R` reset |
+| the keyboard | `H` HOME, `-`/`=` VOL-/VOL+, `←`/`→` cursor, `Enter` PARA, `T` tuner, `C` chain page, `S` settings |
 
 ### The host API
 
 `GET /api/state` returns the whole firmware state: the screen, the presets,
 the slot types and parameters, the telemetry, the LCD framebuffer and the
-scopes. `POST /api/sysex` feeds raw SysEx into the firmware's own parser, and
-`POST /api/load_nam` / `POST /api/load_ir` load a capture or a cabinet.
+scopes. `POST /api/sysex` feeds raw SysEx into the firmware's own parser.
 
 `POST /api/ble_midi` feeds a **BLE-MIDI 1.0 packet** (hex) — the same entry
 point a GATT write on the MIDI characteristic would use: the framing is

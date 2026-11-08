@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/sys/pa_diag.c - the private diagnostic channel (see include/pa_diag.h)
  *
  * USB MIDI carries 7-bit data bytes, so a frame with binary content (the flash dump)
@@ -5,6 +8,8 @@
  * use, and the same scheme as src/sys/sysex.c's unpacker.
  */
 #include "pa_diag.h"
+#include "pa_config.h"
+#include "pa_meas.h"
 
 #include <string.h>
 
@@ -108,6 +113,22 @@ static void send_read(uint8_t rep, pa_diag_flash_read_fn reader, uint32_t addr, 
     s_reply(frame, f);
 }
 
+#if PA_PRODUCT_ANDROMEDA
+/* a reply of the measurement channel (pa_meas.h): 7D <rep> <len u16 LE> <record>, packed like every other frame */
+static void meas_emit(uint8_t rep, const uint8_t *data, uint32_t len) {
+    if (!s_reply || len > PA_DIAG_MAX_REPLY) return;
+    uint8_t inner[PA_DIAG_MAX_REPLY + 8];
+    uint8_t frame[PA_DIAG_MAX_REPLY * 2 + 40];
+    uint32_t n = 0u, f = 0u;
+    inner[n++] = PA_DIAG_MFG_ID; inner[n++] = rep; inner[n++] = (uint8_t)(len & 0xFFu); inner[n++] = (uint8_t)(len >> 8);
+    memcpy(&inner[n], data, len); n += len;
+    frame[f++] = 0xF0u;
+    f += pack_8to7(inner, n, &frame[f], (uint32_t)sizeof(frame) - f - 1u);
+    frame[f++] = 0xF7u;
+    s_reply(frame, f);
+}
+#endif
+
 /* ---- the RX -------------------------------------------------------------- */
 
 void pa_diag_feed(uint8_t b) {
@@ -146,5 +167,8 @@ void pa_diag_feed(uint8_t b) {
         frame[f++] = 0xF7u;
         s_reply(frame, f);
     }
+#if PA_PRODUCT_ANDROMEDA
+    if (s_inner_len >= 2u && s_inner[0] == PA_DIAG_MFG_ID) (void)pa_meas_diag(s_inner, s_inner_len, meas_emit);
+#endif
     s_inner_len = 0;
 }

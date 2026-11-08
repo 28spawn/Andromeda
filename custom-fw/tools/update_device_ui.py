@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 tools/update_device_ui.py - Strict circular geometry enforcement:
   - All buttons and knobs (PARA outer knob, PARA center push-button, MASTER dial, and bottom 5 buttons)

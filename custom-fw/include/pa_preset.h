@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_preset.h — Pocket Amp 80-Preset Torn-Write-Safe A/B NOR Store (QW-4)
  *
@@ -11,9 +14,15 @@
 
 #include <stdint.h>
 #include "pa_fx.h"
+#include "pa_config.h"
 
+#if PA_PRODUCT_ANDROMEDA
+#define PA_PRESET_COUNT      20u
+#define PA_PRESET_FACTORY    12u          /* P01..P12 factory, P13..P20 user (start EMPTY): each slot is a chain, effect + layer + space */
+#else
 #define PA_PRESET_COUNT      80u
 #define PA_PRESET_FACTORY    40u          /* P01..P40 factory, P41..P80 user (start EMPTY) */
+#endif
 #define PA_PRESET_MAGIC      0x32504D50u  /* "PMP2" : v2 record (types + 6 params / slot) */
 #define PA_PRESET_MAGIC_V1   0x50414D50u  /* "PAMP" : legacy v1 record, migrated on boot   */
 #define PA_PRESET_NAME_LEN   24u
@@ -82,6 +91,10 @@ void     pa_preset_capture_from_chain(pa_preset_t *p, const pa_fx_chain_t *chain
                                       const int32_t params[PA_SLOT_COUNT][6], const uint8_t slot_type[PA_SLOT_COUNT]);
 void     pa_preset_apply_smooth(const pa_preset_t *p, pa_fx_chain_t *chain);   /* Blk-02: click-free */
 int      pa_preset_is_empty(uint8_t idx);
+#if PA_PRODUCT_ANDROMEDA
+/* the factory macro values (percent) of an effect type 0..11 (effect * 4 + variant): what a fresh GLASS / BLOOM / ACCRETION starts from */
+void     pa_andromeda_default_macros(uint8_t type, uint8_t out_pct[4]);
+#endif
 uint32_t pa_crc32(const void *data, uint32_t len);
 
 #endif /* PA_PRESET_H */

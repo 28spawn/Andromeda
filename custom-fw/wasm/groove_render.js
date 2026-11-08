@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Andromeda contributors
+
 /* Render the Groove Station and dump the LCD, so it can be compared with the
  * design kit's reference render (GROOVE_SPEC.md, groove_px_3_transport.png).
  *

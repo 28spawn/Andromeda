@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test_wavenet_cycles.c — Benchmark and verify cycle margin of pa_wavenet_step_sample()
  * Measures exact execution time, cycles, and headroom against 44.1 kHz real-time budget.
  */

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/flash_unit.py - the whole flashing process in the order it must happen, one command (it only calls tools/jl_safe_flash.py, so every rule of that tool applies):
 

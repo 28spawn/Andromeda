@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_wavenet.h — Pocket Amp Embedded 23-Layer Dilated WaveNet Inference Engine
  *

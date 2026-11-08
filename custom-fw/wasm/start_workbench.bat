@@ -1,6 +1,8 @@
 @echo off
+:: SPDX-License-Identifier: GPL-3.0-or-later
+:: Copyright (C) 2026 Andromeda contributors
 REM ---------------------------------------------------------------------------
-REM  Pocket Amp Workbench - build (if needed) and serve, then open the browser.
+REM  Project ANDROMEDA Workbench - build (if needed) and serve, then open the browser.
 REM
 REM    start_workbench.bat                build if needed, serve, open the browser
 REM    start_workbench.bat --rebuild      force a rebuild first
@@ -19,7 +21,7 @@ if not "%ZIG%"=="" if not exist "%ZIG%" set ZIG=
 if "%ZIG%"=="" for %%z in (zig.exe) do if not "%%~$PATH:z"=="" set ZIG=%%~$PATH:z
 
 if /I "%~1"=="--rebuild" goto build
-if not exist "pocket_amp.wasm" goto build
+if not exist "andromeda.wasm" if not exist "pocket_amp.wasm" goto build
 if "%ZIG%"=="" goto serve
 rem the wasm exists; just serve it
 :serve

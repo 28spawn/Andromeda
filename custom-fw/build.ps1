@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 # custom-fw/build.ps1 — One-Command Windows Host Verification & JieLi pi32v2 Firmware Builder
 #
 # Usage:
@@ -15,7 +18,9 @@
 
 [CmdletBinding()]
 param(
-    [string]$Board = "pocket_amp"
+    [string]$Board = "pocket_amp",
+    # onyx = the amp-modelling firmware; andromeda = the granular / ambient firmware (pa_config.h PA_PRODUCT_ANDROMEDA)
+    [ValidateSet("andromeda", "onyx")][string]$Product = "andromeda"
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,6 +28,11 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
 $BoardDef = if ($Board -eq "blackbox") { "-DBOARD_BLACKBOX=1" } else { "-DBOARD_POCKET_AMP=1" }
+# The product switch goes to the device compile and the emulator DLL. The host suites below test the shared
+# platform and stay on the Onyx configuration; the Andromeda suites always run, in both products.
+$IsAndromeda = ($Product -eq "andromeda")
+$ProductDef  = if ($IsAndromeda) { "-DPA_PRODUCT_ANDROMEDA=1" } else { "-DPA_PRODUCT_ANDROMEDA=0" }
+$ImgTag      = if ($IsAndromeda) { "Andromeda" } else { "Custom" }
 
 # ---- the one place a native command's failure is noticed --------------------
 function Invoke-Checked {
@@ -40,9 +50,9 @@ function Invoke-Checked {
 # a failed build can never leave a stale image behind to be flashed by accident, and they
 # are written again only at the end, when every step has passed.
 $AppBin    = Join-Path $RepoRoot "custom-fw\build_app.bin"
-$OutUfw    = Join-Path $RepoRoot "custom-fw\Pocket_AMP_Custom.ufw"
-$OutFwsc   = Join-Path $RepoRoot "custom-fw\Pocket_AMP_Custom.fwsc"
-$OutArea   = Join-Path $RepoRoot "custom-fw\Pocket_AMP_Custom_app_area.bin"      # the app area (flash 0x4000..0x85FFF): what the web editor and jl_safe_flash.py take
+$OutUfw    = Join-Path $RepoRoot "custom-fw\$ImgTag.ufw"
+$OutFwsc   = Join-Path $RepoRoot "custom-fw\$ImgTag.fwsc"
+$OutArea   = Join-Path $RepoRoot "custom-fw\$($ImgTag)_app_area.bin"      # the app area (flash 0x4000..0x85FFF): what the web editor and jl_safe_flash.py take
 $TemplateFwsc = if ($env:STOCK_FWSC -and (Test-Path $env:STOCK_FWSC)) {
     $env:STOCK_FWSC
 } elseif (Test-Path (Join-Path $RepoRoot "Pocket AMP.fwsc")) {
@@ -97,7 +107,7 @@ function Run-HostTest {
     )
     $exe = Join-Path $BuildDir "$Name.exe"
     Invoke-Checked "the $Name compile" {
-        clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 $BoardDef @Extra $Source @Srcs -o $exe
+        clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 $BoardDef $ProductDef @Extra $Source @Srcs -o $exe
     }
     Invoke-Checked "the $Name suite" { & $exe }
 }
@@ -107,17 +117,25 @@ Run-HostTest -Name "pa_test_meter" -Source "custom-fw/test/test_cpu_meter.c" -Sr
 # The cycle/clock report. It prints estimates rather than a pass/fail verdict, but
 # it is compiled here so its numbers cannot drift from PA_CPU_HZ again - it used to
 # carry three hard-coded clocks (360/320/240) that contradicted the firmware.
-Invoke-Checked "the cycle/clock report compile" {
-    clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 $BoardDef custom-fw/test/test_wavenet_cycles.c custom-fw/src/nam/pa_wavenet.c custom-fw/src/dsp/hw_accel.c -o (Join-Path $BuildDir "pa_test_wn_cycles.exe")
+if (-not $IsAndromeda) {
+    Invoke-Checked "the cycle/clock report compile" {
+        clang -O2 -Wall -Wextra -Icustom-fw/include -DPA_HOST_SIM=1 $BoardDef custom-fw/test/test_wavenet_cycles.c custom-fw/src/nam/pa_wavenet.c custom-fw/src/dsp/hw_accel.c -o (Join-Path $BuildDir "pa_test_wn_cycles.exe")
+    }
+    Invoke-Checked "the cycle/clock report" { & (Join-Path $BuildDir "pa_test_wn_cycles.exe") }
 }
-Invoke-Checked "the cycle/clock report" { & (Join-Path $BuildDir "pa_test_wn_cycles.exe") }
 
 Run-HostTest -Name "pa_test_reclaim" -Source "custom-fw/test/test_reclaim.c" -Srcs (Srcs "host_reclaim")
-Run-HostTest -Name "pa_test_dsp" -Source "custom-fw/test/test_dsp_chain.c" -Srcs $dspSrcs
-Run-HostTest -Name "pa_test_smp" -Source "custom-fw/test/test_smp_pipeline.c" -Srcs $dspSrcs
-Run-HostTest -Name "pa_test_fft_conv2" -Source "custom-fw/test/test_fft_conv2.c" -Srcs @("custom-fw/src/fx/fft_conv.c")
-# The stereo cabinet and EQ: width 0 is the mono path bit for bit, the right channel keeps the tone and loses the waveform, the width sets the correlation.
-Run-HostTest -Name "pa_test_cab_stereo" -Source "custom-fw/test/test_cab_stereo.c" -Srcs @("custom-fw/src/fx/fx_cab_ir.c", "custom-fw/src/fx/fft_conv.c", "custom-fw/src/fx/fx_eq.c")
+if (-not $IsAndromeda) { Run-HostTest -Name "pa_test_dsp" -Source "custom-fw/test/test_dsp_chain.c" -Srcs $dspSrcs }
+if ($IsAndromeda) {
+    Run-HostTest -Name "pa_test_smp" -Source "custom-fw/test/test_andromeda_smp.c" -Srcs $dspSrcs -Extra @("-lm")
+} else {
+    Run-HostTest -Name "pa_test_smp" -Source "custom-fw/test/test_smp_pipeline.c" -Srcs $dspSrcs
+}
+if (-not $IsAndromeda) { Run-HostTest -Name "pa_test_fft_conv2" -Source "custom-fw/test/test_fft_conv2.c" -Srcs @("custom-fw/src/fx/fft_conv.c") }
+if (-not $IsAndromeda) {
+    # The stereo cabinet and EQ: width 0 is the mono path bit for bit, the right channel keeps the tone and loses the waveform, the width sets the correlation.
+    Run-HostTest -Name "pa_test_cab_stereo" -Source "custom-fw/test/test_cab_stereo.c" -Srcs @("custom-fw/src/fx/fx_cab_ir.c", "custom-fw/src/fx/fft_conv.c", "custom-fw/src/fx/fx_eq.c")
+}
 # USB audio is stereo end to end: the playback ring keeps L and R apart, the capture carries both output channels at 44.1 and 48 kHz.
 Run-HostTest -Name "pa_test_ble_midi_bridge" -Source "custom-fw/test/test_ble_midi_bridge.c" -Srcs @("custom-fw/src/board/ble_midi_bridge.c")
 # The BLE channel remap (sparse maps from Windows) done in software: every unused channel maps to the spec's used channel, the CSA #1 sequence.
@@ -139,29 +157,49 @@ Run-HostTest -Name "pa_test_usb_desc" -Source "custom-fw/test/test_usb_desc.c" -
 Run-HostTest -Name "pa_test_biquad" -Source "custom-fw/test/test_biquad.c" -Srcs @("custom-fw/src/dsp/pa_biquad.c")
 Run-HostTest -Name "pa_test_stereo_spread" -Source "custom-fw/test/test_stereo_spread.c" -Srcs @()
 # Changing the reverb type while the audio interrupt runs (it used to hang the unit when scrolled from Plate to Ambience: a write through a NULL line buffer).
-Run-HostTest -Name "pa_test_reverb_switch_race" -Source "custom-fw/test/test_reverb_switch_race.c" -Srcs @() -Extra @("-lm")
-# Turning the delay's knobs while a note rings must not click (TIME glides, FEEDBACK / MIX are smoothed).
-# Changing the reverb's type while it rings: the wet fades out, the type changes in the audio thread, the wet fades back (every pair of the eight types).
-Run-HostTest -Name "pa_test_reverb_type_clicks" -Source "custom-fw/test/test_reverb_type_clicks.c" -Srcs @("custom-fw/src/fx/fx_reverb.c") -Extra @("-lm")
-Run-HostTest -Name "pa_test_delay_clicks" -Source "custom-fw/test/test_delay_clicks.c" -Srcs @() -Extra @("-lm")
+if (-not $IsAndromeda) {
+    Run-HostTest -Name "pa_test_reverb_switch_race" -Source "custom-fw/test/test_reverb_switch_race.c" -Srcs @() -Extra @("-lm")
+    Run-HostTest -Name "pa_test_reverb_type_clicks" -Source "custom-fw/test/test_reverb_type_clicks.c" -Srcs @("custom-fw/src/fx/fx_reverb.c") -Extra @("-lm")
+    Run-HostTest -Name "pa_test_delay_clicks" -Source "custom-fw/test/test_delay_clicks.c" -Srcs @() -Extra @("-lm")
+}
 Run-HostTest -Name "pa_test_display_list" -Source "custom-fw/test/test_display_list.c" -Srcs @("custom-fw/src/board/ui_5x7.c") -Extra @("-DPA_EMU_DLL=1")
 
 # The WaveNet CPU-stage assembly, which no host suite runs, executed in an interpreter against the C reference (skips without the toolchain).
-Invoke-Checked "the WaveNet kernel emulation" { python (Join-Path $PSScriptRoot "test/test_wn_asm_emu.py") }
+if (-not $IsAndromeda) {
+    Invoke-Checked "the WaveNet kernel emulation" { python (Join-Path $PSScriptRoot "test/test_wn_asm_emu.py") }
+}
 
 # The reverb: tank regions must be disjoint, and the decay knob must produce the
 # RT60 its comment claims (measured with an impulse, not assumed).
-Run-HostTest -Name "pa_test_reverb" -Source "custom-fw/test/test_reverb.c" -Srcs $dspSrcs
+if (-not $IsAndromeda) { Run-HostTest -Name "pa_test_reverb" -Source "custom-fw/test/test_reverb.c" -Srcs $dspSrcs }
 
-# The DSP pool with every effect on, measured by the DEVICE allocator
-# (-DPA_POOL_TEST) rather than budgeted by hand.
-Run-HostTest -Name "pa_test_pool" -Source "custom-fw/test/test_pool.c" -Srcs $dspSrcs -Extra @("-DPA_POOL_TEST=1")
+if (-not $IsAndromeda) {
+    # The DSP pool with every effect on, measured by the DEVICE allocator
+    # (-DPA_POOL_TEST) rather than budgeted by hand.
+    Run-HostTest -Name "pa_test_pool" -Source "custom-fw/test/test_pool.c" -Srcs $dspSrcs -Extra @("-DPA_POOL_TEST=1")
+}
+
+# Andromeda (run for both products, so an Onyx change cannot break the other firmware unnoticed):
+# the granular engine, the cosmic screen, and Andromeda's smaller effect pool with every block on,
+# measured by the DEVICE allocator - the granular engine must get its state and its tape.
+Run-HostTest -Name "pa_test_andromeda_fx" -Source "custom-fw/test/test_andromeda_fx.c" -Srcs @("custom-fw/src/fx/fx_andromeda.c", "custom-fw/src/fx/v1_glass.c", "custom-fw/src/fx/v1_bloom.c", "custom-fw/src/fx/v1_accretion.c", "custom-fw/src/fx/v1_choir.c", "custom-fw/src/fx/v1_fracture.c", "custom-fw/src/fx/v1_constellation.c", "custom-fw/src/fx/v1_fdn.c", "custom-fw/src/fx/v1_shimmer.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_ui_cosmic" -Source "custom-fw/test/test_ui_cosmic.c" -Srcs @("custom-fw/src/board/ui_cosmic.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_accretion" -Source "custom-fw/test/test_accretion.c" -Srcs @("custom-fw/src/fx/v1_accretion.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_fdn" -Source "custom-fw/test/test_fdn.c" -Srcs @("custom-fw/src/fx/v1_fdn.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_bloom" -Source "custom-fw/test/test_bloom.c" -Srcs @("custom-fw/src/fx/v1_bloom.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_meas" -Source "custom-fw/test/test_meas.c" -Srcs @("custom-fw/src/sys/pa_meas.c", "custom-fw/src/sys/pa_diag.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-DPA_HOST_SIM=1", "-lm")
+Run-HostTest -Name "pa_test_choir" -Source "custom-fw/test/test_choir.c" -Srcs @("custom-fw/src/fx/v1_choir.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-Wno-missing-field-initializers", "-lm")
+Run-HostTest -Name "pa_test_fracture" -Source "custom-fw/test/test_fracture.c" -Srcs @("custom-fw/src/fx/v1_fracture.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_constellation" -Source "custom-fw/test/test_constellation.c" -Srcs @("custom-fw/src/fx/v1_constellation.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_shimmer" -Source "custom-fw/test/test_shimmer.c" -Srcs @("custom-fw/src/fx/v1_shimmer.c", "custom-fw/src/fx/v1_fdn.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_glass" -Source "custom-fw/test/test_glass.c" -Srcs @("custom-fw/src/fx/v1_glass.c") -Extra @("-DPA_PRODUCT_ANDROMEDA=1", "-lm")
+Run-HostTest -Name "pa_test_andromeda_pool" -Source "custom-fw/test/test_andromeda_pool.c" -Srcs $dspSrcs -Extra @("-DPA_POOL_TEST=1", "-DPA_PRODUCT_ANDROMEDA=1", "-lm")
 
 # The Groove Station: the generated pattern table's invariants (loop lengths on a
 # 16th, a velocity on every hit, the lanes the reference library actually uses) and
 # the engine's clock, which must walk the whole pattern and wrap at its own length.
 # That wrap is what the UI used to get wrong ("the bar goes away after the 4th").
-Run-HostTest -Name "pa_test_drums" -Source "custom-fw/test/test_drums.c" -Srcs $dspSrcs
+if (-not $IsAndromeda) { Run-HostTest -Name "pa_test_drums" -Source "custom-fw/test/test_drums.c" -Srcs $dspSrcs }
 
 # The millisecond clock: the 32-bit tick counter wraps every 178.96 s, so the clock has
 # to keep a running count (the auto power-off, the toasts and the long-press timing
@@ -179,20 +217,20 @@ Invoke-Checked "the OTA handshake suite" { & (Join-Path $BuildDir "pa_test_ota.e
 
 # The kit itself: the balance of the twelve voices, the cymbals' character, the bus
 # level, and the loop's silence.
-Run-HostTest -Name "pa_test_kit" -Source "custom-fw/test/test_kit.c" -Srcs $dspSrcs -Extra @("-lm")
+if (-not $IsAndromeda) { Run-HostTest -Name "pa_test_kit" -Source "custom-fw/test/test_kit.c" -Srcs $dspSrcs -Extra @("-lm") }
 
 # The decoders and synthesisers the kit is stored with (mu-law, IMA-ADPCM, the kick and tom synths) and the engine's block independence.
-Run-HostTest -Name "pa_test_drum_codecs" -Source "custom-fw/test/test_drum_codecs.c" -Extra @("-lm")
+if (-not $IsAndromeda) { Run-HostTest -Name "pa_test_drum_codecs" -Source "custom-fw/test/test_drum_codecs.c" -Extra @("-lm") }
 
 # The flash driver's argument check against the map (every address) and the boot guard's state machine.
 Run-HostTest -Name "pa_test_flash_guard" -Source "custom-fw/test/test_flash_guard.c"
 Run-HostTest -Name "pa_test_overload_rule" -Source "custom-fw/test/test_overload_rule.c"
-Run-HostTest -Name "pa_test_fft_conv_mac" -Source "custom-fw/test/test_fft_conv_mac.c" -Srcs @("custom-fw/src/fx/fft_conv.c")
+if (-not $IsAndromeda) { Run-HostTest -Name "pa_test_fft_conv_mac" -Source "custom-fw/test/test_fft_conv_mac.c" -Srcs @("custom-fw/src/fx/fft_conv.c") }
 
 # The chromatic tuner (YIN pitch detector, hold, stability): synthetic guitar strings, detuned, noisy, decaying, a peg turned.
 Run-HostTest -Name "pa_test_tuner" -Source "custom-fw/test/test_tuner.c" -Srcs @("custom-fw/src/dsp/tuner.c") -Extra @("-lm")
 
-Run-HostTest -Name "pa_test_full" -Source "custom-fw/test/test_full_firmware.c" -Srcs (Srcs "host_full")
+if (-not $IsAndromeda) { Run-HostTest -Name "pa_test_full" -Source "custom-fw/test/test_full_firmware.c" -Srcs (Srcs "host_full") }
 
 # The torn-write / flash-protection / allocator-churn suite. It needs a directory
 # with no pocket_amp_flash.bin in it, or the SPI-NOR sim will attach to it.
@@ -226,16 +264,19 @@ try { $gitRev = (& git rev-parse --short HEAD 2>$null) } catch { }
 # Extracted from PA_FW_VERSION in custom-fw/include/pa_config.h (e.g. 101 -> "1.01")
 $cfgHdr = Get-Content (Join-Path $RepoRoot "custom-fw/include/pa_config.h") -Raw
 $fwVerNum = 101
-if ($cfgHdr -match '#define\s+PA_FW_VERSION\s+(\d+)u') {
+$verPattern = if ($IsAndromeda) { '#define\s+PA_ANDROMEDA_FW_VERSION\s+(\d+)u' } else { '#define\s+PA_FW_VERSION\s+(\d+)u' }
+if ($cfgHdr -match $verPattern) {
     $fwVerNum = [int]$Matches[1]
+} elseif ($IsAndromeda) {
+    throw "PA_ANDROMEDA_FW_VERSION not found in pa_config.h"
 }
 $verMajor = [int]($fwVerNum / 100)
 $verMinor = $fwVerNum % 100
 $verStr = ("{0}.{1:D2}" -f $verMajor, $verMinor)
 
 $packNum = 194
-$buildName = "Onyx"
-$boardPrefix = if ($Board -eq "blackbox") { "BlackBox_Onyx" } else { "Pocket_AMP_Onyx" }
+$buildName = if ($IsAndromeda) { "Andromeda" } else { "Onyx" }
+$boardPrefix = if ($Board -eq "blackbox") { "BlackBox_$buildName" } else { "$buildName" }   # release/Pocket_AMP_Andromeda_0.10, never the Onyx folder
 $releaseBaseName = ("{0}_{1}" -f $boardPrefix, $verStr)
 $buildCode = ("{0}-{1}" -f $releaseBaseName, $buildNum)
 $idHdr = "/* generated by build.ps1 - do not edit */`n#define PA_BUILD_ID $buildNum" + "u`n#define PA_BUILD_TEXT `"$buildTxt`"`n#define PA_BUILD_REV `"$gitRev`"`n#define PA_BUILD_NAME `"$buildName`"`n#define PA_PACK_NUM ${packNum}u`n#define PA_BUILD_CODE `"$buildCode`"`n"
@@ -258,7 +299,7 @@ $pi32Inc = "$pi32Root\pi32v2-include"
 $pi32Lib = "$pi32Root\pi32v2-lib\r3"
 
     Invoke-Checked "the startup code compile" {
-        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 $BoardDef -c custom-fw/src/board/entry.S -o (Join-Path $BuildDir "entry.o")
+        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 $BoardDef $ProductDef -c custom-fw/src/board/entry.S -o (Join-Path $BuildDir "entry.o")
     }
 
 # The object names come from the source PATH, not its base name: two files with the same
@@ -271,7 +312,7 @@ foreach ($s in $srcs) {
     $tag = ($rel -replace "[\\/:]", "_")
     $obj = Join-Path $BuildDir "$tag.o"
     Invoke-Checked "the compile of $($s.Name)" {
-        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 -O2 -Wall -Wno-tautological-constant-out-of-range-compare -ffreestanding -fno-builtin -isystem $pi32Inc -Icustom-fw/include $BoardDef -Icustom-fw/src/board/ble_platform -Icustom-fw/third_party/optimist_ble/src -Icustom-fw/third_party/optimist_ble/hal -c $s.FullName -o $obj
+        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 -O2 -Wall -Wno-tautological-constant-out-of-range-compare -ffreestanding -fno-builtin -isystem $pi32Inc -Icustom-fw/include $BoardDef $ProductDef -Icustom-fw/src/board/ble_platform -Icustom-fw/third_party/optimist_ble/src -Icustom-fw/third_party/optimist_ble/hal -c $s.FullName -o $obj
     }
     $objs += $obj
 }
@@ -284,36 +325,40 @@ foreach ($s in $srcs) {
 #
 # --gc-sections drops the code nothing reaches. It currently saves 0 bytes
 # (every function is reachable), but it keeps it that way.
+$elfName = if ($IsAndromeda) { "andromeda_custom.elf" } else { "pocket_amp_custom.elf" }
+$elfPath = Join-Path $BuildDir $elfName
+
 Invoke-Checked "the link" {
-    & "$pi32Bin\pi32v2-ld.exe" -T custom-fw/app.ld --gc-sections $objs "--start-group" "$pi32Lib\libcompiler_rt.a" "$pi32Lib\libm.a" "$pi32Lib\libc.a" "--end-group" -o (Join-Path $BuildDir "pocket_amp_custom.elf")
+    & "$pi32Bin\pi32v2-ld.exe" -T $(if ($IsAndromeda) { "custom-fw/app_andromeda.ld" } else { "custom-fw/app.ld" }) --gc-sections $objs "--start-group" "$pi32Lib\libcompiler_rt.a" "$pi32Lib\libm.a" "$pi32Lib\libc.a" "--end-group" -o $elfPath
 }
+Copy-Item -Force $elfPath (Join-Path $BuildDir "pocket_amp_custom.elf")
 Invoke-Checked "the .text extraction" {
-    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.text" (Join-Path $BuildDir "pocket_amp_custom.elf") (Join-Path $BuildDir "text.bin")
+    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.text" $elfPath (Join-Path $BuildDir "text.bin")
 }
 Invoke-Checked "the .data extraction" {
-    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.data" (Join-Path $BuildDir "pocket_amp_custom.elf") (Join-Path $BuildDir "data.bin")
+    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.data" $elfPath (Join-Path $BuildDir "data.bin")
 }
 # The two RAM-code sections (.ram_text, .c1_text) are loaded from the flash image too, between the code and the data. The image used to
 # be .text + .data only: .data then sat 48 bytes before the address the startup code copies it from, so every initialised variable
 # arrived shifted by 48 bytes - the stock amp and cabinet tables read one entry (amps) or six entries (cabinets) off, and the last
 # entries read past the end of the image. The image is now laid out by the linker's own load addresses.
 Invoke-Checked "the .ram_text extraction" {
-    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.ram_text" (Join-Path $BuildDir "pocket_amp_custom.elf") (Join-Path $BuildDir "ram_text.bin")
+    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.ram_text" $elfPath (Join-Path $BuildDir "ram_text.bin")
 }
 Invoke-Checked "the .ramfn extraction" {
-    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.ramfn" (Join-Path $BuildDir "pocket_amp_custom.elf") (Join-Path $BuildDir "ramfn.bin")
+    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.ramfn" $elfPath (Join-Path $BuildDir "ramfn.bin")
 }
 Invoke-Checked "the .c1_text extraction" {
-    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.c1_text" (Join-Path $BuildDir "pocket_amp_custom.elf") (Join-Path $BuildDir "c1_text.bin")
+    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.c1_text" $elfPath (Join-Path $BuildDir "c1_text.bin")
 }
 # .flashfn (flash_ram.c: the flash controller probe) runs from SRAM and is copied from its load address in the image at boot. It was NEVER packed: the image held zeros there, the probe copied zeros
 # and jumped into them (the "stage 0, died before its first line" of packs 140 and 168). It is packed now, and the image is checked below.
 Invoke-Checked "the .flashfn extraction" {
-    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.flashfn" (Join-Path $BuildDir "pocket_amp_custom.elf") (Join-Path $BuildDir "flashfn.bin")
+    & "$pi32Bin\llvm-objcopy.exe" "-O=binary" "-j=.flashfn" $elfPath (Join-Path $BuildDir "flashfn.bin")
 }
 $xipBase = 0x02000120
 $syms = @{}
-& "$pi32Bin\llvm-nm.exe" (Join-Path $BuildDir "pocket_amp_custom.elf") | ForEach-Object {
+& "$pi32Bin\llvm-nm.exe" $elfPath | ForEach-Object {
     if ($_ -match '^([0-9a-fA-F]{8})\s+\w\s+(_rt_load|_c1_load|_rf_load|_ff_load|_data_load|_data_start|_data_end)$') { $syms[$Matches[2]] = [Convert]::ToUInt32($Matches[1], 16) }
 }
 foreach ($n in '_rt_load', '_c1_load', '_rf_load', '_ff_load', '_data_load') { if (-not $syms.ContainsKey($n)) { throw "the link map has no $n symbol" } }
@@ -337,6 +382,7 @@ if ($syms['_data_end'] - $syms['_data_start'] -ne $dataBytes.Length) { throw "th
 if (($syms['_rt_load'] - $xipBase) -lt $textBytes.Length) { throw "the RAM-code load address overlaps the code" }
 $appBinBuilt = Join-Path $BuildDir "build_app.bin"
 [System.IO.File]::WriteAllBytes($appBinBuilt, $img)
+[System.IO.File]::WriteAllBytes($AppBin, $img)
 $appSize = (Get-Item $appBinBuilt).Length
 Write-Host ("    the app image is {0} bytes; the app area holds an app.bin of up to {1} bytes (pack_ufw.APP_SLOT_MAX), so {2} bytes are free" -f $appSize, 0x81CD9, (0x81CD9 - $appSize))
 
@@ -346,10 +392,13 @@ Write-Host ("    the app image is {0} bytes; the app area holds an app.bin of up
 # custom-fw/test/EFFECT_MATRIX.md.
 Write-Host "`n=== [3/5] The Effect Matrix (every effect, every pair, every order) ===" -ForegroundColor Cyan
 Invoke-Checked "the emulator DLL build" {
-    powershell -ExecutionPolicy Bypass -File custom-fw/emu/build_dll.ps1 -Board $Board
+    powershell -ExecutionPolicy Bypass -File custom-fw/emu/build_dll.ps1 -Board $Board -Product $Product
 }
 Invoke-Checked "the effect matrix" {
-    python custom-fw/tools/stress_effects.py --dll custom-fw/emu/pocket_amp_emu.dll --types
+    if ($Product -eq "andromeda") { $emuDll = if (Test-Path custom-fw/emu/andromeda_emu.dll) { "custom-fw/emu/andromeda_emu.dll" } else { "custom-fw/emu/pocket_amp_emu.dll" }
+        python custom-fw/tools/stress_effects.py --dll $emuDll --types --andromeda }
+    else { $emuDll = if (Test-Path custom-fw/emu/andromeda_emu.dll) { "custom-fw/emu/andromeda_emu.dll" } else { "custom-fw/emu/pocket_amp_emu.dll" }
+        python custom-fw/tools/stress_effects.py --dll $emuDll --types }
 }
 
 # ---- the flashable images ---------------------------------------------------
@@ -358,30 +407,36 @@ Write-Host "`n=== [4/5] Packaging .ufw and .fwsc Firmware Containers ===" -Foreg
 Invoke-Checked "the packer" {
     python custom-fw/tools/pack_ufw.py --in-bin $appBinBuilt --out-ufw $OutUfw --out-fwsc $OutFwsc --out-area $OutArea --template-fwsc $TemplateFwsc
 }
+Copy-Item -Force $OutFwsc (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$ImgTag.fwsc")
+Copy-Item -Force $OutUfw (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$ImgTag.ufw")
+Copy-Item -Force $OutArea (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$($ImgTag)_app_area.bin")
 Invoke-Checked "the package verification" {
     python custom-fw/tools/pack_ufw.py --verify $OutFwsc
 }
 Copy-Item -Force $appBinBuilt $AppBin
 
-# ---- the Onyx release package: built from scratch, with NO M-VAVE material in it (tools/onyx_pkg_make.py) ----
+# ---- the Andromeda release package: built from scratch, with NO M-VAVE material in it (tools/onyx_pkg_make.py) ----
 # The update loader (loader/onyx_loader.c + third_party/pendel_loader, MPL-2.0) is built here, the three JieLi SDK files (Apache-2.0) are fetched once, and the package, the app image, the checksums and the
 # licences go to custom-fw/release/<name>-<pack>/. This is the package that is published. (Pocket_AMP_Custom.fwsc above is built from the original M-VAVE file for the PC flasher: it stays on this machine.)
-Write-Host "`n=== [4b] The Onyx release package (vendor-free) ===" -ForegroundColor Cyan
-Invoke-Checked "the Onyx loader build" { powershell -NoProfile -ExecutionPolicy Bypass -File custom-fw/tools/build_onyx_loader.ps1 }
+Write-Host "`n=== [4b] The Andromeda release package (vendor-free) ===" -ForegroundColor Cyan
+Invoke-Checked "the update loader build" { powershell -NoProfile -ExecutionPolicy Bypass -File custom-fw/tools/build_onyx_loader.ps1 }
 Invoke-Checked "the SDK files" { python custom-fw/tools/get_sdk_files.py }
 $relDir = Join-Path $RepoRoot ("custom-fw\release\{0}" -f $releaseBaseName)
 if (Test-Path $relDir) { Remove-Item -Recurse -Force $relDir }
 New-Item -ItemType Directory -Force $relDir | Out-Null
 $relPkg = Join-Path $relDir ("{0}.fwsc" -f $releaseBaseName)
-Invoke-Checked "the Onyx package" {
+Invoke-Checked "the package container build" {
     python custom-fw/tools/onyx_pkg_make.py $appBinBuilt custom-fw/build_pi32/onyx_loader/loader.bin $relPkg --sdk custom-fw/third_party/jieli_sdk_files --product ("Pocket AMP_{0}" -f $packNum)
 }
-Invoke-Checked "the Onyx package check" { python custom-fw/test/test_onyx_package.py $relPkg $appBinBuilt }
+Invoke-Checked "the package container check" { python custom-fw/test/test_onyx_package.py $relPkg $appBinBuilt }
 Copy-Item -Force $appBinBuilt (Join-Path $relDir ("{0}.bin" -f $releaseBaseName))
 New-Item -ItemType Directory -Force (Join-Path $relDir "LICENSES") | Out-Null
-foreach ($l in @("custom-fw\LICENSES\Apache-2.0.txt", "custom-fw\LICENSES\MPL-2.0.txt", "LICENSE")) { Copy-Item -Force (Join-Path $RepoRoot $l) (Join-Path $relDir "LICENSES\$(Split-Path -Leaf $l)") }
+foreach ($l in @("custom-fw\LICENSES\Apache-2.0.txt", "custom-fw\LICENSES\MPL-2.0.txt", "LICENSE", "custom-fw\LICENSES\NOTICE-optimist.txt")) { Copy-Item -Force (Join-Path $RepoRoot $l) (Join-Path $relDir "LICENSES\$(Split-Path -Leaf $l)") }
 Copy-Item -Force (Join-Path $RepoRoot "custom-fw\third_party\pendel_loader\NOTICE") (Join-Path $relDir "LICENSES\NOTICE-pendel-bsp.txt")
-Copy-Item -Force (Join-Path $RepoRoot "NOTICE.md") (Join-Path $relDir "NOTICE.md")
+$noticeText = (Get-Content (Join-Path $RepoRoot "NOTICE.md") -Raw).Replace("(LICENSE)", "(LICENSES/LICENSE)").Replace("(custom-fw/LICENSES/", "(LICENSES/")
+[System.IO.File]::WriteAllText((Join-Path $relDir "NOTICE.md"), $noticeText)
+$licText = (Get-Content (Join-Path $RepoRoot "LICENSING.md") -Raw).Replace("(LICENSE)", "(LICENSES/LICENSE)").Replace("(custom-fw/LICENSES/", "(LICENSES/")
+[System.IO.File]::WriteAllText((Join-Path $relDir "LICENSING.md"), $licText)
 $sums = ""
 foreach ($f in (Get-ChildItem $relDir -File)) { $sums += ("{0}  {1}`n" -f (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower(), $f.Name) }
 [System.IO.File]::WriteAllText((Join-Path $relDir "SHA256SUMS"), $sums)

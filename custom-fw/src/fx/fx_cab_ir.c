@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/fx/fx_cab_ir.c — Partitioned Q18 Hardware FIR Cabinet Convolver + Low/High Cut
  *
  * Implements:
@@ -17,6 +20,33 @@
 #include "pa_config.h"
 #include "../dsp/fixedpoint.h"
 #include <math.h>
+
+#if PA_PRODUCT_ANDROMEDA
+/* Andromeda has no cabinet: the slot exists (the chain, the presets and the editor protocol all expect
+ * eight), but it is a pass-through node with no state, locked off in fx_graph.c. The real cabinet's
+ * FFT state (17 KB of the .pool region) and its tap buffers went to the granular tape. */
+volatile uint8_t g_pa_cab_parts_limit = 16;          /* audio_alnk.c's load governor writes it */
+static void cab_stub_run(fx_node_t *nd, int32_t *buf, int n) { (void)nd; (void)buf; (void)n; }
+static void cab_stub_run_stereo(fx_node_t *nd, int32_t *l, int32_t *r, int n) { (void)nd; (void)l; (void)r; (void)n; }
+static void cab_stub_set_param(fx_node_t *nd, int id, int32_t val) { (void)nd; (void)id; (void)val; }
+static void cab_stub_reset(fx_node_t *nd) { (void)nd; }
+fx_node_t *fx_cab_ir_new(void) {
+    static fx_node_t node;
+    memset(&node, 0, sizeof node);
+    node.frame      = PA_BLOCK_N;
+    node.tag        = "cab";
+    node.run        = cab_stub_run;
+    node.run_stereo = cab_stub_run_stereo;
+    node.set_param  = cab_stub_set_param;
+    node.reset      = cab_stub_reset;
+    return &node;
+}
+void fx_cab_ir_set_stereo_width(fx_node_t *nd, uint8_t pct) { (void)nd; (void)pct; }
+void fx_cab_ir_set_trim_db_x10(fx_node_t *nd, int16_t db_x10) { (void)nd; (void)db_x10; }
+void fx_cab_ir_set_stock_trim(fx_node_t *nd, uint8_t stock_idx) { (void)nd; (void)stock_idx; }
+void fx_cab_ir_normalise_q18(int32_t *taps_q18, uint32_t num_taps) { (void)taps_q18; (void)num_taps; }
+void fx_cab_ir_load_q18(fx_node_t *nd, const int32_t *taps_q18, uint32_t num_taps) { (void)nd; (void)taps_q18; (void)num_taps; }
+#else
 
 /* PA_CAB_FFT 1: the cabinet convolution runs on the CPU as a float FFT convolution (fft_conv.c). The
  * accelerator's FIR job writes 129 words for a 64-sample block and the Q18 output was being read as 64
@@ -701,3 +731,5 @@ void fx_cab_ir_load_q18(fx_node_t *nd, const int32_t *taps_q18, uint32_t num_tap
     s->lp.z1 = 0; s->lp.z2 = 0;
     for (int i = 0; i < 4; i++) s->rz[i] = 0.0f;
 }
+
+#endif /* PA_PRODUCT_ANDROMEDA */

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_embedded_user.c - the imported-content path: registry seeding, blob load, cabinet list.
  * Run by test/test_embedded_user.py, which builds a fixture .inc with tools/pa_import.py and passes it in. */
 #include <stdio.h>

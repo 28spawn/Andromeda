@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_drive.c - the DRV block (src/fx/fx_drive.c), measured.
  *
  *   [1] LEVEL 0 % is silent; LEVEL 100 % is +12 dB over 50 %

@@ -80,7 +80,7 @@
   }
 
   /* ========================================================================
-     Pocket Amp Authentic Hardware Enclosure (Strict Circular Geometry)
+     Andromeda Hardware Enclosure (Strict Circular Geometry)
      ======================================================================== */
   .device-shell {
     position: relative;
@@ -612,6 +612,27 @@
   .perf-hud-val.accent { color: var(--accent); }
   .perf-hud-val.green { color: var(--green); }
   .perf-hud-val.amber { color: var(--amber); }
+  .act {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 7px 11px;
+    font: inherit;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 600;
+    transition: all .08s ease;
+  }
+  .act:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .act:active, .act.on {
+    background: var(--accent);
+    color: #101214;
+    border-color: var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -673,17 +694,40 @@
           </div>
         </div>
 
-        <!-- Bottom Tactile Pill Button Strip -->
+        <!-- Bottom Tactile Pill Button Strip (Andromeda 5-Button System) -->
         <div class="hw-pill-bar">
-          <button class="hw-pill-btn" onmousedown="beginBtn(1<<0)" onmouseup="endBtn(1<<0)" onmouseleave="endBtn(1<<0)" onclick="clickBtn(1<<0)">HOME</button>
+          <button class="hw-pill-btn" id="hwBtnHome"
+                  onmousedown="onHwBtnDown(1<<0, 1100)" onmouseup="onHwBtnUp(1<<0)" onmouseleave="onHwBtnCancel()"
+                  onclick="tapBtn(1<<0)"
+                  title="HOME: Tap: Toggle Radar / Signal Chain / Block Page | Hold 1.1s: Settings">HOME</button>
           <div class="hw-pill-divider"></div>
-          <button class="hw-pill-btn" onmousedown="beginBtn(1<<1)" onmouseup="endBtn(1<<1)" onmouseleave="endBtn(1<<1)" onclick="clickBtn(1<<1)">VOL-</button>
+          <button class="hw-pill-btn" id="hwBtnVolM"
+                  onmousedown="onHwBtnDown(1<<1, 900)" onmouseup="onHwBtnUp(1<<1)" onmouseleave="onHwBtnCancel()"
+                  onclick="tapBtn(1<<1)"
+                  title="VOL-: Decrement Preset (P01..P20) | On Block Page: Prev Active Block | Hold: Prev Preset">VOL-</button>
           <div class="hw-pill-divider"></div>
-          <button class="hw-pill-btn" onmousedown="beginBtn(1<<2)" onmouseup="endBtn(1<<2)" onmouseleave="endBtn(1<<2)" onclick="clickBtn(1<<2)">VOL+</button>
+          <button class="hw-pill-btn" id="hwBtnVolP"
+                  onmousedown="onHwBtnDown(1<<2, 900)" onmouseup="onHwBtnUp(1<<2)" onmouseleave="onHwBtnCancel()"
+                  onclick="tapBtn(1<<2)"
+                  title="VOL+: Increment Preset (P01..P20) | On Block Page: Next Active Block | Hold: Next Preset">VOL+</button>
           <div class="hw-pill-divider"></div>
-          <button class="hw-pill-btn" onmousedown="beginBtn(1<<3)" onmouseup="endBtn(1<<3)" onmouseleave="endBtn(1<<3)" onclick="clickBtn(1<<3)">&lt;</button>
+          <button class="hw-pill-btn" id="hwBtnLeft"
+                  onmousedown="onHwBtnDown(1<<3, 900)" onmouseup="onHwBtnUp(1<<3)" onmouseleave="onHwBtnCancel()"
+                  onclick="tapBtn(1<<3)"
+                  title="<: Strike / Reverse Grain Burst / ACCRETION Rec | Hold 0.8s: Clear Phrase Buffer">&lt;</button>
           <div class="hw-pill-divider"></div>
-          <button class="hw-pill-btn" onmousedown="beginBtn(1<<4)" onmouseup="endBtn(1<<4)" onmouseleave="endBtn(1<<4)" onclick="clickBtn(1<<4)">&gt;</button>
+          <button class="hw-pill-btn" id="hwBtnRight"
+                  onmousedown="onHwBtnDown(1<<4, 900)" onmouseup="onHwBtnUp(1<<4)" onmouseleave="onHwBtnCancel()"
+                  onclick="tapBtn(1<<4)"
+                  title=">: SOS Looper (Play / Dub / Freeze / Soft Strike)">&gt;</button>
+        </div>
+        <!-- Andromeda Badges -->
+        <div style="display:flex; justify-content:space-between; width:480px; margin:6px auto 0; font-size:10px; font-weight:700; text-align:center; color:#888; text-transform:uppercase;">
+          <div style="width:72px; color:#5eead4;">FREEZE<br><small style="font-weight:normal;font-size:8px;color:#80f2ff;">(HOLD 1.5s)</small></div>
+          <div style="width:72px; color:#5eead4;">PRESET -<br><small style="font-weight:normal;font-size:8px;color:#80f2ff;">(DECREMENT)</small></div>
+          <div style="width:72px; color:#5eead4;">PRESET +<br><small style="font-weight:normal;font-size:8px;color:#80f2ff;">(INCREMENT)</small></div>
+          <div style="width:72px; color:#ff007f;">REVERSE<br><small style="font-weight:normal;font-size:8px;color:#ff80bf;">(BURST)</small></div>
+          <div style="width:72px; color:#f59e0b;">SOS LOOP<br><small style="font-weight:normal;font-size:8px;color:#ffd54f;">(REC/PLAY/DUB)</small></div>
         </div>
       </div>
     </div>
@@ -692,9 +736,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; width:580px; margin:12px auto 4px;">
       <div style="display:flex; align-items:center; gap:6px;">
         <span style="font-size:10px; font-weight:700; color:var(--muted);">SCREEN:</span>
-        <select id="onyxScreenSelect" style="width:180px; padding:3px 6px; font-size:10px;" onchange="onDisplayModeChange(this.value)">
-          <option value="live">● Live C Firmware LCD (240x240)</option>
-        </select>
+        <span style="font-size:10px; font-weight:700; color:var(--accent);">● Live Andromeda Cosmic Radar LCD (240x240)</span>
       </div>
       <div style="display:flex; align-items:center; gap:6px; font-size:11px;">
         <span style="color:var(--amber); font-weight:700;">VOL:</span>
@@ -703,48 +745,20 @@
       </div>
     </div>
 
-    <!-- Simultaneous 2-Button Chords -->
-    <div class="combo-row" style="width:580px; margin:0 auto 10px;">
-      <button class="combo-btn" onclick="tapBtn((1<<1)|(1<<2))">⚡ [VOL- + VOL+]<br>TUNER [T]</button>
-      <button class="combo-btn" onclick="tapBtn((1<<3)|(1<<4))">⚡ [&lt; + &gt;]<br>BANK MODE [B]</button>
-      <button class="combo-btn" style="border-color:#ff7043; color:#ffab91;" onclick="tapBtn((1<<0)|(1<<1))">🥁 [HOME + VOL-]<br>DRUMS [D]</button>
-      <button class="combo-btn" style="border-color:#00e5ff; color:#80f2ff;" onclick="tapBtn(1<<0)">⚙ [HOME on Home]<br>SETTINGS [S]</button>
-      <button class="combo-btn" style="border-color:#ffd54f; color:#ffe082;" onclick="holdBtn(1<<0, 1700)" title="Hold HOME for 1.5 s">🔒 [HOLD HOME 1.5s]<br>STOMP LOCK [L]</button>
-      <button id="btToggleBtn" class="combo-btn" style="border-color:#2fc2b0; color:#2fc2b0;" onclick="toggleBluetooth()" title="Cycle Bluetooth State">📶 BT: CONNECTED<br>[CYCLE STATE]</button>
+    <!-- Hardware Action & Helper Row (matching WASM layout) -->
+    <div class="row" style="width:580px; margin:14px auto 10px; display:flex; gap:7px; flex-wrap:wrap; justify-content:center;">
+      <button class="act" id="comboTuner" onclick="tapBtn((1<<1)|(1<<2))" title="VOL- &amp; VOL+ together: Chromatic Tuner">Tuner</button>
+      <button class="act" id="homeHold" onclick="holdBtn(1<<0, 1100)" title="HOME held 1.1s: Settings">Settings (1.1s)</button>
+      <button class="act" id="leftHold" onclick="holdBtn(1<<3, 900)" title="&lt; held 0.8s: Clear loop buffer">Clear (0.8s)</button>
+      <button class="act" id="paraClick" onclick="tapBtn(1<<5)" title="a quick PARA press (cycle focus / edit)">PARA Click</button>
+      <button class="act" id="paraTurnL" onclick="sendEnc(-1)" title="turn the PARA encoder left">&#9664;</button>
+      <button class="act" id="paraTurnR" onclick="sendEnc(1)" title="turn the PARA encoder right">&#9654;</button>
+      <button class="act" id="paraHold1" onclick="holdBtn(1<<5, 1200)" title="PARA held 1.2s: Save preset">Save (1.2s)</button>
+      <button class="act" id="btToggleBtn" onclick="toggleBluetooth()" title="Cycle Bluetooth State">BT State</button>
     </div>
-
-    <!-- Quick Steppers for PARA -->
-    <div style="display:flex; gap:6px; width:580px; margin:0 auto 16px;">
-      <button class="combo-btn" style="flex:1" onclick="sendEnc(-1)">↺ PARA -1</button>
-      <button class="combo-btn" style="flex:1.5; border-color:var(--accent); color:var(--accent); font-weight:700;" onclick="tapBtn(1<<5)">● PARA CLICK</button>
-      <button class="combo-btn" style="flex:1" onclick="sendEnc(1)">↻ PARA +1</button>
-      <button class="combo-btn" style="flex:1" onclick="holdBtn(1<<5, 1200)" title="Hold PARA for 1 s">Save (1s)</button>
-      <button class="combo-btn" style="flex:1" onclick="holdBtn(1<<5, 2200)" title="Hold PARA for 2 s to Move">Move (2s)</button>
-    </div>
-
-    <!-- Chromatic Tuner & Drum Machine Card -->
-    <div class="card" style="margin-top:16px;">
-      <h2>
-        <span>Chromatic Tuner & 808/909 Drum Machine</span>
-        <span id="tunerNoteBadge" class="badge">--</span>
-      </h2>
-      <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; align-items:end;">
         <div>
-          <label>808/909 Drums</label>
-          <button id="drumToggleBtn" class="btn-secondary" onclick="toggleDrums()">▶ Start Drums</button>
-        </div>
-        <div>
-          <label>Tempo (BPM)</label>
-          <input type="number" id="drumBpm" value="120" min="50" max="240" onchange="updateDrums()">
-        </div>
-        <div>
-          <label>Groove Pattern</label>
-          <select id="drumPattern" onchange="updateDrums()">
-            <option value="0">0: Rock 4/4</option>
-            <option value="1">1: Double Kick Metal</option>
-            <option value="2">2: Funk / Backbeat</option>
-            <option value="3">3: Studio Metronome</option>
-          </select>
+          <label>Tuning Deviation</label>
+          <div id="tunerCentsReadout" style="font-size:16px; font-weight:700; color:#fff; padding:6px 0;">0 ct</div>
         </div>
       </div>
     </div>
@@ -803,17 +817,22 @@
               <optgroup label="Physical Instrument Input">
                 <option value="live" selected>🔌 Live Guitar Input Jack (Audio Interface In)</option>
               </optgroup>
-              <optgroup label="🎸 GuitarSet Studio Session DIs (CC-BY 4.0)">
-                <option value="gs_funk_comp">🎸 Funk 16th Rhythm Chops (112 BPM, C#)</option>
-                <option value="gs_funk_solo">🎸 Funk Melodic Lead & Fills (114 BPM, Ab)</option>
-                <option value="gs_jazz_comp">🎸 Jazz Swing 7th/9th Comping (130 BPM, D)</option>
-                <option value="gs_jazz_solo">🎸 Jazz Bebop Melodic Runs (137 BPM, Eb)</option>
-                <option value="gs_rock_comp">🎸 Rock Arpeggiated Rhythm (85 BPM, F)</option>
-                <option value="gs_rock_solo">🎸 Rock Expressive Lead Solo (148 BPM, C)</option>
-                <option value="gs_bossa_comp">🎸 Bossa Nova Fingerstyle (154 BPM, E)</option>
-                <option value="gs_bossa_solo">🎸 Bossa Nova Melodic Lead (166 BPM, Ab)</option>
-                <option value="gs_acoustic_strum">🎸 Acoustic Open Strumming (107 BPM, Ab)</option>
-                <option value="gs_acoustic_solo">🎸 Acoustic Melodic Solo (100 BPM, C#)</option>
+              <optgroup label="🎸 Jonas Hemmersbach Clean DI Captures">
+                <option value="jh_chords_1">🎸 Chords 1 (Clean DI)</option>
+                <option value="jh_chords_2">🎸 Chords 2 (Clean DI)</option>
+                <option value="jh_chords_3">🎸 Chords 3 (Clean DI)</option>
+                <option value="jh_chords_4">🎸 Chords 4 (Clean DI)</option>
+                <option value="jh_chords_5">🎸 Chords 5 (Clean DI)</option>
+                <option value="jh_lick_1">🎸 Lick 1 (Lead DI)</option>
+                <option value="jh_lick_2">🎸 Lick 2 (Lead DI)</option>
+                <option value="jh_lick_3">🎸 Lick 3 (Lead DI)</option>
+                <option value="jh_lick_4">🎸 Lick 4 (Lead DI)</option>
+                <option value="jh_lick_5">🎸 Lick 5 (Lead DI)</option>
+                <option value="jh_riff_1">🎸 Riff 1 (Rhythm DI)</option>
+                <option value="jh_riff_2">🎸 Riff 2 (Rhythm DI)</option>
+                <option value="jh_riff_3">🎸 Riff 3 (Rhythm DI)</option>
+                <option value="jh_riff_4">🎸 Riff 4 (Rhythm DI)</option>
+                <option value="jh_riff_5">🎸 Riff 5 (Rhythm DI)</option>
               </optgroup>
               <optgroup label="🎸 Synthesised DI phrases (tools/gen_test_audio.py)">
                 <option value="di_clean">🎸 Clean strummed chords</option>
@@ -883,82 +902,142 @@
       <canvas id="scopeCanvas" width="600" height="90"></canvas>
     </div>
 
-    <!-- .NAM Model Loader & .WAV Cabinet IR Loader -->
+    <!-- ANDROMEDA PRESET MATRIX: 20 PRESETS (12 FACTORY + 8 USER) -->
     <div class="card">
-      <h2>
-        <span>Neural Amp Modeler (.nam) & Cabinet IR (.wav) Hot-Loader</span>
-        <span id="namModelBadge" class="badge">Marshall JCM800 Crunch (Q21 GRU-16)</span>
-      </h2>
-      <div class="drop-grid">
-        <div class="drop-zone" id="namDropZone" onclick="document.getElementById('namFileInput').click()">
-          <input type="file" id="namFileInput" accept=".nam,.json,.am3data,.bin" style="display:none" onchange="uploadNamFile(this.files[0])">
-          <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📂 Load .NAM or .am3data Model</div>
-          <div style="font-size:11px; color:var(--muted);">Drop any Neural Amp Modeler <code>.nam</code> file or click to browse.<br>Auto-quantizes to AC791N Q21 GRU-16 in real time!</div>
-          <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;" onclick="event.stopPropagation()">
-            <button type="button" class="btn btn-sm" onclick="loadSampleNam('test_capture.nam')" style="font-size:11px; padding:3px 8px; background:var(--panel-hi); border:1px solid var(--accent); color:var(--text); border-radius:4px; cursor:pointer;" title="A generated A2 capture (tools/gen_test_audio.py) - exercises the loader and the engine; it is not a model of an amplifier">⚡ Synthetic A2 test capture</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h2 style="margin:0;">
+          <span>Andromeda Preset Roster (20 Presets: 12 Factory + 8 User)</span>
+        </h2>
+        <span id="activePresetBadge" class="badge" style="background:#051b24; border-color:var(--accent); color:var(--accent); font-weight:bold; font-size:12px;">01 NEBULA DRIFT</span>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-top:8px;">
+        <!-- Group 1: Ambient Washes & Shimmers (P01..P06) -->
+        <div style="background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:10px;">
+          <div style="font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:6px;">Presets P01 &ndash; P06: Washes &amp; Glitch</div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <button class="btn-secondary preset-btn active" id="pbtn0" onclick="selectPreset(0)" style="text-align:left; padding:5px 8px; cursor:pointer;">01 NEBULA DRIFT <span style="float:right;color:var(--muted);font-size:10px;">Ambient Wash</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn1" onclick="selectPreset(1)" style="text-align:left; padding:5px 8px; cursor:pointer;">02 PULSAR SHIMMER <span style="float:right;color:var(--muted);font-size:10px;">Shimmer + Octave</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn2" onclick="selectPreset(2)" style="text-align:left; padding:5px 8px; cursor:pointer;">03 SINGULARITY <span style="float:right;color:var(--muted);font-size:10px;">Drone Pad Freeze</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn3" onclick="selectPreset(3)" style="text-align:left; padding:5px 8px; cursor:pointer;">04 CHRONOS CHOP <span style="float:right;color:var(--muted);font-size:10px;">50ms Stutter Slice</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn4" onclick="selectPreset(4)" style="text-align:left; padding:5px 8px; cursor:pointer;">05 TACHYON REV <span style="float:right;color:var(--muted);font-size:10px;">Reverse Tape Burst</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn5" onclick="selectPreset(5)" style="text-align:left; padding:5px 8px; cursor:pointer;">06 SUPERNOVA <span style="float:right;color:var(--muted);font-size:10px;">Stochastic Crush</span></button>
           </div>
         </div>
-        <div class="drop-zone" id="irDropZone" onclick="document.getElementById('irFileInput').click()">
-          <input type="file" id="irFileInput" accept=".wav" style="display:none" onchange="uploadIrFile(this.files[0])">
-          <div style="font-weight:700; color:var(--amber); margin-bottom:4px;">🔊 Load Cabinet IR (.wav)</div>
-          <div style="font-size:11px; color:var(--muted);">Drop any <code>.wav</code> speaker cab impulse response.<br>Loads 1024 Q18 FIR taps into 0x01EE0400 HW!</div>
-        </div>
-      </div>
-
-      <!-- The IR bank: synthesised cabinets and reverbs (tools/gen_test_audio.py) -->
-      <div style="margin-top:10px; margin-bottom:12px;">
-        <div style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">
-          IR bank - modelled cabs & reverbs (1-click load into the FIR convolver):
-        </div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          <button class="btn-secondary" style="width:auto; padding:5px 10px; font-size:11px; cursor:pointer;" onclick="loadIrBank('cab_4x12_closed')">🔊 4x12 closed</button>
-          <button class="btn-secondary" style="width:auto; padding:5px 10px; font-size:11px; cursor:pointer;" onclick="loadIrBank('cab_2x12_open')">🔊 2x12 open</button>
-          <button class="btn-secondary" style="width:auto; padding:5px 10px; font-size:11px; cursor:pointer;" onclick="loadIrBank('cab_1x12_combo')">🔊 1x12 combo</button>
-          <button class="btn-secondary" style="width:auto; padding:5px 10px; font-size:11px; cursor:pointer;" onclick="loadIrBank('cab_bass_4x10')">🔊 Bass 4x10</button>
-          <button class="btn-secondary" style="width:auto; padding:5px 10px; font-size:11px; cursor:pointer;" onclick="loadIrBank('rev_plate')">🏛 Plate reverb</button>
-          <button class="btn-secondary" style="width:auto; padding:5px 10px; font-size:11px; cursor:pointer;" onclick="loadIrBank('rev_spring')">🌊 Spring reverb</button>
-        </div>
-      </div>
-
-      <!-- 5-Category Adaptive Voicing Engine -->
-      <div style="background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div style="font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px;">
-            Adaptive Tone Voicing & Biquad Profile:
+        <!-- Group 2: Generative Clouds & Tape Loops (P07..P12) -->
+        <div style="background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:10px;">
+          <div style="font-size:11px; font-weight:700; color:var(--green); text-transform:uppercase; margin-bottom:6px;">Presets P07 &ndash; P12: Clouds &amp; SOS Loops</div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <button class="btn-secondary preset-btn" id="pbtn6" onclick="selectPreset(6)" style="text-align:left; padding:5px 8px; cursor:pointer;">07 ORBITAL ARP <span style="float:right;color:var(--muted);font-size:10px;">Fifths/Octaves Arp</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn7" onclick="selectPreset(7)" style="text-align:left; padding:5px 8px; cursor:pointer;">08 KEPLER GRAV <span style="float:right;color:var(--muted);font-size:10px;">Elliptical Pan LFO</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn8" onclick="selectPreset(8)" style="text-align:left; padding:5px 8px; cursor:pointer;">09 STOCHASTIC <span style="float:right;color:var(--muted);font-size:10px;">Perlin Noise Cloud</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn9" onclick="selectPreset(9)" style="text-align:left; padding:5px 8px; cursor:pointer;">10 WORMHOLE SOS <span style="float:right;color:var(--muted);font-size:10px;">Sound-on-Sound Loop</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn10" onclick="selectPreset(10)" style="text-align:left; padding:5px 8px; cursor:pointer;">11 EVENT SCRUB <span style="float:right;color:var(--muted);font-size:10px;">Circular Audio Scrub</span></button>
+            <button class="btn-secondary preset-btn" id="pbtn11" onclick="selectPreset(11)" style="text-align:left; padding:5px 8px; cursor:pointer;">12 DARK MATTER <span style="float:right;color:var(--muted);font-size:10px;">Sub-Octave Resonance</span></button>
           </div>
-          <span id="activeVoicingBadge" class="badge" style="font-size:10px;">AUTO: CRUNCH</span>
-        </div>
-        <div class="voicing-btns" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:6px;">
-          <button id="voiceBtn0" class="btn-secondary" style="padding:6px 4px; font-size:11px;" onclick="setVoicing(0)">1. Clean<br><small style="color:var(--muted);font-size:9px;">20Hz / 18.5k</small></button>
-          <button id="voiceBtn1" class="btn-secondary" style="padding:6px 4px; font-size:11px;" onclick="setVoicing(1)">2. Crunch<br><small style="color:var(--muted);font-size:9px;">30Hz / Tube Sag</small></button>
-          <button id="voiceBtn2" class="btn-secondary" style="padding:6px 4px; font-size:11px;" onclick="setVoicing(2)">3. High Gain<br><small style="color:var(--muted);font-size:9px;">45Hz / Anti-Fizz</small></button>
-          <button id="voiceBtn3" class="btn-secondary" style="padding:6px 4px; font-size:11px;" onclick="setVoicing(3)">4. Fuzz<br><small style="color:var(--muted);font-size:9px;">35Hz / 9.5k LPF</small></button>
-          <button id="voiceBtn4" class="btn-secondary" style="padding:6px 4px; font-size:11px;" onclick="setVoicing(4)">5. Bass<br><small style="color:var(--muted);font-size:9px;">20Hz Sub / 14k</small></button>
         </div>
       </div>
-
-      <div id="presetAmpsTitle" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">
-        Stock & User NAM Amps (Flash Persisted):
+      <!-- User Flash Presets P13..P20 -->
+      <div style="margin-top:10px; background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:10px;">
+        <div style="font-size:11px; font-weight:700; color:var(--amber); text-transform:uppercase; margin-bottom:6px;">User Custom Slots (P13 &ndash; P20 Flash Storage)</div>
+        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
+          <button class="btn-secondary preset-btn" id="pbtn12" onclick="selectPreset(12)" style="text-align:left; padding:5px 8px; font-size:11px;">13 USER 13</button>
+          <button class="btn-secondary preset-btn" id="pbtn13" onclick="selectPreset(13)" style="text-align:left; padding:5px 8px; font-size:11px;">14 USER 14</button>
+          <button class="btn-secondary preset-btn" id="pbtn14" onclick="selectPreset(14)" style="text-align:left; padding:5px 8px; font-size:11px;">15 USER 15</button>
+          <button class="btn-secondary preset-btn" id="pbtn15" onclick="selectPreset(15)" style="text-align:left; padding:5px 8px; font-size:11px;">16 USER 16</button>
+          <button class="btn-secondary preset-btn" id="pbtn16" onclick="selectPreset(16)" style="text-align:left; padding:5px 8px; font-size:11px;">17 USER 17</button>
+          <button class="btn-secondary preset-btn" id="pbtn17" onclick="selectPreset(17)" style="text-align:left; padding:5px 8px; font-size:11px;">18 USER 18</button>
+          <button class="btn-secondary preset-btn" id="pbtn18" onclick="selectPreset(18)" style="text-align:left; padding:5px 8px; font-size:11px;">19 USER 19</button>
+          <button class="btn-secondary preset-btn" id="pbtn19" onclick="selectPreset(19)" style="text-align:left; padding:5px 8px; font-size:11px;">20 USER 20</button>
+        </div>
       </div>
-      <div class="preset-amps" id="presetAmpsContainer"></div>
     </div>
 
-    <!-- 8-Slot Signal Chain & C7 Dynamic SRAM Reclaim -->
+    <!-- 4 CELESTIAL CONTROL AXES & LIVE ACCRETION DISK LOOPER -->
     <div class="card">
-      <h2>
-        <span>8-Slot Effect Chain (Click Slot to Toggle Bypass & Reclaim SRAM)</span>
-        <span id="selectedSlotLabel" style="color:var(--amber); font-size:11px;">Editing: AMP</span>
-      </h2>
-      <div class="slot-strip" id="slotStrip"></div>
-
-      <!-- Sub-Algorithm / Type Selector -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:var(--panel2); padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <label style="margin:0; font-weight:700; color:var(--accent);">Model / Type:</label>
-          <select id="slotTypeSelect" style="width:230px;" onchange="onSlotTypeChange(this.value)"></select>
-        </div>
-        <div id="slotTypeDesc" style="font-size:11px; color:var(--muted);">Select sub-algorithm</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0;">
+          <span>Andromeda 4-Axis Celestial Modulator & Looper Console</span>
+        </h2>
+        <span id="looperStateBadge" class="badge" style="background:#080b10; border-color:var(--muted); color:var(--muted); font-weight:bold;">LOOPER: STOPPED</span>
       </div>
+
+      <!-- 4 Celestial Axes Controls -->
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:14px;">
+        <div class="axis-box" id="axisBox0" onclick="focusAxis(0)" style="background:var(--panel2); border:2px solid var(--accent); border-radius:8px; padding:10px; text-align:center; cursor:pointer; box-shadow:0 0 10px rgba(0,229,255,0.25);">
+          <div style="font-weight:700; font-size:13px; color:var(--accent);">ORBIT ★</div>
+          <div style="font-size:10px; color:var(--muted); margin-bottom:8px;">Density & Window Size</div>
+          <input type="range" id="axisSlider0" min="0" max="2097152" value="1048576" style="width:100%; accent-color:var(--accent);" oninput="onAxisSlider(0, this.value)">
+          <div id="axisVal0" style="font-size:11px; font-weight:bold; margin-top:4px; color:var(--accent);">120 ms</div>
+        </div>
+
+        <div class="axis-box" id="axisBox1" onclick="focusAxis(1)" style="background:var(--panel2); border:2px solid var(--border); border-radius:8px; padding:10px; text-align:center; cursor:pointer;">
+          <div style="font-weight:700; font-size:13px; color:var(--text);">WARP</div>
+          <div style="font-size:10px; color:var(--muted); margin-bottom:8px;">Pitch Shift & Harmonics</div>
+          <input type="range" id="axisSlider1" min="0" max="2097152" value="1048576" style="width:100%; accent-color:var(--text);" oninput="onAxisSlider(1, this.value)">
+          <div id="axisVal1" style="font-size:11px; font-weight:bold; margin-top:4px;">Unison (1.00x)</div>
+        </div>
+
+        <div class="axis-box" id="axisBox2" onclick="focusAxis(2)" style="background:var(--panel2); border:2px solid var(--border); border-radius:8px; padding:10px; text-align:center; cursor:pointer;">
+          <div style="font-weight:700; font-size:13px; color:var(--text);">FLUX</div>
+          <div style="font-size:10px; color:var(--muted); margin-bottom:8px;">PRNG Jitter & LFO Drift</div>
+          <input type="range" id="axisSlider2" min="0" max="2097152" value="524288" style="width:100%; accent-color:var(--text);" oninput="onAxisSlider(2, this.value)">
+          <div id="axisVal2" style="font-size:11px; font-weight:bold; margin-top:4px;">25 % Jitter</div>
+        </div>
+
+        <div class="axis-box" id="axisBox3" onclick="focusAxis(3)" style="background:var(--panel2); border:2px solid var(--border); border-radius:8px; padding:10px; text-align:center; cursor:pointer;">
+          <div style="font-weight:700; font-size:13px; color:var(--text);">GRAVITY</div>
+          <div style="font-size:10px; color:var(--muted); margin-bottom:8px;">Pan Spread & Feedback</div>
+          <input type="range" id="axisSlider3" min="0" max="2097152" value="1048576" style="width:100%; accent-color:var(--text);" oninput="onAxisSlider(3, this.value)">
+          <div id="axisVal3" style="font-size:11px; font-weight:bold; margin-top:4px;">50 % Stereo</div>
+        </div>
+      </div>
+
+      <!-- Accretion Looper, Reverse Burst & Freeze Action Bar -->
+      <div style="display:flex; gap:10px; align-items:center; background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:12px;">
+        <button class="btn-primary" style="flex:1.2; padding:10px; background:#d32f2f; border-color:#ff5252; font-size:12px; font-weight:bold; cursor:pointer;" onclick="triggerLooperAction()">⏺ Looper: Rec / Play / Dub (&gt;)</button>
+        <button class="btn-secondary" style="flex:1; padding:10px; border-color:#bd10e0; color:#bd10e0; font-size:12px; font-weight:bold; cursor:pointer;" onclick="triggerReverseBurst()">⏪ Reverse Grain Burst (&lt;)</button>
+        <button class="btn-secondary" style="flex:1.2; padding:10px; border-color:var(--accent); color:var(--accent); font-size:12px; font-weight:bold; cursor:pointer;" onclick="triggerBufferFreeze()">❄ Latch Buffer Freeze (HOME)</button>
+      </div>
+    </div>
+
+    <!-- ANDROMEDA GRANULAR SIGNAL CHAIN TOPOLOGY -->
+    <div class="card" style="margin-bottom:0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h2 style="margin:0;"><span>Andromeda DSP Topology & Cycle Margin (360 MHz AC791N)</span></h2>
+        <span style="color:var(--green); font-size:11px; font-weight:bold;">SRAM Reclaimed: 56 KB | 62% CPU Headroom</span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; font-size:11px; text-align:center;">
+        <div style="background:#0a1017; border:1px solid var(--border); border-radius:6px; padding:8px 4px; color:var(--accent);">
+          <div style="font-weight:bold;">INPUT</div>
+          <small style="color:var(--muted);">Conditioning</small>
+        </div>
+        <div style="background:#0a1017; border:1px solid var(--border); border-radius:6px; padding:8px 4px; color:var(--accent);">
+          <div style="font-weight:bold;">DIFFUSION</div>
+          <small style="color:var(--muted);">Allpass Smear</small>
+        </div>
+        <div style="background:#003844; border:1px solid var(--accent); border-radius:6px; padding:8px 4px; color:#fff; box-shadow:0 0 8px rgba(0,229,255,0.3);">
+          <div style="font-weight:bold;">GRANULAR</div>
+          <small style="color:var(--accent);">16-Voice Core</small>
+        </div>
+        <div style="background:#0a1017; border:1px solid var(--border); border-radius:6px; padding:8px 4px; color:var(--accent);">
+          <div style="font-weight:bold;">PITCH WARP</div>
+          <small style="color:var(--muted);">Hermite Q16</small>
+        </div>
+        <div style="background:#0a1017; border:1px solid var(--border); border-radius:6px; padding:8px 4px; color:var(--accent);">
+          <div style="font-weight:bold;">SOS LOOP</div>
+          <small style="color:var(--muted);">5.46s Tape</small>
+        </div>
+        <div style="background:#0a1017; border:1px solid var(--border); border-radius:6px; padding:8px 4px; color:var(--accent);">
+          <div style="font-weight:bold;">SPACE REV</div>
+          <small style="color:var(--muted);">Cloud Wash</small>
+        </div>
+        <div style="background:#0a1017; border:1px solid var(--border); border-radius:6px; padding:8px 4px; color:var(--accent);">
+          <div style="font-weight:bold;">LIMITER</div>
+          <small style="color:var(--muted);">Soft Saturation</small>
+        </div>
+      </div>
+    </div>
 
       <div class="param-sliders" id="paramSlidersContainer">
         <!-- Rendered dynamically by renderParamSliders() -->
@@ -978,18 +1057,7 @@ const SLOT_NAMES = ["DYN", "DRV", "AMP", "CAB", "EQ", "MOD", "DLY", "REV"];
 const STAGE_NAMES = ["DYN", "DRIVE", "NAM-GRU", "CAB-IR", "EQ", "MOD", "DELAY", "REVERB"];
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-const GROOVE_NAMES = [
-  "8 Beat 1 (Pop)", "8 Beat 2 (Rock)", "8 Beat 3", "8 Beat 4", "8 Beat 5",
-  "16 Beat 1", "16 Beat 2", "16 Beat 3", "16 Beat 4", "16 Beat 5",
-  "Rock 'n' Roll", "Classic Rock", "Pop Rock", "Slow Rock", "Rock Shuffle", "Rock Ballad",
-  "Punk", "New Wave", "Hard Rock", "Metal (Double-Kick)",
-  "Classic Funk", "Funk Rock", "Electric Funk", "Soul", "R&B Backbeat",
-  "Jazz Swing", "Big Band", "Fusion", "Swing 4/4", "Dixieland",
-  "Texas Blues", "Country", "Country Folk", "Rockabilly", "Bluegrass",
-  "Bossa Nova", "Rumba", "Samba", "Cha Cha", "Tango",
-  "Metronome 1/4", "Metronome 2/4", "Metronome 3/4", "Metronome 4/4",
-  "Metronome 5/4", "Metronome 6/4", "Metronome 7/4", "Metronome 3/8", "Metronome 6/8"
-];
+
 
 const SLOT_TYPES = [
   // 0: DYN
@@ -1147,7 +1215,6 @@ function paramLabels(slot) {
 }
 let currentSlotMask = 0xFF;
 let selectedSlot = 2; // AMP
-let drumPlaying = 0;
 let knobAngle = 0;
 
 const lcdCanvas = document.getElementById("lcdCanvas");
@@ -1247,17 +1314,35 @@ function releaseBtn(mask) {
  * so it is turned into a complete gesture here. The click that a real mouse
  * generates after its own mouse-up is ignored, or the button would fire
  * twice. */
-let __lastGesture = 0;
-function beginBtn(mask) {
-  __lastGesture = Date.now();
-  pressBtn(mask);
+let hwBtnTimer = null;
+let hwBtnHeld = false;
+
+function onHwBtnDown(mask, holdMs) {
+  hwBtnHeld = false;
+  if (hwBtnTimer) clearTimeout(hwBtnTimer);
+  hwBtnTimer = setTimeout(() => {
+    hwBtnHeld = true;
+    holdBtn(mask, holdMs || 1100);
+  }, 500);
 }
-function endBtn(mask) {
-  __lastGesture = Date.now();
-  releaseBtn(mask);
+
+function onHwBtnUp(mask) {
+  if (hwBtnTimer) {
+    clearTimeout(hwBtnTimer);
+    hwBtnTimer = null;
+  }
+  if (!hwBtnHeld) {
+    tapBtn(mask);
+  }
+  hwBtnHeld = false;
 }
-function clickBtn(mask) {
-  if (Date.now() - __lastGesture > 400) tapBtn(mask);
+
+function onHwBtnCancel() {
+  if (hwBtnTimer) {
+    clearTimeout(hwBtnTimer);
+    hwBtnTimer = null;
+  }
+  hwBtnHeld = false;
 }
 
 /* A complete gesture in ONE request: the emulator presses the button, holds
@@ -1287,23 +1372,20 @@ function sendEnc(delta) {
 
 function onParaDown(e) {
   e.stopPropagation();
-  __lastGesture = Date.now();
-  pressBtn(1 << 5);
+  onHwBtnDown(1 << 5, 1200);
   const b = document.getElementById("paraBtn");
   if (b) b.classList.add("pressed");
 }
 
 function onParaUp(e) {
   e.stopPropagation();
-  __lastGesture = Date.now();
-  releaseBtn(1 << 5);
+  onHwBtnUp(1 << 5);
   const b = document.getElementById("paraBtn");
   if (b) b.classList.remove("pressed");
 }
 
 function onParaClick(e) {
   e.stopPropagation();
-  if (Date.now() - __lastGesture > 400) tapBtn(1 << 5);
 }
 
 // PARA Knob Mouse Wheel & Drag
@@ -1392,22 +1474,19 @@ window.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
   const k = e.key.toLowerCase();
 
-  // --- direct commands ---------------------------------------------------
-  // These are not a single physical button, so they are fired as a whole.
-  if (k === "t") { tapBtn((1<<1)|(1<<2)); return; }  // VOL- + VOL+ -> TUNER
-  if (k === "b") { tapBtn((1<<3)|(1<<4)); return; }  // < + >      -> BANK MODE
-  if (k === "c") { tapBtn((1<<0)|(1<<2)); return; }  // HOME + VOL+ -> signal chain
-  if (k === "d") { tapBtn((1<<0)|(1<<1)); return; }  // HOME + VOL- -> groove station
-  if (k === "s") { tapBtn(1<<0); return; }            // HOME click -> Settings
-  // The HOLD actions are a DURATION, not a bit: the firmware reads the hold
-  // from the release edge, so the physical button has to be held down. They
-  // used to be sent as bits 6..9, which the raw input mask (bits 0..5)
-  // discards - so they did nothing at all.
-  if (k === "l") { holdBtn(1<<0, 1700); return; }     // HOME held 1.5 s -> Live Stomp Lock
-  if (k === "m") { holdBtn(1<<5, 2200); return; }     // PARA held 2 s   -> Move block
-  // (the PARA 3 s hold no longer opens the Factory Reset: Settings > System > FACTORY RESET, then a click on RESET)
+  // --- Andromeda Direct Commands & Shortcuts -----------------------------
+  if (k === "t") { tapBtn((1<<1)|(1<<2)); return; }  // VOL- + VOL+ -> TUNER HUD
+  if (k === "h") { tapBtn(1<<0); return; }            // HOME tap    -> Toggle Radar <-> Chain
+  if (k === "s") { holdBtn(1<<0, 1100); return; }     // HOME hold   -> Settings Menu
+  if (k === "c") { holdBtn(1<<3, 900); return; }      // < hold      -> Clear loop buffer
+  if (k === "p" || k === "enter") { tapBtn(1<<5); return; } // PARA click -> Cycle Axis / Edit
+  if (k === "w") { holdBtn(1<<5, 1200); return; }     // PARA hold   -> Save Preset to Flash
+  if (k === "[" || k === "-") { tapBtn(1<<1); return; } // VOL- tap   -> Prev Preset
+  if (k === "]" || k === "=") { tapBtn(1<<2); return; } // VOL+ tap   -> Next Preset
   if (e.key === "ArrowUp")   { e.preventDefault(); sendEnc(1);  return; }
   if (e.key === "ArrowDown") { e.preventDefault(); sendEnc(-1); return; }
+  if (e.key === "ArrowLeft") { e.preventDefault(); tapBtn(1<<3); return; } // < tap -> Strike / Rec
+  if (e.key === "ArrowRight"){ e.preventDefault(); tapBtn(1<<4); return; } // > tap -> Looper Play/Dub
 
   activeKeys.add(k);
 
@@ -1544,17 +1623,7 @@ function setSlotParam(paramId, val) {
   onParamSliderInput(selectedSlot, paramId, val);
 }
 
-function toggleDrums() {
-  drumPlaying = drumPlaying ? 0 : 1;
-  updateDrums();
-}
 
-function updateDrums() {
-  const bpm = parseInt(document.getElementById("drumBpm").value, 10) || 120;
-  const pattern = parseInt(document.getElementById("drumPattern").value, 10) || 0;
-  document.getElementById("drumToggleBtn").textContent = drumPlaying ? "⏹ Stop Drums" : "▶ Start Drums";
-  apiPost("/api/drums", { playing: drumPlaying, bpm, pattern });
-}
 
 let g_loadedAmps = [];
 
@@ -1960,33 +2029,6 @@ function linToDb(peak) {
 }
 
 let g_display_mode = "live";
-let g_onyx_img = new Image();
-
-function onDisplayModeChange(val) {
-  g_display_mode = val;
-  if (val !== "live") {
-    g_onyx_img.onload = () => {
-      lcdCtx.drawImage(g_onyx_img, 0, 0, 240, 240);
-    };
-    g_onyx_img.src = "/onyx/" + val + "?t=" + Date.now();
-  }
-}
-
-async function loadOnyxScreens() {
-  try {
-    const res = await fetch("/api/onyx_screens");
-    const data = await res.json();
-    const sel = document.getElementById("onyxScreenSelect");
-    if (!sel || !data.screens) return;
-    data.screens.forEach(s => {
-      const opt = document.createElement("option");
-      opt.value = s;
-      const cleanName = s.replace(".png", "").replace(/^\d+[b]?_/, "").replace(/_/g, " ").toUpperCase();
-      opt.textContent = "🎨 " + cleanName;
-      sel.appendChild(opt);
-    });
-  } catch (e) {}
-}
 
 async function pollState() {
   try {
@@ -2040,15 +2082,12 @@ async function pollState() {
       updateMasterDial(t.master_volume);
     }
 
-    // Sync Drum Machine state
-    if (t.drum_playing !== undefined) {
-      drumPlaying = t.drum_playing;
-      const btn = document.getElementById("drumToggleBtn");
-      if (btn) btn.textContent = drumPlaying ? "⏹ Stop Drums" : "▶ Start Drums";
-      const bpmEl = document.getElementById("drumBpm");
-      if (bpmEl && document.activeElement !== bpmEl) bpmEl.value = t.drum_bpm;
-      const patEl = document.getElementById("drumPattern");
-      if (patEl && document.activeElement !== patEl) patEl.value = t.drum_pattern;
+    // Sync Tuner HUD readouts
+    if (t.tuner_freq_tenths !== undefined && t.tuner_active) {
+      const fEl = document.getElementById("tunerFreqReadout");
+      if (fEl) fEl.textContent = (t.tuner_freq_tenths / 10).toFixed(1) + " Hz";
+      const cEl = document.getElementById("tunerCentsReadout");
+      if (cEl) cEl.textContent = (t.tuner_cents > 0 ? "+" : "") + t.tuner_cents + " ct";
     }
 
     // Sync Bluetooth state
@@ -2113,7 +2152,7 @@ async function pollState() {
       updateVoicingUi(st.wavenet_voicing);
     }
 
-    // 4d. Sync Slot Types (Preset changes or Onyx encoder model changes)
+    // 4d. Sync Slot Types
     if (st.slot_types && Array.isArray(st.slot_types)) {
       // types whose knob labels / units depend on the type: DYN, MOD, REV
       for (const s of [0, 4, 5, 6, 7]) {
@@ -2154,6 +2193,22 @@ async function pollState() {
       });
     }
 
+    // Andromeda looper & freeze state sync
+    if (st.andromeda) {
+      const lBadge = document.getElementById("looperStateBadge");
+      if (lBadge) {
+        const states = ["STOPPED", "RECORDING", "PLAYING", "OVERDUBBING"];
+        const colors = ["var(--muted)", "#d32f2f", "#4cd964", "#f5c542"];
+        const s = st.andromeda.looper_state || 0;
+        lBadge.textContent = "LOOPER: " + (states[s] || "STOPPED") + (st.andromeda.frozen ? " (FROZEN)" : "");
+        lBadge.style.color = colors[s] || "var(--muted)";
+        lBadge.style.borderColor = colors[s] || "var(--muted)";
+      }
+    }
+    if (st.telemetry && st.telemetry.preset_index !== undefined) {
+      updatePresetUI(st.telemetry.preset_index);
+    }
+
     // 5. Per-stage CPU breakdown
     const sg = document.getElementById("cpuStagesGrid");
     sg.innerHTML = STAGE_NAMES.map((name, idx) => {
@@ -2170,18 +2225,94 @@ async function pollState() {
   setTimeout(pollState, 50);
 }
 
-function initDrumPatterns() {
-  const sel = document.getElementById("drumPattern");
-  if (!sel) return;
-  sel.innerHTML = GROOVE_NAMES.map((name, idx) => `<option value="${idx}">${idx}: ${name}</option>`).join("");
-}
 
-initDrumPatterns();
+
 renderSlots();
 refreshAmpList();
 loadDevices();
-loadOnyxScreens();
 pollState();
+
+// --- Project ANDROMEDA Workbench Controller ---
+const COSMIC_PRESET_NAMES = [
+  "01 CRYSTAL", "02 KALIMBA", "03 GARDEN", "04 DRIFT", "05 SOS", "06 MIRROR",
+  "07 ANGELS", "08 DEEP", "09 CLOCK", "10 WATER", "11 STARDUST", "12 GRAVITY"
+];
+
+let currentActiveAxis = 0;
+
+function selectPreset(idx) {
+  fetch('/api/preset?index=' + idx).then(() => {
+    updatePresetUI(idx);
+  }).catch(() => {
+    // If running in wasm shim
+    if (typeof d !== 'undefined' && d.emu_select_preset) {
+      d.emu_select_preset(idx);
+    }
+    updatePresetUI(idx);
+  });
+}
+
+function updatePresetUI(idx) {
+  for (let i = 0; i < 12; i++) {
+    const btn = document.getElementById('pbtn' + i);
+    if (btn) {
+      if (i === idx) {
+        btn.classList.add('active');
+        btn.style.background = '#003844';
+        btn.style.borderColor = 'var(--accent)';
+      } else {
+        btn.classList.remove('active');
+        btn.style.background = 'var(--panel2)';
+        btn.style.borderColor = 'var(--border)';
+      }
+    }
+  }
+  const badge = document.getElementById('activePresetBadge');
+  if (badge) badge.textContent = COSMIC_PRESET_NAMES[idx] || `PRESET ${idx + 1}`;
+}
+
+function focusAxis(axis) {
+  currentActiveAxis = axis;
+  for (let i = 0; i < 4; i++) {
+    const b = document.getElementById('axisBox' + i);
+    if (b) {
+      if (i === axis) {
+        b.style.borderColor = 'var(--accent)';
+        b.style.boxShadow = '0 0 10px rgba(0,229,255,0.3)';
+      } else {
+        b.style.borderColor = 'var(--border)';
+        b.style.boxShadow = 'none';
+      }
+    }
+  }
+}
+
+function onAxisSlider(axis, val) {
+  const v = parseInt(val);
+  const labels = [
+    Math.round(10 + (v / 2097152) * 390) + " ms",
+    (0.5 + (v / 2097152) * 1.5).toFixed(2) + "x (" + Math.round(((v - 1048576) / 1048576) * 12) + " st)",
+    Math.round((v / 2097152) * 100) + " % Jitter",
+    Math.round((v / 2097152) * 100) + " % Stereo"
+  ];
+  const el = document.getElementById('axisVal' + axis);
+  if (el) el.textContent = labels[axis];
+  // Send parameter update to slot 6 (PA_SLOT_DELAY)
+  fetch(`/api/param?slot=6&param=${axis + 1}&value=${v}`).catch(() => {});
+}
+
+function triggerLooperAction() {
+  tapBtn(1 << 4); // > button
+}
+
+function triggerReverseBurst() {
+  tapBtn(1 << 3); // < button
+}
+
+function triggerBufferFreeze() {
+  holdBtn(1 << 0, 1700); // HOME hold
+}
+
 </script>
 
 <!-- Bottom-Right Floating Performance HUD -->
@@ -2196,7 +2327,7 @@ pollState();
   </div>
   <div class="perf-hud-row">
     <span>SRAM Usage:</span>
-    <span class="perf-hud-val amber" id="hudSram">0.0 / 144 KB</span>
+    <span class="perf-hud-val amber" id="hudSram">0.0 / 64 KB</span>
   </div>
   <div class="perf-hud-row">
     <span>Est. Response:</span>

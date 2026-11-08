@@ -77,6 +77,7 @@ custom-fw/wasm/out/
 # WASM build outputs
 # python custom-fw/wasm/build_wasm.py [--inline]
 custom-fw/wasm/pocket_amp.wasm
+custom-fw/wasm/andromeda.wasm
 custom-fw/wasm/workbench-standalone.html
 # the replaced third-party drum kit (unused; test_provenance.py lists it)
 custom-fw/src/dsp/drum_samples.inc
@@ -104,9 +105,19 @@ custom-fw/qa/*.npz
 custom-fw/qa/noise/
 custom-fw/qa/usb-etw/*.csv
 
-# release outputs and SDK tools
+# release documentation, manifests and licenses are tracked, compiled binaries are not
 !custom-fw/release/**
+custom-fw/release/**/*.bin
+custom-fw/release/**/*.fwsc
+custom-fw/release/**/*.ufw
 custom-fw/third_party/jieli_sdk_files/
+
+# local recovery and diagnostic dumps
+recovery_log.txt
+blackbox.bin
+matrix.csv
+probe.csv
+reamp.csv
 
 # agent / editor local settings
 .claude/

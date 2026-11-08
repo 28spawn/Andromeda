@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/board/ui_app.c — Pocket Amp 240x240 RGB565 Onyx Design System Renderer
  *
  * Implements the authentic "Onyx" 240x240 theme for the M-VAVE Pocket Amp:
@@ -40,18 +43,47 @@
 #include "../../include/pa_wavenet.h"
 #include "../dsp/fixedpoint.h"
 #include "onyx_block_icons.h"
+
+/* What the screens call the product, its theme, and the unit's own sound in the USB mode row */
+#if PA_PRODUCT_ANDROMEDA
+#define UI_PRODUCT_LABEL  "ANDROMEDA"
+#define UI_THEME_LABEL    "COSMOS"
+#define UI_THEME_LABEL_X  184
+#define UI_USB_OWN_LABEL  "PEDAL"
+#else
+#define UI_PRODUCT_LABEL  "POCKET AMP"
+#define UI_THEME_LABEL    "ONYX"
+#define UI_THEME_LABEL_X  196
+#define UI_USB_OWN_LABEL  "AMP"
+#endif
 #include "../../include/pa_settings.h"
 #include "../../include/pa_audio.h"
+#if PA_PRODUCT_ANDROMEDA
+#include "../../include/ui_cosmic.h"
+#include "../../include/pa_meas.h"     /* also pa_granular.h */
+#endif
 
 extern void plat_backlight_set(uint8_t pct);      /* IMP-06 (gpio_scan.c) */
 extern uint32_t plat_ms(void);
+static uint8_t s_bl_dipped __attribute__((unused));
+static uint8_t s_last_duty10 __attribute__((unused)) = 10u;
+
 
 /* IMP-06: runtime grey palette (ONYX / HIGH CONTRAST) */
+#if PA_PRODUCT_ANDROMEDA
+uint16_t g_onyx_greys[3] = { AND_DUST, AND_STARDUST, AND_HAZE };
+#else
 uint16_t g_onyx_greys[3] = { 0x2945u, 0x528Au, 0x8C51u };
+#endif
 void pa_ui_set_theme(uint8_t theme) {
     static const uint16_t k_pal[2][3] = {
+#if PA_PRODUCT_ANDROMEDA
+        { AND_DUST, AND_STARDUST, AND_HAZE },          /* COSMOS */
+        { AND_HC_LINE, AND_HC_DIM, AND_HC_MUTE },      /* HIGH CONTRAST */
+#else
         { 0x2945u, 0x528Au, 0x8C51u },   /* ONYX          #292929 #525252 #8a8a8a */
         { 0x4A69u, 0x8410u, 0xC618u },   /* HIGH CONTRAST #4c4c4c #808080 #c0c0c0 */
+#endif
     };
     for (int i = 0; i < 3; i++) g_onyx_greys[i] = k_pal[theme ? 1 : 0][i];
 }
@@ -81,7 +113,7 @@ extern void st7735s_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui
 extern void ui_draw_char(uint16_t x, uint16_t y, char c, uint16_t fg, uint16_t bg);
 extern void ui_draw_str(uint16_t x, uint16_t y, const char *s, uint16_t fg, uint16_t bg);
 extern void ui_draw_str_scaled(uint16_t x, uint16_t y, const char *s, uint16_t fg, uint16_t bg, uint8_t scale);
-extern uint32_t plat_ms(void);
+
 
 #define DISP_W 240
 #define DISP_H 240
@@ -134,6 +166,16 @@ static void fmt_preset(char out[4], uint32_t preset_0_to_98) {
 
 /* Slot Metadata Functions */
 static const char *get_slot_label(uint8_t slot) {
+#if PA_PRODUCT_ANDROMEDA
+    switch (slot) {
+        case PA_SLOT_DYNAMICS: return "DYN";
+        case PA_SLOT_DELAY:    return "EFFECT";
+        case PA_SLOT_MOD:      return "LAYER";
+        case PA_SLOT_REVERB:   return "SPACE";
+        case PA_SLOT_EQ:       return "EQ";
+        default: return "---";
+    }
+#else
     switch (slot) {
         case PA_SLOT_DYNAMICS: return "DYN";
         case PA_SLOT_DRIVE:    return "DRIVE";
@@ -145,9 +187,20 @@ static const char *get_slot_label(uint8_t slot) {
         case PA_SLOT_REVERB:   return "REV";
         default: return "???";
     }
+#endif
 }
 
 static const char *get_slot_short(uint8_t slot) {
+#if PA_PRODUCT_ANDROMEDA
+    switch (slot) {
+        case PA_SLOT_DYNAMICS: return "DYN";
+        case PA_SLOT_DELAY:    return "FX";
+        case PA_SLOT_MOD:      return "LAY";
+        case PA_SLOT_REVERB:   return "SPC";
+        case PA_SLOT_EQ:       return "EQ";
+        default: return "---";
+    }
+#else
     switch (slot) {
         case PA_SLOT_DYNAMICS: return "DYN";
         case PA_SLOT_DRIVE:    return "DRV";
@@ -159,9 +212,20 @@ static const char *get_slot_short(uint8_t slot) {
         case PA_SLOT_REVERB:   return "REV";
         default: return "???";
     }
+#endif
 }
 
 static uint16_t get_slot_color(uint8_t slot) {
+#if PA_PRODUCT_ANDROMEDA
+    switch (slot) {
+        case PA_SLOT_DYNAMICS: return ONYX_COL_DYN;
+        case PA_SLOT_DELAY:    return AND_VIOLET;
+        case PA_SLOT_MOD:      return AND_ICE;
+        case PA_SLOT_REVERB:   return AND_ION;
+        case PA_SLOT_EQ:       return AND_PULSAR_PINK;
+        default: return AND_DUST;
+    }
+#else
     switch (slot) {
         case PA_SLOT_DYNAMICS: return ONYX_COL_DYN;
         case PA_SLOT_DRIVE:    return ONYX_COL_DRIVE;
@@ -173,15 +237,29 @@ static uint16_t get_slot_color(uint8_t slot) {
         case PA_SLOT_REVERB:   return ONYX_COL_REV;
         default: return ONYX_COL_TEXT;
     }
+#endif
 }
 
 static uint8_t get_slot_model_count(const pa_ui_ctx_t *ui, uint8_t slot) {
     (void)ui;
+#if PA_PRODUCT_ANDROMEDA
+    switch (slot) {
+        case PA_SLOT_DYNAMICS: return 5;
+        case PA_SLOT_DELAY:    return 24;  /* 6 effects x 4 variants = 24 */
+        case PA_SLOT_MOD:      return 6;   /* 6 materials */
+        case PA_SLOT_REVERB:   return 1;   /* COSMIC FDN */
+        case PA_SLOT_EQ:       return 3;
+        case PA_SLOT_AMP:      return (uint8_t)(PA_STOCK_AMP_COUNT + pa_user_nam_get_count());
+        case PA_SLOT_CAB:      return pa_cab_total_count();
+        default: return pa_fx_slot_type_count((pa_fx_slot_id_t)slot);
+    }
+#else
     switch (slot) {
         case PA_SLOT_AMP:      return (uint8_t)(PA_STOCK_AMP_COUNT + pa_user_nam_get_count());
         case PA_SLOT_CAB:      return pa_cab_total_count();
         default:               return pa_fx_slot_type_count((pa_fx_slot_id_t)slot);   /* IMP-13: DSP is the source of truth */
     }
+#endif
 }
 
 /* A deleted capture or cabinet leaves a hole in the type numbering (presets name them by it). The screen counts the models that exist: "cur" is the 1-based position of the type among them, "total" how many there are. */
@@ -211,6 +289,26 @@ static const char *get_slot_model_name(const pa_ui_ctx_t *ui, uint8_t slot, uint
     static const char * const rev_models[8] = { "ROOM", "HALL", "SWELL", "SPRING", "SHIMMER", "CLOUD",
                                                 "PLATE", "AMBIENCE" };
 
+#if PA_PRODUCT_ANDROMEDA
+    static const char * const and_fx_models[24] = {
+        "CRYSTAL", "BELL", "KALIMBA", "MARIMBA",
+        "GARDEN",  "DUSK", "DRIFT",   "RAW",
+        "SOS",     "TAPE", "DECAY",   "MIRROR",
+        "ANGELS",  "MOURN","DEEP",    "INFINITE",
+        "CLOCK",   "WATER","HEART",   "SKIP",
+        "STARDUST","GRAVITY","DANCE", "ORBIT"
+    };
+    static const char * const and_mat_models[6] = { "CRYSTAL", "BELL", "KALIMBA", "METAL", "WOOD", "MARIMBA" };
+
+    switch (slot) {
+        case PA_SLOT_DYNAMICS: return dyn_models[idx % 5u];
+        case PA_SLOT_DELAY:    return and_fx_models[idx % 24u];
+        case PA_SLOT_MOD:      return and_mat_models[idx % 6u];
+        case PA_SLOT_REVERB:   return "COSMIC FDN";
+        case PA_SLOT_EQ:       return eq_models[idx % 3u];
+        default: return "OFF";
+    }
+#else
     switch (slot) {
         case PA_SLOT_DYNAMICS: return dyn_models[idx % 5u];
         case PA_SLOT_DRIVE:    return drv_models[idx % 6u];
@@ -230,6 +328,7 @@ static const char *get_slot_model_name(const pa_ui_ctx_t *ui, uint8_t slot, uint
         case PA_SLOT_REVERB:   return rev_models[idx % 8u];
         default: return "STANDARD";
     }
+#endif
 }
 
 static const char *get_slot_model_kind(const pa_ui_ctx_t *ui, uint8_t slot) {
@@ -255,6 +354,19 @@ static int is_a2_capture_active(const pa_ui_ctx_t *ui) {
 }
 
 static uint8_t get_slot_param_count(const pa_ui_ctx_t *ui, uint8_t slot) {
+#if PA_PRODUCT_ANDROMEDA
+    switch (slot) {
+        case PA_SLOT_DYNAMICS: return 4;
+        case PA_SLOT_DELAY:    return 6;   /* 0..3 macros + 4 MIX + 5 SPACE SEND */
+        case PA_SLOT_MOD:      return 5;   /* 0..3 macros + 4 LEVEL */
+        case PA_SLOT_REVERB:   return 6;   /* 0..5 DECAY, SIZE, TONE, SEND, SHIMMER, INTERVAL */
+        case PA_SLOT_EQ: {
+            static const uint8_t n[3] = { 5, 3, 4 };
+            return n[ui ? (ui->slot_type[PA_SLOT_EQ] % 3u) : 0];
+        }
+        default: return 0;
+    }
+#else
     switch (slot) {
         case PA_SLOT_DYNAMICS: return 4;
         case PA_SLOT_DRIVE:    return 3;
@@ -269,6 +381,7 @@ static uint8_t get_slot_param_count(const pa_ui_ctx_t *ui, uint8_t slot) {
         case PA_SLOT_REVERB:   return 4;
         default: return 0;
     }
+#endif
 }
 
 static const char *get_slot_param_label(const pa_ui_ctx_t *ui, uint8_t slot, uint8_t p) {
@@ -281,12 +394,13 @@ static const char *get_slot_param_label(const pa_ui_ctx_t *ui, uint8_t slot, uin
         { "THRESH", "RELEASE", "ATTACK", "LEVEL"  },   /* AI GATE MS: THRESH = lowest threshold */
         { "THRESH", "RATIO",   "ATTACK", "LEVEL"  },   /* COMP: THRESH is the compressor's */
     };
-    static const char * const drv_params[3] = { "DRIVE", "TONE", "LEVEL" };
-    static const char * const amp_params[6] = { "GAIN", "BASS", "MID", "TREBLE", "PRES", "MASTER" };
-    static const char * const cab_params[3] = { "LEVEL", "LOWCUT", "HICUT" };
     static const char * const eq_bands[5]   = { "100", "400", "1k", "3k", "8k" };
     static const char * const eq_cut[3]     = { "LOWCUT", "HICUT", "LEVEL" };
     static const char * const eq_par[4]     = { "LOW", "MID", "FREQ", "HIGH" };
+#if !PA_PRODUCT_ANDROMEDA
+    static const char * const drv_params[3] = { "DRIVE", "TONE", "LEVEL" };
+    static const char * const amp_params[6] = { "GAIN", "BASS", "MID", "TREBLE", "PRES", "MASTER" };
+    static const char * const cab_params[3] = { "LEVEL", "LOWCUT", "HICUT" };
     /* MOD: per type, in the DSP's type order (fx_mod.c). "---" = the knob does nothing. */
     static const char * const mod_params[7][4] = {
         { "RATE", "DEPTH", "MIX", "---"  },   /* CHORUS */
@@ -302,7 +416,42 @@ static const char *get_slot_param_label(const pa_ui_ctx_t *ui, uint8_t slot, uin
                                              "TONE", "TONE", "TONE", "TONE" };
     static const char * const dly_params[4] = { "TIME", "FDBK", "MIX", "" };
     static const char * const rev_params[4] = { "DECAY", "LOWCUT", "TONE", "MIX" };
+#endif
 
+#if PA_PRODUCT_ANDROMEDA
+    static const char * const and_axis[6][4] = {
+        { "MATERIAL", "TUNE",   "DECAY",  "BRIGHT"  }, /* GLASS */
+        { "SIZE",     "PITCH",  "BLOOM",  "DRIFT"   }, /* BLOOM */
+        { "FDBK",     "TONE",   "WOBBLE", "DEGRADE" }, /* ACCRETION */
+        { "VOICING",  "DETUNE", "SPREAD", "ATTACK"  }, /* CHOIR */
+        { "GRID",     "SLICE",  "CHAOS",  "PITCH"   }, /* FRACTURE */
+        { "TEMPO",    "SCALE",  "MOTION", "DENSITY" }  /* CONSTELLATION */
+    };
+    static const char * const and_layer_params[5] = { "MATERIAL", "TUNE", "DECAY", "BRIGHT", "LEVEL" };
+    static const char * const and_space_params[6] = { "DECAY", "SIZE", "TONE", "SEND", "SHIMMER", "INTERVAL" };
+
+    switch (slot) {
+        case PA_SLOT_DYNAMICS: return (p < 4) ? dyn_params[ui ? (ui->slot_type[PA_SLOT_DYNAMICS] % 5u) : 0][p] : "";
+        case PA_SLOT_DELAY:
+            if (p == 4) return "MIX";
+            if (p < 4) {
+                uint8_t fx = ui ? (uint8_t)((ui->slot_type[PA_SLOT_DELAY] / 4u) % 6u) : 0u;
+                return and_axis[fx][p];
+            }
+            return "";
+        case PA_SLOT_MOD:
+            return (p < 5) ? and_layer_params[p] : "";
+        case PA_SLOT_REVERB:
+            return (p < 6) ? and_space_params[p] : "";
+        case PA_SLOT_EQ: {
+            uint8_t et = ui ? (uint8_t)(ui->slot_type[PA_SLOT_EQ] % 3u) : 0u;
+            if (et == 1u) return (p < 3) ? eq_cut[p] : "";
+            if (et == 2u) return (p < 4) ? eq_par[p] : "";
+            return (p < 5) ? eq_bands[p] : "";
+        }
+        default: return "";
+    }
+#else
     switch (slot) {
         case PA_SLOT_DYNAMICS: return (p < 4) ? dyn_params[ui ? (ui->slot_type[PA_SLOT_DYNAMICS] % 5u) : 0][p] : "";
         case PA_SLOT_DRIVE:    return (p < 3) ? drv_params[p] : "";
@@ -322,6 +471,7 @@ static const char *get_slot_param_label(const pa_ui_ctx_t *ui, uint8_t slot, uin
             return (p < 4) ? rev_params[p] : "";
         default: return "";
     }
+#endif
 }
 
 /* UI Primitives */
@@ -375,7 +525,11 @@ static void draw_circle(int16_t cx, int16_t cy, int16_t r, uint16_t col) {
 }
 
 /* Draw a segmented horizontal meter (IN / OUT) reflecting live audio measurements */
+#if PA_PRODUCT_ANDROMEDA
+#define PA_UI_SRAM_TOTAL_KB 512u      /* Andromeda: the whole chip SRAM (the figure counts everything static plus the DSP pool in use) */
+#else
 #define PA_UI_SRAM_TOTAL_KB 336u      /* the effect pool's region (0x01C20000, 0x54000 bytes): the SRAM figure on the Performance page is out of this */
+#endif
 static void draw_seg_meter(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t level_pct, const char *label) {
     if (label) {
         uint16_t tx = x;
@@ -549,6 +703,11 @@ static void fmt_val_10(char *buf, int32_t pct) {
  * show it: delay TIME and reverb DECAY in ms. Returns the unit ("" for none). */
 static const char *param_value_text(const pa_ui_ctx_t *ui, uint8_t slot, uint8_t p,
                                     int32_t val_q21, int32_t pct, char *buf) {
+#if PA_PRODUCT_ANDROMEDA
+    (void)ui; (void)slot; (void)p; (void)val_q21;
+    fmt_val_10(buf, pct);
+    return "";
+#else
     uint32_t ms = 0;
     int has_ms = 0;
     if (slot == PA_SLOT_DELAY && p == 0) {
@@ -633,6 +792,7 @@ static const char *param_value_text(const pa_ui_ctx_t *ui, uint8_t slot, uint8_t
     for (int i = 0; i < n; i++) buf[i] = tmp[n - 1 - i];
     buf[n] = '\0';
     return "ms";
+#endif
 }
 
 static void draw_param_card(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
@@ -1384,6 +1544,7 @@ static void render_tuner(const pa_ui_ctx_t *ui) {
  * (and _stopped.png); the screen is compared with it pixel by pixel below the
  * header, because the header is the device's own.
  */
+#if !PA_PRODUCT_ANDROMEDA
 static void render_drums(const pa_ui_ctx_t *ui) {
     render_sub_title_bar("GROOVE STATION", ONYX_COL_TEXT, 0, ui->drum_playing, 0, ui);
 
@@ -1484,6 +1645,7 @@ static void render_drums(const pa_ui_ctx_t *ui) {
     ui_onyx_draw_str((uint16_t)(hx + 3u), 218, k2, 1, ONYX_COL_TEXT, UI_ALIGN_LEFT);
     ui_onyx_draw_str((uint16_t)(hx + kwid + 10u), 218, a2, 1, ONYX_COL_MUTE, UI_ALIGN_LEFT);
 }
+#endif /* !PA_PRODUCT_ANDROMEDA */
 
 /* Render Save Preset Dialog */
 static void render_save_dialog(const pa_ui_ctx_t *ui) {
@@ -1574,6 +1736,23 @@ static void render_saved_toast(const pa_ui_ctx_t *ui) {
 }
 
 /* Render Settings Menu Screen (9 rows from tokens.py) */
+#if PA_PRODUCT_ANDROMEDA
+/* Settings rows Andromeda shows, as indices into the full (Onyx) list: no Play Mode (there is no stomp mode) and no Fizz Filter (there is no amp to filter) */
+static const uint8_t k_set_rows[9] = { 0, 1, 2, 5, 6, 7, 8, 9, 10 };
+#define SET_N 9
+#define SET_LOG(i) ((int)k_set_rows[(i)])
+/* Display rows: no Home View (grid / list of the eight Onyx slots) */
+static const uint8_t k_disp_rows[4] = { 0, 1, 3, 4 };
+#define DISP_N 4
+#define DISP_LOG(i) ((int)k_disp_rows[(i)])
+#define DSH 36                              /* the rows under the removed Home View move up by its height */
+#else
+#define SET_N 11
+#define SET_LOG(i) (i)
+#define DISP_N 5
+#define DISP_LOG(i) (i)
+#define DSH 0
+#endif
 static void render_settings_menu(const pa_ui_ctx_t *ui) {
     render_sub_title_bar("SETTINGS", ONYX_COL_TEXT, 0, 1, 0, ui);
 
@@ -1589,14 +1768,15 @@ static void render_settings_menu(const pa_ui_ctx_t *ui) {
     cpu_str[2] = '%'; cpu_str[3] = '\0';
 
     uint8_t top = ui->settings_scroll_top;
-    if (top > (SETTINGS_ROW_COUNT - 7)) top = SETTINGS_ROW_COUNT - 7;
+    if (top > (SET_N - 7)) top = SET_N - 7;
 
     for (int i = 0; i < 7; i++) {
-        uint8_t idx = top + i;
-        if (idx >= SETTINGS_ROW_COUNT) break;
+        const uint8_t vidx = top + i;                 /* the row's place on the screen */
+        if (vidx >= SET_N) break;
+        const uint8_t idx = (uint8_t)SET_LOG(vidx);   /* what it is (the full list's index) */
 
         uint16_t y = (uint16_t)(34 + i * 28);
-        int sel = (ui->settings_cursor == idx);
+        int sel = (ui->settings_cursor == vidx);
 
         if (sel) {
             fill_rounded_box(4, y + 1, 230, 26, ONYX_COL_PANEL);
@@ -1624,7 +1804,7 @@ static void render_settings_menu(const pa_ui_ctx_t *ui) {
         else if (idx == 9) val = ui->usb_loopback ? "ON" : "OFF";
         /* USB Mode (what an audio interface calls direct monitoring): AMP = the unit's own sound, INTERFACE = only the PC's audio is played and the PC records the dry guitar, IF+MONITOR = the same
          * with the dry guitar also heard. Click cycles. */
-        else if (idx == 10) { static const char * const k_um[3] = { "AMP", "INTERFACE", "IF+MONITOR" };
+        else if (idx == 10) { static const char * const k_um[3] = { UI_USB_OWN_LABEL, "INTERFACE", "IF+MONITOR" };
                               val = k_um[ui->usb_mode % 3u]; }
 
         uint16_t vlen = 0;
@@ -1636,15 +1816,19 @@ static void render_settings_menu(const pa_ui_ctx_t *ui) {
 
     /* Scrollbar on right edge */
     st7735s_fill_rect(236, 36, 2, 196, ONYX_COL_LINE);
-    uint16_t thumb_h = (uint16_t)((7 * 196) / SETTINGS_ROW_COUNT);
-    uint16_t thumb_y = (uint16_t)(36 + (top * (196 - thumb_h)) / (SETTINGS_ROW_COUNT - 7));
+    uint16_t thumb_h = (uint16_t)((7 * 196) / SET_N);
+    uint16_t thumb_y = (uint16_t)(36 + (top * (196 - thumb_h)) / (SET_N - 7));
     st7735s_fill_rect(235, thumb_y, 4, thumb_h, ONYX_COL_DIM);
 }
 
 
 /* Render Input / Output Settings Screen. Eight rows, 32 px apart, six of them on screen (the list scrolls with the cursor):
  *   0 INPUT GAIN  1 NOISE GATE  2 MASTER  3 STEREO WIDTH  4 BALANCE  (sliders)   5 ROUTING (click cycles)   6 OUTPUT   7 CAB ON LINE OUT */
+#if PA_PRODUCT_ANDROMEDA
+#define IO_ROWS 7
+#else
 #define IO_ROWS 8
+#endif
 #define IO_VISIBLE 6
 static void io_slider(uint16_t y, int sel, const pa_ui_ctx_t *ui, const char *label, const char *val, uint16_t bw) {
     if (sel) {
@@ -1743,7 +1927,7 @@ static void render_display_settings(const pa_ui_ctx_t *ui) {
     render_sub_title_bar("DISPLAY", ONYX_COL_TEXT, 0, 1, 0, ui);
 
     /* Row 0: Brightness slider */
-    int sel0 = (ui->sub_cursor == 0);
+    int sel0 = (DISP_LOG(ui->sub_cursor) == 0);
     if (sel0) {
         fill_rounded_box(4, 34, 232, 38, ONYX_COL_PANEL);
         st7735s_fill_rect(4, 40, 3, 26, ui->edit_mode ? ONYX_COL_OK : ONYX_COL_SELECT);
@@ -1763,7 +1947,7 @@ static void render_display_settings(const pa_ui_ctx_t *ui) {
     fill_circle(14 + bw, 58, 4, sel0 ? (ui->edit_mode ? ONYX_COL_OK : ONYX_COL_SELECT) : ONYX_COL_TEXT);
 
     /* Row 1: Auto Dim */
-    int sel1 = (ui->sub_cursor == 1);
+    int sel1 = (DISP_LOG(ui->sub_cursor) == 1);
     if (sel1) {
         fill_rounded_box(4, 76, 232, 32, ONYX_COL_PANEL);
         st7735s_fill_rect(4, 80, 3, 24, ONYX_COL_SELECT);
@@ -1772,8 +1956,9 @@ static void render_display_settings(const pa_ui_ctx_t *ui) {
     const char *dim_txt = (ui->display_auto_dim == 0) ? "OFF" : ((ui->display_auto_dim == 1) ? "30 s" : ((ui->display_auto_dim == 2) ? "1 m" : "5 m"));
     ui_draw_str(198, 86, dim_txt, ONYX_COL_TEXT, sel1 ? ONYX_COL_PANEL : ONYX_COL_BG);
 
+#if !PA_PRODUCT_ANDROMEDA
     /* Row 2: Home View (GRID / LIST) */
-    int sel2 = (ui->sub_cursor == 2);
+    int sel2 = (DISP_LOG(ui->sub_cursor) == 2);
     if (sel2) {
         fill_rounded_box(4, 112, 232, 32, ONYX_COL_PANEL);
         st7735s_fill_rect(4, 116, 3, 24, ONYX_COL_SELECT);
@@ -1791,33 +1976,34 @@ static void render_display_settings(const pa_ui_ctx_t *ui) {
         ui_draw_str(188, 124, "LIST", ONYX_COL_BG, ONYX_COL_TEXT);
     }
 
+#endif
     /* Row 3: Battery % */
-    int sel3 = (ui->sub_cursor == 3);
+    int sel3 = (DISP_LOG(ui->sub_cursor) == 3);
     if (sel3) {
-        fill_rounded_box(4, 148, 232, 32, ONYX_COL_PANEL);
-        st7735s_fill_rect(4, 152, 3, 24, ONYX_COL_SELECT);
+        fill_rounded_box(4, 148 - DSH, 232, 32, ONYX_COL_PANEL);
+        st7735s_fill_rect(4, 152 - DSH, 3, 24, ONYX_COL_SELECT);
     }
-    ui_draw_str(14, 158, "BATTERY %", sel3 ? ONYX_COL_SELECT : ONYX_COL_MUTE, sel3 ? ONYX_COL_PANEL : ONYX_COL_BG);
+    ui_draw_str(14, 158 - DSH, "BATTERY %", sel3 ? ONYX_COL_SELECT : ONYX_COL_MUTE, sel3 ? ONYX_COL_PANEL : ONYX_COL_BG);
     /* The pill is 38 x 21 (x 190..227, y 154..174, centre y 164); the knob is 11 px (radius 5), 5 px from the pill's edge on every side (it used to be 13 px at 222, touching the right edge). */
     if (ui->display_battery_pct) {
-        fill_rounded_box(190, 154, 38, 21, ONYX_COL_TEXT);
-        ui_draw_str(195, 160, "ON", ONYX_COL_BG, ONYX_COL_TEXT);
-        fill_circle(217, 164, 5, ONYX_COL_BG);
+        fill_rounded_box(190, 154 - DSH, 38, 21, ONYX_COL_TEXT);
+        ui_draw_str(195, 160 - DSH, "ON", ONYX_COL_BG, ONYX_COL_TEXT);
+        fill_circle(217, 164 - DSH, 5, ONYX_COL_BG);
     } else {
-        fill_rounded_box(190, 154, 38, 21, ONYX_COL_PANEL);
-        draw_rounded_rect(190, 154, 38, 21, ONYX_COL_DIM);
-        fill_circle(200, 164, 5, ONYX_COL_DIM);
-        ui_draw_str(208, 160, "OFF", ONYX_COL_MUTE, ONYX_COL_PANEL);
+        fill_rounded_box(190, 154 - DSH, 38, 21, ONYX_COL_PANEL);
+        draw_rounded_rect(190, 154 - DSH, 38, 21, ONYX_COL_DIM);
+        fill_circle(200, 164 - DSH, 5, ONYX_COL_DIM);
+        ui_draw_str(208, 160 - DSH, "OFF", ONYX_COL_MUTE, ONYX_COL_PANEL);
     }
 
     /* Row 4: Theme */
-    int sel4 = (ui->sub_cursor == 4);
+    int sel4 = (DISP_LOG(ui->sub_cursor) == 4);
     if (sel4) {
-        fill_rounded_box(4, 184, 232, 32, ONYX_COL_PANEL);
-        st7735s_fill_rect(4, 188, 3, 24, ONYX_COL_SELECT);
+        fill_rounded_box(4, 184 - DSH, 232, 32, ONYX_COL_PANEL);
+        st7735s_fill_rect(4, 188 - DSH, 3, 24, ONYX_COL_SELECT);
     }
-    ui_draw_str(14, 194, "THEME", sel4 ? ONYX_COL_SELECT : ONYX_COL_MUTE, sel4 ? ONYX_COL_PANEL : ONYX_COL_BG);
-    ui_draw_str(ui->theme ? 172 : 196, 194, ui->theme ? "CONTRAST" : "ONYX", ONYX_COL_TEXT, sel4 ? ONYX_COL_PANEL : ONYX_COL_BG);
+    ui_draw_str(14, 194 - DSH, "THEME", sel4 ? ONYX_COL_SELECT : ONYX_COL_MUTE, sel4 ? ONYX_COL_PANEL : ONYX_COL_BG);
+    ui_draw_str(ui->theme ? 172 : UI_THEME_LABEL_X, 194 - DSH, ui->theme ? "CONTRAST" : UI_THEME_LABEL, ONYX_COL_TEXT, sel4 ? ONYX_COL_PANEL : ONYX_COL_BG);
 }
 
 /* Render Performance Telemetry Screen */
@@ -1886,11 +2072,20 @@ static void render_performance(const pa_ui_ctx_t *ui, const pa_fx_chain_t *chain
 
     /* SRAM */
     ui_draw_str(14, 140, "SRAM", ONYX_COL_MUTE, ONYX_COL_BG);
+#if PA_PRODUCT_ANDROMEDA
+    uint32_t kb = pa_meas_sram_used_kb();               /* all of the static SRAM and the DSP pool in use, not the pool alone: the effect overlay is static */
+    if (kb == 0u) kb = ui->sram_used_bytes / 1024u;
+#else
     uint32_t kb = ui->sram_used_bytes / 1024u;
+#endif
     char sbuf[24];
     fmt_u3(sbuf, kb);
     sbuf[3] = ' '; sbuf[4] = '/'; sbuf[5] = ' ';
+#if PA_PRODUCT_ANDROMEDA
+    sbuf[6] = '5'; sbuf[7] = '1'; sbuf[8] = '2';
+#else
     sbuf[6] = '3'; sbuf[7] = '3'; sbuf[8] = '6';                 /* PA_UI_SRAM_TOTAL_KB: the effect pool's region, 336 KB (pa_plat.h PA_POOL_BUDGET_BYTES); it said 1024 KB, the chip has 512 KB */
+#endif
     sbuf[9] = ' '; sbuf[10] = 'K'; sbuf[11] = 'B'; sbuf[12] = '\0';
     ui_draw_str(132, 140, sbuf, ONYX_COL_TEXT, ONYX_COL_BG);
     st7735s_fill_rect(14, 154, 212, 6, ONYX_COL_LINE);
@@ -1899,7 +2094,11 @@ static void render_performance(const pa_ui_ctx_t *ui, const pa_fx_chain_t *chain
     st7735s_fill_rect(14, 154, sbw, 6, ONYX_COL_BLUETOOTH);
 
     /* CPU by block: stacked bar + legend */
+#if PA_PRODUCT_ANDROMEDA
+    ui_draw_str(14, 174, "CPU BY STAGE", ONYX_COL_MUTE, ONYX_COL_BG);
+#else
     ui_draw_str(14, 174, "CPU BY BLOCK", ONYX_COL_MUTE, ONYX_COL_BG);
+#endif
     st7735s_fill_rect(14, 186, 212, 8, ONYX_COL_LINE);
 
     /* Block proportions from the live cycle meter (per-stage EMA), normalised to
@@ -1907,9 +2106,11 @@ static void render_performance(const pa_ui_ctx_t *ui, const pa_fx_chain_t *chain
     uint16_t cur_x = 14;
     uint8_t  blk_pcts[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     {
+#if !PA_PERF_MEASURED
         static const uint8_t k_stage_of_slot[8] = {   /* by slot: DYN DRV AMP CAB EQ MOD DLY REV (the CAB shares the MISC bucket) */
             PA_ST_DYN, PA_ST_DRIVE, PA_ST_NAM, PA_ST_MISC, PA_ST_EQ, PA_ST_MOD, PA_ST_DELAY, PA_ST_REVERB
         };
+#endif
         uint32_t c[8], total = 0;
         for (int b = 0; b < 8; b++) {
             const fx_node_t *nd = chain ? chain->slots[b] : 0;
@@ -1934,6 +2135,17 @@ static void render_performance(const pa_ui_ctx_t *ui, const pa_fx_chain_t *chain
         }
     }
 
+#if PA_PRODUCT_ANDROMEDA
+    /* Andromeda has three stages: the effect (GLASS / BLOOM / ACCRETION), the GLASS layer on top of it, and the reverb behind it (SPACE) */
+    for (int i = 0; i < 3; i++) {
+        const int b = (i == 0) ? PA_SLOT_DELAY : ((i == 1) ? PA_SLOT_MOD : PA_SLOT_REVERB);
+        const uint16_t lx = (uint16_t)(14 + i * 76);
+        ui_draw_str(lx, 202, i == 0 ? "EFFECT" : (i == 1 ? "LAYER" : "SPACE"), blk_pcts[b] ? get_slot_color(b) : ONYX_COL_DIM, ONYX_COL_BG);
+        if (blk_pcts[b]) { char p_str[4]; fmt_u2(p_str, blk_pcts[b]); p_str[2] = '%'; p_str[3] = '\0'; ui_draw_str(lx, 214, p_str, ONYX_COL_TEXT, ONYX_COL_BG); }
+        else ui_draw_str(lx, 214, "OFF", ONYX_COL_DIM, ONYX_COL_BG);
+    }
+    if (0)
+#endif
     /* 8-slot legend underneath */
     for (int b = 0; b < 8; b++) {
         uint16_t lx = (uint16_t)(14 + b * 26);
@@ -1959,6 +2171,11 @@ void pa_ui_ota_notice(const char *a, const char *b) {
 }
 
 /* Render Technical System Info Screen */
+#if PA_PRODUCT_ANDROMEDA
+#define PA_SLOT_COUNT_LABEL "20"
+#else
+#define PA_SLOT_COUNT_LABEL "80"
+#endif
 static void render_sys_info(const pa_ui_ctx_t *ui) {
     render_sub_title_bar("SYSTEM", ONYX_COL_TEXT, 0, 1, 0, ui);
 
@@ -1966,7 +2183,13 @@ static void render_sys_info(const pa_ui_ctx_t *ui) {
     char batt[12];                                   /* IMP-12: was a hard-coded "82%" */
     fmt_u3(batt, ui->batt_pct); batt[3] = '%'; batt[4] = '\0';
     char fwv[6] = { (char)('0' + (PA_FW_VERSION / 100) % 10), '.', (char)('0' + (PA_FW_VERSION / 10) % 10), (char)('0' + PA_FW_VERSION % 10), 0, 0 };     /* PA_FW_VERSION 103 -> "1.03" */
-    const char *info_vals[5] = { "POCKET AMP", fwv, "80", batt[0] == '0' ? &batt[batt[1] == '0' ? 2 : 1] : batt, PA_BUILD_CODE };
+#if PA_PRODUCT_ANDROMEDA
+    const char *bcode = PA_BUILD_CODE;                 /* "Pocket_AMP_Andromeda_0.10-2611052259": the label would run into it, so show "0.10-2611052259" */
+    for (const char *q = PA_BUILD_CODE; *q; q++) if (*q == '_') bcode = q + 1;
+#else
+    const char *bcode = PA_BUILD_CODE;
+#endif
+    const char *info_vals[5] = { UI_PRODUCT_LABEL, fwv, PA_SLOT_COUNT_LABEL, batt[0] == '0' ? &batt[batt[1] == '0' ? 2 : 1] : batt, bcode };
 
     for (int i = 0; i < 5; i++) {
         uint16_t y = (uint16_t)(36 + i * 20);
@@ -2088,20 +2311,41 @@ void pa_ui_init(pa_ui_ctx_t *ui) {
     if (!ui) return;
     ui->view              = PA_UI_VIEW_MAIN_GRID;
     ui->prev_view         = PA_UI_VIEW_MAIN_GRID;
+#if PA_PRODUCT_ANDROMEDA
+    ui->preset_index      = 0;    /* P01 default: NEBULA DRIFT */
+#else
     ui->preset_index      = 7;    /* P08 default */
+#endif
     ui->preset_volume     = 85;   /* Vol 85 */
     ui->master_volume     = 100;  /* the MASTER (front-panel knob / OUTPUT LEVEL): 100 % until a saved setting or the knob says otherwise */
+#if PA_PRODUCT_ANDROMEDA
+    ui->bank_group        = 0;    /* Bank 01 (P01-P04) */
+    ui->save_target       = 0;
+#else
     ui->bank_group        = 1;    /* Bank 02 (P05-P08) */
     ui->save_target       = 7;
+#endif
     ui->save_btn          = 1;    /* 1 = SAVE selected by default */
     ui->saved_toast_timer_ms = 0;
+#if PA_PRODUCT_ANDROMEDA
+    ui->cursor_slot_idx   = PA_SLOT_DELAY;    /* Focus on Granular by default */
+#else
     ui->cursor_slot_idx   = 2;    /* Focus on AMP by default */
+#endif
     ui->home_view_mode    = 0;    /* 0 = GRID */
     ui->moving_slot       = PA_SLOT_AMP;
     ui->moving_orig_idx   = 2;
+#if PA_PRODUCT_ANDROMEDA
+    ui->selected_slot     = PA_SLOT_DELAY;
+#else
     ui->selected_slot     = PA_SLOT_AMP;
+#endif
     ui->editor_cursor     = -1;   /* the model / type row */
+#if PA_PRODUCT_ANDROMEDA
+    ui->selected_param    = 0;
+#else
     ui->selected_param    = 2;
+#endif
     ui->edit_mode         = 0;
     ui->sub_cursor        = 0;
     ui->sub_edit_mode     = 0;
@@ -2116,7 +2360,7 @@ void pa_ui_init(pa_ui_ctx_t *ui) {
     ui->out_level_pct     = 100;  /* 100 % = 0 dB at the DAC (IMP-05: the setting is real now) */
     ui->io_output_type    = 0;    /* 0 = PHONES */
     ui->io_cab_on_line    = 1;    /* 1 = ON */
-    ui->display_brightness= 80;   /* 80% */
+    ui->display_brightness= 100; s_last_duty10 = 10u; /* 100% default */
     ui->display_auto_dim  = 0;    /* OFF: on the bench unit the 15 % soft-PWM dim looked black */
     ui->display_battery_pct = 1;  /* 1 = ON */
     ui->stomp_assign_key  = 0;
@@ -2162,6 +2406,9 @@ void pa_ui_init(pa_ui_ctx_t *ui) {
     ui->dimmed            = 0;
     ui->last_input_ms     = 0;
     ui->settings_dirty    = 0;
+#if PA_PRODUCT_ANDROMEDA
+    ui->and_detail = 0u; ui->and_edit = 0u;
+#endif
     ui->toast_kind        = 0;
     ui->overload_ms       = 0;
     ui->batt_pct          = pa_battery_pct_from_mv(ui->battery_mv);
@@ -2250,6 +2497,137 @@ void pa_ui_apply_io_settings(pa_ui_ctx_t *ui, pa_fx_chain_t *chain) {
     pa_audio_core_set_routing(ui->out_route, ui->out_balance);
 }
 
+#if PA_PRODUCT_ANDROMEDA
+/* ---- the signal chain page: what a block is, and what the keys do to it ------------------------------------------------------------------------------------ */
+#define CHAIN_BLOCKS 4
+static const uint8_t k_chain_slot[CHAIN_BLOCKS] = { PA_SLOT_DELAY, PA_SLOT_MOD, PA_SLOT_REVERB, PA_SLOT_REVERB };   /* EFFECT, LAYER, SPACE, SHIMMER (the shimmer lives in the reverb) */
+
+/* The play screen shows one page at a time: the EFFECT (axes 0..5), the LAYER (6..10), SPACE (11..14) or SHIMMER (15..18); see AND_FOCUS_* in pa_granular.h. HOME on the chain page opens the page of
+ * the block under the cursor, and HOME on a page goes back to the chain page with the cursor on that block, so every page is reached without changing the slot. */
+static uint8_t focus_group(uint8_t a) { return a >= AND_FOCUS_SHIMMER ? 3u : (a >= AND_FOCUS_SPACE ? 2u : (a >= AND_FOCUS_LAYER ? 1u : 0u)); }
+static uint8_t focus_first(uint8_t g) { static const uint8_t f[4] = { 0u, AND_FOCUS_LAYER, AND_FOCUS_SPACE, AND_FOCUS_SHIMMER }; return f[g & 3u]; }
+static uint8_t focus_next(uint8_t a) {                                            /* the PARA click walks the page it is on */
+    static const uint8_t last[4] = { 5u, 10u, 14u, 18u };
+    const uint8_t g = focus_group(a);
+    return a >= last[g] ? focus_first(g) : (uint8_t)(a + 1u);
+}
+static uint8_t focus_prev(uint8_t a) {                                            /* the PARA turn, hovering, walks the page backwards */
+    static const uint8_t last[4] = { 5u, 10u, 14u, 18u };
+    const uint8_t g = focus_group(a);
+    return a <= focus_first(g) ? last[g] : (uint8_t)(a - 1u);
+}
+/* Is the block of this page on in the preset? The EFFECT page always is; LAYER and SPACE when their slot is on; SHIMMER when the reverb is on and the shimmer has an amount. */
+static int detail_block_on(const pa_ui_ctx_t *ui, const pa_fx_chain_t *chain, uint8_t g) {
+    if (g == 0u || !chain) return 1;
+    if (g == 1u) return chain->slots[PA_SLOT_MOD] && NODE_SHOWN_ON(chain->slots[PA_SLOT_MOD]);
+    if (!chain->slots[PA_SLOT_REVERB] || !NODE_SHOWN_ON(chain->slots[PA_SLOT_REVERB])) return 0;
+    return g == 2u ? 1 : ui->slot_params[PA_SLOT_REVERB][4] > 0;
+}
+/* the next page (d = +1) or the previous one (d = -1) among the blocks that are on, wrapping; the same page when it is the only one */
+static uint8_t detail_next_block(const pa_ui_ctx_t *ui, const pa_fx_chain_t *chain, uint8_t g, int d) {
+    for (int i = 1; i <= 4; i++) {
+        const uint8_t n = (uint8_t)(((int)g + d * i + 8) % 4);
+        if (detail_block_on(ui, chain, n)) return n;
+    }
+    return g;
+}
+/* the slot and knob an axis edits; *interval is set for the SHIMMER interval, which has four steps and snaps to them */
+static void focus_target(uint8_t axis, pa_fx_slot_id_t *slot, uint8_t *idx, int *interval) {
+    *interval = 0;
+    if (axis < AND_FOCUS_LAYER)        { *slot = (axis == 5u) ? PA_SLOT_REVERB : PA_SLOT_DELAY; *idx = (axis == 5u) ? 3u : axis; }
+    else if (axis < AND_FOCUS_SPACE)   { *slot = PA_SLOT_MOD;    *idx = (uint8_t)(axis - AND_FOCUS_LAYER); }
+    else if (axis < AND_FOCUS_SHIMMER) { *slot = PA_SLOT_REVERB; *idx = (uint8_t)(axis - AND_FOCUS_SPACE); }
+    else {
+        static const uint8_t k_shim[4] = { 4u, 5u, 0u, 3u };                     /* AMOUNT, INTERVAL, DECAY, SEND */
+        *slot = PA_SLOT_REVERB; *idx = k_shim[(axis - AND_FOCUS_SHIMMER) & 3u]; *interval = (axis == AND_FOCUS_SHIMMER + 1u);
+    }
+}
+
+static void chain_set_knob(pa_ui_ctx_t *ui, pa_fx_chain_t *chain, uint8_t slot, uint8_t k, int32_t v) {
+    if (v < 0) v = 0;
+    if (v > 2097152) v = 2097152;
+    ui->slot_params[slot][k] = v;
+    pa_fx_chain_set_param(chain, (pa_fx_slot_id_t)slot, k, v);
+}
+
+/* the effect type of the DELAY slot (0..11) with that type's own knobs */
+static void chain_set_effect_type(pa_ui_ctx_t *ui, pa_fx_chain_t *chain, uint8_t t) {
+    ui_select_model(ui, chain, PA_SLOT_DELAY, t);
+    uint8_t pct[4]; pa_andromeda_default_macros(t, pct);
+    for (uint8_t k = 0; k < 4u; k++) chain_set_knob(ui, chain, PA_SLOT_DELAY, k, (int32_t)(((int64_t)pct[k] * 2097152) / 100));
+}
+
+/* < > on the focused block: EFFECT steps through the twelve effect + variant types (GLASS x4, BLOOM x4, ACCRETION x4) with that type's own knobs; LAYER steps the material; SPACE the amount */
+static void chain_block_adjust(pa_ui_ctx_t *ui, pa_fx_chain_t *chain, uint8_t blk, int d) {
+    if (blk == 0u) {
+        int t = (int)ui->slot_type[PA_SLOT_DELAY] + d;
+        while (t < 0) t += (int)AND_TYPE_COUNT;
+        t %= (int)AND_TYPE_COUNT;
+        chain_set_effect_type(ui, chain, (uint8_t)t);
+    } else if (blk == 1u) {
+        int m = (int)(((int64_t)ui->slot_params[PA_SLOT_MOD][0] * 6) >> 21); if (m > 5) m = 5;
+        m = (m + d + 6) % 6;
+        chain_set_knob(ui, chain, PA_SLOT_MOD, 0, (int32_t)(((int64_t)(2 * m + 1) * 2097152) / 12));
+    } else if (blk == 2u) {
+        chain_set_knob(ui, chain, PA_SLOT_REVERB, 3, ui->slot_params[PA_SLOT_REVERB][3] + d * 131072);              /* SPACE: the send */
+    } else {
+        chain_set_knob(ui, chain, PA_SLOT_REVERB, 4, ui->slot_params[PA_SLOT_REVERB][4] + d * 131072);              /* SHIMMER: how much of the shifted tail comes round */
+    }
+}
+
+/* PARA click on the focused block: switch it on or off (a block that is off costs nothing) */
+static void chain_block_toggle(pa_ui_ctx_t *ui, pa_fx_chain_t *chain, uint8_t blk) {
+    if (blk == 3u) {                                                   /* SHIMMER: click steps OFF -> +12 -> +7 -> +12 and +7 -> +19 -> OFF (the interval is knob 5, a quarter of the range each) */
+        const int32_t fb = ui->slot_params[PA_SLOT_REVERB][4];
+        int iv = (int)(((int64_t)ui->slot_params[PA_SLOT_REVERB][5] * 4) >> 21); if (iv > 3) iv = 3;
+        if (fb <= 0) { chain_set_knob(ui, chain, PA_SLOT_REVERB, 5, (int32_t)(2097152 / 8)); chain_set_knob(ui, chain, PA_SLOT_REVERB, 4, 1048576); }
+        else if (iv < 3) chain_set_knob(ui, chain, PA_SLOT_REVERB, 5, (int32_t)((2 * (iv + 1) + 1) * 2097152 / 8));
+        else chain_set_knob(ui, chain, PA_SLOT_REVERB, 4, 0);
+        return;
+    }
+    const uint8_t slot = k_chain_slot[blk % 3u];
+    fx_node_t *nd = chain->slots[slot];
+    if (!nd) return;
+    const int turning_on = !NODE_SHOWN_ON(nd);
+    if (turning_on) {
+        if (slot == PA_SLOT_MOD && ui->slot_params[PA_SLOT_MOD][4] <= 0) ui->slot_params[PA_SLOT_MOD][4] = 838860;      /* a layer at level 0 would be "on" and silent: 40 % */
+        pa_fx_chain_set_slot_type(chain, (pa_fx_slot_id_t)slot, ui->slot_type[slot]);
+        for (int k = 0; k < 6; k++) pa_fx_chain_set_param(chain, (pa_fx_slot_id_t)slot, k, ui->slot_params[slot][k]);
+    }
+    pa_fx_chain_set_slot_enabled(chain, (pa_fx_slot_id_t)slot, turning_on);
+}
+
+/* The measurement channel's commands (pa_meas.h), run in the main loop through the same paths the front panel uses; and the context its reports show. */
+void pa_ui_meas_service(pa_ui_ctx_t *ui, pa_fx_chain_t *chain) {
+    if (!ui || !chain) return;
+    pa_meas_ctx_t c;
+    c.slot = (uint8_t)ui->preset_index;
+    c.effect_type = (uint8_t)ui->slot_type[PA_SLOT_DELAY];
+    c.enabled_mask = 0u;
+    for (int sl = 0; sl < PA_SLOT_COUNT; sl++) if (chain->slots[sl] && NODE_SHOWN_ON(chain->slots[sl])) c.enabled_mask |= (uint8_t)(1u << sl);
+    c.view = (uint8_t)ui->view;
+    { extern volatile uint8_t g_pa_gov_level; c.gov_level = g_pa_gov_level; }
+    pa_meas_set_context(&c);
+    if (ui->drum_bpm >= 40u && ui->drum_bpm <= 250u) g_and_tempo_bpm = (uint16_t)ui->drum_bpm;      /* FRACTURE follows the unit's tempo */
+    pa_meas_cmd_t cmd;
+    int guard = 0;
+    while (guard++ < 8 && pa_meas_take_cmd(&cmd)) {
+        switch (cmd.op) {
+        case PA_MEAS_OP_LOAD:   pa_ui_load_preset(ui, chain, cmd.a); break;
+        case PA_MEAS_OP_EFFECT: chain_set_effect_type(ui, chain, cmd.a); break;
+        case PA_MEAS_OP_BLOCK: {
+            const fx_node_t *nd = chain->slots[k_chain_slot[cmd.a % 3u]];       /* blocks 0..2: effect, layer, space */
+            if (nd && (NODE_SHOWN_ON(nd) ? 1 : 0) != (cmd.b ? 1 : 0)) chain_block_toggle(ui, chain, cmd.a);
+            break; }
+        case PA_MEAS_OP_PARAM:  chain_set_knob(ui, chain, cmd.a, cmd.b, (int32_t)cmd.c); break;
+        case PA_MEAS_OP_ACTION: if (chain->slots[PA_SLOT_DELAY]) fx_andromeda_action(chain->slots[PA_SLOT_DELAY], cmd.a); break;
+        default: break;
+        }
+        ui->dirty = 1;
+    }
+}
+#endif
+
 /* Complete Front Panel Input Handler Matching NAVIGATION.md */
 /* Adjust whatever is under the block editor's cursor by `delta` steps.
  * Returns 1 if something changed.
@@ -2312,6 +2690,16 @@ static int block_editor_adjust(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
     }
 
     return 0;   /* the ON/OFF row */
+}
+
+static void pa_ui_dirty_throttled(pa_ui_ctx_t *ui) {
+    if (!ui) return;
+    static uint32_t s_param_dirty_ms;
+    const uint32_t now = plat_ms();
+    if (s_param_dirty_ms == 0u || (uint32_t)(now - s_param_dirty_ms) >= 50u) {
+        s_param_dirty_ms = now;
+        ui->dirty = 1;
+    }
 }
 
 /* ---- Save the current sound into a preset slot: the Save-to dialog and the MIDI "save" command both come here. Returns the pa_preset_save() result (0 = saved). ---- */
@@ -2388,9 +2776,23 @@ void pa_ui_midi_control(pa_ui_ctx_t *ui, pa_fx_chain_t *chain, const pa_midi_ev_
         ui->drum_playing = v ? 1u : 0u; ui->dirty = 1;
         break;
     case PA_MEV_PLAY_MODE:
+#if PA_PRODUCT_ANDROMEDA
+        ui->play_mode = 0u; (void)v; settings = 1; ui->dirty = 1;     /* there is no stomp mode here */
+#else
         ui->play_mode = v ? 1u : 0u; settings = 1; ui->dirty = 1;
+#endif
         break;
     case PA_MEV_SLOT_SET:
+#if PA_PRODUCT_ANDROMEDA
+        if (e->a == PA_SLOT_CAB) {
+            /* CC 33: In Andromeda, sets SHIMMER on/off */
+            int32_t fb = v ? 1048576 : 0;
+            ui->slot_params[PA_SLOT_REVERB][4] = fb;
+            pa_fx_chain_set_param(chain, PA_SLOT_REVERB, 4, fb);
+            ui->dirty = 1;
+            break;
+        }
+#endif
         midi_slot_set(ui, chain, e->a, v);
         break;
     case PA_MEV_KNOB: {
@@ -2575,6 +2977,13 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
                          uint32_t buttons_pressed, int32_t enc_delta,
                          const uint16_t adc_pots[4]) {
     if (!ui || !chain) return;
+#if PA_PRODUCT_ANDROMEDA
+    {   /* the home screen is live (grains, tape, waves): redraw it about 15 times a second. Frames only redraw the bands that changed. */
+        static uint32_t s_live_ms;
+        const uint32_t now = plat_ms();
+        if (ui->view == PA_UI_VIEW_MAIN_GRID && (uint32_t)(now - s_live_ms) >= 66u) { s_live_ms = now; ui->dirty = 1; }
+    }
+#endif
 
     /* Blk-01: the Pocket Amp has no master pot. gpio_scan.c never sampled the ADC, so pots[0]
      * stayed at 2048, and 2048*100/1023 clamped to 100 % -> every preset_vol was overwritten to
@@ -2606,6 +3015,8 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
         if (ui->dimmed) {
             ui->dimmed = 0;
             plat_backlight_set(ui->display_brightness);
+            uint8_t d = (uint8_t)((ui->display_brightness + 5u) / 10u);
+            s_last_duty10 = d ? d : 1u;
             ui->dirty = 1;
             return;
         }
@@ -2628,6 +3039,7 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
             return;
         }
 
+#if !PA_PRODUCT_ANDROMEDA   /* Andromeda: < + > is reserved for the looper's PRE / POST routing (roadmap Phase 2) */
         /* < & > -> Enter / Leave Bank Mode */
         if ((buttons_pressed & PA_COMBO_BANK) == PA_COMBO_BANK) {
             if (ui->view == PA_UI_VIEW_BANK_MODE) {
@@ -2652,19 +3064,43 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
             ui->dirty = 1;
             return;
         }
+#endif  /* Andromeda has no drum machine and no Onyx bank view */
     }
 
+#if PA_PRODUCT_ANDROMEDA
+    /* HOME held 1.5 s on the home screen: Latch Infinite Buffer Freeze (Project Andromeda) */
+#else
     /* HOME held 1.5 s on the home screen: switch between PRESET and STOMP mode (the Live Stomp Lock this replaced is gone).
      * On any other screen a long press is just HOME: it goes home. */
-    if (buttons_pressed & PA_BTN_HOME_HOLD) {
-        if (ui->view == PA_UI_VIEW_MAIN_GRID) {
-            ui->play_mode = (ui->play_mode == 1u) ? 0u : 1u;
-            pa_ui_mark_settings_dirty(ui);
+#endif
+#if PA_PRODUCT_ANDROMEDA
+    if (buttons_pressed & PA_BTN_HOME_HOLD) {                 /* HOME held 1 s on the play or the chain page: Settings. Anywhere else it is just HOME. */
+        if (ui->view == PA_UI_VIEW_MAIN_GRID || ui->view == PA_UI_VIEW_CHAIN) {
+            ui->prev_view = ui->view;
+            ui->view = PA_UI_VIEW_SETTINGS;
+            ui->settings_cursor = 0;
             ui->dirty = 1;
             return;
         }
         buttons_pressed |= PA_BTN_HOME;
     }
+#else
+    if (buttons_pressed & PA_BTN_HOME_HOLD) {
+        if (ui->view == PA_UI_VIEW_MAIN_GRID) {
+#if PA_PRODUCT_ANDROMEDA
+            if (chain && chain->slots[PA_SLOT_DELAY]) {          /* freeze (BLOOM, ACCRETION): Andromeda has no PRESET / STOMP mode switch */
+                fx_andromeda_action(chain->slots[PA_SLOT_DELAY], AND_ACT_FREEZE);
+            }
+#else
+            ui->play_mode = (ui->play_mode == 1u) ? 0u : 1u;
+            pa_ui_mark_settings_dirty(ui);
+#endif
+            ui->dirty = 1;
+            return;
+        }
+        buttons_pressed |= PA_BTN_HOME;
+    }
+#endif
 
     /* No PARA 3 s hold any more (2026-11-04, owner's request: it fired by accident and was unreliable): the factory reset is reached only through Settings > System > FACTORY RESET, and confirmed
      * there with a normal click on RESET (the dialog opens on CANCEL, the safe choice). Holding PARA still does 1 s Save-to and 2 s Move; past 3 s nothing more happens. */
@@ -2672,11 +3108,24 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
     /* Universal HOME button rule:
      * "HOME always goes to Home. Pressed on Home, it opens Settings." */
     if (buttons_pressed & PA_BTN_HOME) {
+#if PA_PRODUCT_ANDROMEDA
+        if (ui->view == PA_UI_VIEW_MAIN_GRID) {                /* the play screen -> the signal chain, and back */
+            ui->prev_view = PA_UI_VIEW_MAIN_GRID;
+            ui->view = PA_UI_VIEW_CHAIN;
+            ui->sub_cursor = focus_group((uint8_t)(ui->selected_param % AND_FOCUS_COUNT));          /* the cursor sits on the block whose page this was */
+        } else if (ui->view == PA_UI_VIEW_CHAIN) {                 /* the chain page -> the page of the block under the cursor */
+            if (ui->sub_cursor >= CHAIN_BLOCKS) ui->sub_cursor = 0u;
+            ui->selected_param = focus_first((uint8_t)ui->sub_cursor);
+            ui->and_detail = 1u; ui->and_edit = 0u;                  /* a block's page: VOL- / VOL+ walk the blocks, PARA hovers and clicks to edit */
+            ui->view = PA_UI_VIEW_MAIN_GRID;
+        } else if (ui->view == PA_UI_VIEW_MOVING) {
+#else
         if (ui->view == PA_UI_VIEW_MAIN_GRID) {
             ui->prev_view = PA_UI_VIEW_MAIN_GRID;
             ui->view = PA_UI_VIEW_SETTINGS;
             ui->settings_cursor = 0;
         } else if (ui->view == PA_UI_VIEW_MOVING) {
+#endif
             /* Cancel moving: restore original position */
             if (ui->moving_orig_idx < 8) {
                 /* Restore chain order */
@@ -2701,14 +3150,82 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
         } else {
             ui->view = PA_UI_VIEW_MAIN_GRID;
             ui->tuner.active = 0;
+#if PA_PRODUCT_ANDROMEDA
+            ui->and_detail = 0u; ui->and_edit = 0u;               /* back from Settings and the dialogs: the plain play screen */
+#endif
         }
         ui->dirty = 1;
         return;
     }
 
+#if PA_PRODUCT_ANDROMEDA
+    /* The signal chain page (HOME): IN -> EFFECT -> LAYER -> SPACE -> OUT. < > (or the PARA turn) pick the block, VOL- / VOL+ change it (EFFECT: the effect and its variant), PARA click switches it
+     * on / off, VOL- / VOL+ held 0.8 s change the preset. */
+    if (ui->view == PA_UI_VIEW_CHAIN) {
+        if (ui->sub_cursor >= CHAIN_BLOCKS) ui->sub_cursor = 0u;
+        if (buttons_pressed & (PA_BTN_VOLM_HOLD | PA_BTN_VOLP_HOLD)) {
+            int p = (int)ui->preset_index + ((buttons_pressed & PA_BTN_VOLP_HOLD) ? 1 : 0) - ((buttons_pressed & PA_BTN_VOLM_HOLD) ? 1 : 0);
+            while (p < 0) p += (int)PA_PRESET_COUNT;
+            pa_ui_load_preset(ui, chain, (uint8_t)(p % (int)PA_PRESET_COUNT));
+            ui->dirty = 1;
+            return;
+        }
+        int dv = 0;
+        if (buttons_pressed & PA_BTN_VOL_PLUS)  dv += 1;
+        if (buttons_pressed & PA_BTN_VOL_MINUS) dv -= 1;
+        if (dv != 0 && chain) { chain_block_adjust(ui, chain, ui->sub_cursor, dv); ui->dirty = 1; }
+        int dc = enc_delta;
+        if (buttons_pressed & PA_BTN_LEFT)  dc -= 1;
+        if (buttons_pressed & PA_BTN_RIGHT) dc += 1;
+        if (dc != 0) { ui->sub_cursor = menu_wrap(ui->sub_cursor, dc, CHAIN_BLOCKS); ui->dirty = 1; }
+        if ((buttons_pressed & PA_BTN_PARA_CLICK) && chain) { chain_block_toggle(ui, chain, ui->sub_cursor); ui->dirty = 1; }
+        if (buttons_pressed & PA_BTN_PARA_HOLD1) {                 /* PARA 1 s: the save dialog, as on the play screen */
+            ui->prev_view = PA_UI_VIEW_CHAIN;
+            ui->save_target = ui->preset_index;
+            ui->save_btn = 1;
+            ui->view = PA_UI_VIEW_SAVE_DIALOG;
+            ui->dirty = 1;
+        }
+        return;
+    }
+
+    /* Project ANDROMEDA Front-Panel Mapping on Home Screen */
+    if (ui->view == PA_UI_VIEW_MAIN_GRID) {
+        /* VOL- / VOL+: Preset navigation across 12 Celestial Algorithms */
+#else
     /* Master Volume adjustment via VOL- / VOL+ on Home Screen (PRESET Mode) */
     if (ui->view == PA_UI_VIEW_MAIN_GRID && ui->play_mode == 0) {
+#endif
+#if PA_PRODUCT_ANDROMEDA
+        /* VOL- / VOL+ held 0.8 s: the previous / next preset, on the plain play screen and on a block's page */
+        if (buttons_pressed & (PA_BTN_VOLM_HOLD | PA_BTN_VOLP_HOLD)) {
+            int p = (int)ui->preset_index + ((buttons_pressed & PA_BTN_VOLP_HOLD) ? 1 : 0) - ((buttons_pressed & PA_BTN_VOLM_HOLD) ? 1 : 0);
+            while (p < 0) p += (int)PA_PRESET_COUNT;
+            pa_ui_load_preset(ui, chain, (uint8_t)(p % (int)PA_PRESET_COUNT));
+            ui->selected_param = 0u; ui->and_edit = 0u;
+            ui->dirty = 1;
+            return;
+        }
+        /* On a block's page (opened from the chain page) VOL- / VOL+ walk the blocks that are on in this preset: EFFECT, LAYER, SPACE, SHIMMER */
+        if (ui->and_detail && (buttons_pressed & (PA_BTN_VOL_MINUS | PA_BTN_VOL_PLUS))) {
+            const uint8_t g = focus_group((uint8_t)(ui->selected_param % AND_FOCUS_COUNT));
+            const uint8_t n = detail_next_block(ui, chain, g, (buttons_pressed & PA_BTN_VOL_PLUS) ? 1 : -1);
+            ui->selected_param = focus_first(n);
+            ui->and_edit = 0u;
+            ui->dirty = 1;
+            return;
+        }
+#endif
         if (buttons_pressed & (PA_BTN_VOL_MINUS | PA_BTN_VOL_PLUS)) {
+#if PA_PRODUCT_ANDROMEDA
+            int dp = 0;
+            if (buttons_pressed & PA_BTN_VOL_MINUS) dp -= 1;
+            if (buttons_pressed & PA_BTN_VOL_PLUS)  dp += 1;
+            int p = (int)ui->preset_index + dp;
+            while (p < 0) p += (int)PA_PRESET_COUNT;
+            p %= (int)PA_PRESET_COUNT;
+            pa_ui_load_preset(ui, chain, (uint8_t)p);
+#else
             if (buttons_pressed & PA_BTN_VOL_MINUS) {
                 ui->preset_volume = (ui->preset_volume >= 5u) ? (uint8_t)(ui->preset_volume - 5u) : 0u;
             }
@@ -2716,9 +3233,83 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
                 ui->preset_volume = (ui->preset_volume <= 95u) ? (uint8_t)(ui->preset_volume + 5u) : 100u;
             }
             pa_fx_chain_set_preset_vol(chain, ui->preset_volume);
+#endif
             ui->dirty = 1;
             return;
         }
+#if PA_PRODUCT_ANDROMEDA
+        /* < held 0.8 s: reset the effect (ACCRETION erases the tape, BLOOM empties its history, CONSTELLATION rerolls, GLASS stops ringing) */
+        if (buttons_pressed & PA_BTN_LEFT_HOLD) {
+            if (chain && chain->slots[PA_SLOT_DELAY]) fx_andromeda_action(chain->slots[PA_SLOT_DELAY], AND_ACT_CLEAR);
+            ui->dirty = 1;
+            return;
+        }
+        /* < (LEFT): GLASS strike, BLOOM flips the reverse bias, ACCRETION starts the recording (a loop that is there: freezes it) */
+        if (buttons_pressed & PA_BTN_LEFT) {
+            if (chain && chain->slots[PA_SLOT_DELAY]) {
+                fx_andromeda_action(chain->slots[PA_SLOT_DELAY], AND_ACT_PRIMARY);
+            }
+            ui->dirty = 1;
+            return;
+        }
+        /* > (RIGHT): GLASS soft strike, BLOOM freeze, ACCRETION PLAY <-> DUB (and REC -> PLAY) */
+        if (buttons_pressed & PA_BTN_RIGHT) {
+            if (chain && chain->slots[PA_SLOT_DELAY]) {
+                fx_andromeda_action(chain->slots[PA_SLOT_DELAY], AND_ACT_SECONDARY);
+            }
+            ui->dirty = 1;
+            return;
+        }
+        /* PARA Dial: turn the focused control in real time: the four macros (0..3), MIX (4), SPACE (5 = the reverb's mix) */
+        if (enc_delta != 0 && ui->and_detail && !ui->and_edit) {         /* a block's page, hovering: the turn moves along the page's controls */
+            uint8_t a = (uint8_t)(ui->selected_param % AND_FOCUS_COUNT);
+            for (int k = 0; k < (enc_delta < 0 ? -enc_delta : enc_delta); k++) a = enc_delta > 0 ? focus_next(a) : focus_prev(a);
+            ui->selected_param = a;
+            ui->dirty = 1;
+        } else if (enc_delta != 0) {
+            uint8_t axis = (uint8_t)(ui->selected_param % AND_FOCUS_COUNT);
+            /* 0..3 the effect's macros, 4 MIX, 5 SPACE, 6..9 the layer's macros, 10 its level, 11..14 the reverb's knobs, 15..18 the shimmer (focus_target) */
+            pa_fx_slot_id_t slot; uint8_t idx; int snap;
+            focus_target(axis, &slot, &idx, &snap);
+            int32_t step = 65536; /* 1/32 full scale in Q21 */
+            int32_t val = ui->slot_params[slot][idx] + enc_delta * step;
+            if (snap) {                                                          /* the shimmer interval: four steps (+12, +7, +12 and +7, +19) */
+                int iv = (int)(((int64_t)ui->slot_params[slot][idx] * 4) >> 21); if (iv > 3) iv = 3;
+                iv += enc_delta > 0 ? 1 : -1; if (iv < 0) iv = 0; if (iv > 3) iv = 3;
+                val = (int32_t)((2 * iv + 1) * 2097152 / 8);
+            }
+            if (val < 0) val = 0;
+            if (val > 2097152) val = 2097152;
+            ui->slot_params[slot][idx] = val;
+            pa_fx_chain_set_param(chain, slot, idx, val);
+            pa_ui_dirty_throttled(ui);
+        }
+        /* PARA Click: move the focus (macro 1 -> 2 -> 3 -> 4 -> MIX -> SPACE -> the four LAYER macros -> LAYER level) */
+        if (buttons_pressed & PA_BTN_PARA_CLICK) {
+            if (ui->and_detail) ui->and_edit ^= 1u;                                                  /* a block's page: click = edit the hovered value, click again = back to hovering */
+            else ui->selected_param = focus_next((uint8_t)(ui->selected_param % AND_FOCUS_COUNT));    /* the plain play screen: the click walks the page's controls */
+            ui->dirty = 1;
+            return;
+        }
+        /* PARA 1.2s Hold: Save Dialog */
+        if (buttons_pressed & PA_BTN_PARA_HOLD1) {
+            ui->prev_view = PA_UI_VIEW_MAIN_GRID;
+            ui->save_target = ui->preset_index;
+            ui->save_btn = 1;
+            ui->view = PA_UI_VIEW_SAVE_DIALOG;
+            ui->dirty = 1;
+            return;
+        }
+        /* PARA held 3 s: clear (ACCRETION erases the tape, BLOOM empties its history, GLASS stops ringing) */
+        if (buttons_pressed & PA_BTN_PARA_HOLD2) {
+            if (chain && chain->slots[PA_SLOT_DELAY]) {
+                fx_andromeda_action(chain->slots[PA_SLOT_DELAY], AND_ACT_CLEAR);
+            }
+            ui->dirty = 1;
+            return;
+        }
+        return;
+#endif
     }
 
     /* IMP-04: any key dismisses the SAVED card early */
@@ -2908,10 +3499,10 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
              * buttons alone. The PARA encoder moves to the next setting,
              * and so does VOL+ (VOL- is the universal Back). */
             if (buttons_pressed & PA_BTN_LEFT) {
-                if (block_editor_adjust(ui, chain, slot, -1)) ui->dirty = 1;
+                if (block_editor_adjust(ui, chain, slot, -1)) pa_ui_dirty_throttled(ui);
             }
             if (buttons_pressed & PA_BTN_RIGHT) {
-                if (block_editor_adjust(ui, chain, slot, +1)) ui->dirty = 1;
+                if (block_editor_adjust(ui, chain, slot, +1)) pa_ui_dirty_throttled(ui);
             }
             if (buttons_pressed & PA_BTN_VOL_PLUS) {
                 int cur = (int)ui->editor_cursor + 1;
@@ -2956,7 +3547,7 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
             if (buttons_pressed & PA_BTN_LEFT)  d--;
             if (buttons_pressed & PA_BTN_RIGHT) d++;
             if (d != 0) {
-                if (block_editor_adjust(ui, chain, slot, d)) ui->dirty = 1;
+                if (block_editor_adjust(ui, chain, slot, d)) pa_ui_dirty_throttled(ui);
             }
             /* PARA click: exit edit mode, resume < > navigation */
             if (buttons_pressed & PA_BTN_PARA_CLICK) {
@@ -3143,7 +3734,7 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
             int d = enc_delta;
             if (buttons_pressed & PA_BTN_LEFT)  d -= 1;
             if (buttons_pressed & PA_BTN_RIGHT) d += 1;
-            if (d != 0) { ui->settings_cursor = menu_wrap(ui->settings_cursor, d, SETTINGS_ROW_COUNT); ui->dirty = 1; }   /* wraps at both ends */
+            if (d != 0) { ui->settings_cursor = menu_wrap(ui->settings_cursor, d, SET_N); ui->dirty = 1; }   /* wraps at both ends */
         }
 
         /* Update scroll window (7 visible items in 8-item menu) */
@@ -3156,36 +3747,36 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
 
         /* PARA press: activate selected row */
         if (buttons_pressed & PA_BTN_PARA_CLICK) {
-            if (ui->settings_cursor == 0) {
+            if (SET_LOG(ui->settings_cursor) == 0) {
                 /* Input / Output sub-page */
                 ui->prev_view = PA_UI_VIEW_SETTINGS;
                 ui->view = PA_UI_VIEW_INPUT_OUTPUT;
                 ui->sub_cursor = 0;
-            } else if (ui->settings_cursor == 1) {
+            } else if (SET_LOG(ui->settings_cursor) == 1) {
                 /* Bluetooth: OFF -> BLE -> BLE+A2DP -> OFF. The radio follows (pa_board_bt_mode_changed); the icon follows the radio. */
                 ui->bt_mode = (uint8_t)((ui->bt_mode + 1u) % 3u);
                 pa_board_bt_mode_changed(ui->bt_mode);
                 pa_ui_mark_settings_dirty(ui);
                 ui->dirty = 1;
-            } else if (ui->settings_cursor == 2) {
+            } else if (SET_LOG(ui->settings_cursor) == 2) {
                 /* Display sub-page */
                 ui->prev_view = PA_UI_VIEW_SETTINGS;
                 ui->view = PA_UI_VIEW_DISPLAY;
                 ui->sub_cursor = 0;
                 ui->edit_mode = 0;
-            } else if (ui->settings_cursor == 3) {
+            } else if (SET_LOG(ui->settings_cursor) == 3) {
                 /* Play Mode: PRESET (0) vs STOMP (1) inline toggle */
                 ui->play_mode = (ui->play_mode == 1) ? 0 : 1;
                 pa_ui_mark_settings_dirty(ui);
-            } else if (ui->settings_cursor == 4) {
+            } else if (SET_LOG(ui->settings_cursor) == 4) {
                 /* IMP-09: Fizz Filter OFF -> LOW -> MED -> HIGH */
                 ui->fizz_filter_enabled = (uint8_t)((ui->fizz_filter_enabled + 1u) & 3u);
                 ui->ai_eq_enabled = ui->fizz_filter_enabled ? 1 : 0;
                 pa_fx_chain_set_fizz_filter(chain, ui->fizz_filter_enabled);
                 pa_ui_mark_settings_dirty(ui);
-            } else if (ui->settings_cursor == 5) {
+            } else if (SET_LOG(ui->settings_cursor) == 5) {
                 /* USB Audio: fixed at 44.1 kHz by USB descriptor (270 B packet) */
-            } else if (ui->settings_cursor == 8) {
+            } else if (SET_LOG(ui->settings_cursor) == 8) {
                 /* The output limiter's mode: BRICKWALL -> SOFT -> OFF.
                  * The limiter is the last stage of the chain, so this decides
                  * whether the cab's peaks are limited, softly compressed or
@@ -3193,21 +3784,21 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
                 ui->output_limit_mode = (uint8_t)((ui->output_limit_mode + 1u) % 3u);
                 pa_fx_chain_set_output_limit_mode(chain, (pa_lmt_mode_t)ui->output_limit_mode);
                 pa_ui_mark_settings_dirty(ui);
-            } else if (ui->settings_cursor == 9) {
+            } else if (SET_LOG(ui->settings_cursor) == 9) {
                 /* The USB audio loopback: the guitar to the host and the
                  * host's audio back. The stock ships with it ON and there was
                  * no way to turn it off. */
                 ui->usb_loopback = ui->usb_loopback ? 0u : 1u;
                 pa_ui_mark_settings_dirty(ui);
-            } else if (ui->settings_cursor == 10) {
+            } else if (SET_LOG(ui->settings_cursor) == 10) {
                 /* The USB audio mode: AMP -> INTERFACE -> INTERFACE + DIRECT MONITOR -> AMP (pa_settings.h) */
                 ui->usb_mode = (uint8_t)((ui->usb_mode + 1u) % 3u);
                 pa_ui_mark_settings_dirty(ui);
-            } else if (ui->settings_cursor == 6) {
+            } else if (SET_LOG(ui->settings_cursor) == 6) {
                 /* Performance / Telemetry sub-page */
                 ui->prev_view = PA_UI_VIEW_SETTINGS;
                 ui->view = PA_UI_VIEW_TELEMETRY;
-            } else if (ui->settings_cursor == 7) {
+            } else if (SET_LOG(ui->settings_cursor) == 7) {
                 /* System sub-page (contains Factory Reset) */
                 ui->prev_view = PA_UI_VIEW_SETTINGS;
                 ui->view = PA_UI_VIEW_SYS_INFO;
@@ -3307,22 +3898,22 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
                 int dd = enc_delta;
                 if (buttons_pressed & PA_BTN_LEFT)  dd--;
                 if (buttons_pressed & PA_BTN_RIGHT) dd++;
-                if (dd != 0) { ui->sub_cursor = menu_wrap(ui->sub_cursor, dd, 5); ui->dirty = 1; }        /* wraps at both ends */
+                if (dd != 0) { ui->sub_cursor = menu_wrap(ui->sub_cursor, dd, DISP_N); ui->dirty = 1; }        /* wraps at both ends */
             }
             if (buttons_pressed & PA_BTN_PARA_CLICK) {
-                if (ui->sub_cursor == 0) {
+                if (DISP_LOG(ui->sub_cursor) == 0) {
                     ui->edit_mode = 1; /* Enter Edit Mode for Brightness */
-                } else if (ui->sub_cursor == 1) {
+                } else if (DISP_LOG(ui->sub_cursor) == 1) {
                     ui->display_auto_dim = (uint8_t)((ui->display_auto_dim + 1u) % 4u);
-                } else if (ui->sub_cursor == 2) {
+                } else if (DISP_LOG(ui->sub_cursor) == 2) {
                     ui->home_view_mode ^= 1;
-                } else if (ui->sub_cursor == 3) {
+                } else if (DISP_LOG(ui->sub_cursor) == 3) {
                     ui->display_battery_pct ^= 1;
-                } else if (ui->sub_cursor == 4) {
+                } else if (DISP_LOG(ui->sub_cursor) == 4) {
                     ui->theme ^= 1;                       /* IMP-06: ONYX <-> HIGH CONTRAST */
                     pa_ui_set_theme(ui->theme);
                 }
-                if (ui->sub_cursor != 0) pa_ui_mark_settings_dirty(ui);   /* IMP-10 */
+                if (DISP_LOG(ui->sub_cursor) != 0) pa_ui_mark_settings_dirty(ui);   /* IMP-10 */
                 ui->dirty = 1;
             }
         } else {
@@ -3351,7 +3942,9 @@ void pa_ui_handle_inputs(pa_ui_ctx_t *ui, pa_fx_chain_t *chain,
                 ui->dirty = 1;
             }
             if (enc_delta || (buttons_pressed & (PA_BTN_LEFT | PA_BTN_RIGHT))) {
-                plat_backlight_set(ui->display_brightness);   /* IMP-06: brightness was UI-only */
+                plat_backlight_set(ui->display_brightness);
+            uint8_t d = (uint8_t)((ui->display_brightness + 5u) / 10u);
+            s_last_duty10 = d ? d : 1u;   /* IMP-06: brightness was UI-only */
                 pa_ui_mark_settings_dirty(ui);
             }
         }
@@ -3502,7 +4095,7 @@ extern volatile uint32_t g_pa_isr_avg_us;
 extern uint32_t plat_ticks24(void);
 #endif
 /* How long one UI tick may spend drawing, in microseconds, by how much CPU the audio leaves the main loop. */
-static uint8_t s_bl_dipped;                        /* 1 while the backlight is dipped for a screen change */
+
 static uint8_t s_view_boost;                       /* 1 while the frame being drawn is a change of screen: every band changes, so it is drawn with a bigger budget */
 static uint32_t ui_draw_budget_us(void) {
     uint32_t b = 2500u;
@@ -3544,7 +4137,10 @@ void pa_ui_render(pa_ui_ctx_t *ui, const pa_fx_chain_t *chain,
 #if !(defined(PA_EMU_DLL) || defined(PA_HOST_SIM) || defined(__wasm__) || defined(__EMSCRIPTEN__))
         if (s_view_boost && plat_ms() > 3000u && !s_bl_dipped) {    /* a full-screen write takes ~21 ms and the panel scans in 16.7 ms with no tearing-sync line: the new screen would be seen arriving. Dip the light (not at boot, which fades it in) */
             extern void plat_backlight_duty10(uint8_t d);
-            plat_backlight_duty10(1u); s_bl_dipped = 1u;
+            if (s_last_duty10 >= 8u) {          /* only dip at high brightness */
+                plat_backlight_duty10(1u);
+                s_bl_dipped = 1u;
+            }
         }
 #endif
         s_f_view = (uint8_t)ui->view;
@@ -3572,13 +4168,65 @@ void pa_ui_render(pa_ui_ctx_t *ui, const pa_fx_chain_t *chain,
                 U[1u + (us < 17000u ? 0u : us < 34000u ? 1u : us < 67000u ? 2u : us < 100000u ? 3u : 4u)]++;
             }
             s_frame_open = 0;
-            if (s_bl_dipped) { plat_backlight_set(ui->display_brightness); s_bl_dipped = 0u; }      /* the new screen is complete: the light back to the user's setting */
+            if (s_bl_dipped) {
+                extern void plat_backlight_duty10(uint8_t d);
+                plat_backlight_duty10(s_last_duty10);  /* exact restore, not re-quantised % */
+                s_bl_dipped = 0u;
+            }
         }
     }
 #else
     if (st7735s_present_step(render_frame_cb, &rc, PA_UI_BANDS_PER_TICK)) s_frame_open = 0;
 #endif
 }
+
+#if PA_PRODUCT_ANDROMEDA
+/* The play screen and the chain page (src/board/ui_cosmic.c) */
+static void render_andromeda_play(pa_ui_ctx_t *ui, const pa_fx_chain_t *chain) {
+    gran_telemetry_t tel;                         /* the struct is larger than 128 bytes */
+    memset(&tel, 0, sizeof(tel));
+    if (chain && chain->slots[PA_SLOT_DELAY]) fx_granular_get_telemetry(chain->slots[PA_SLOT_DELAY], &tel);
+    int32_t p[AND_FOCUS_COUNT];
+    for (int k = 0; k < 5; k++) p[k] = ui->slot_params[PA_SLOT_DELAY][k];   /* the effect's four macros (their names depend on the effect) and MIX */
+    p[5] = ui->slot_params[PA_SLOT_REVERB][3];                              /* SPACE: the reverb's mix */
+    for (int k = 0; k < 5; k++) p[6 + k] = ui->slot_params[PA_SLOT_MOD][k]; /* the GLASS layer: 4 macros and its level */
+    for (int k = 0; k < 4; k++) p[AND_FOCUS_SPACE + k] = ui->slot_params[PA_SLOT_REVERB][k];      /* SPACE: decay, size, tone, send */
+    p[AND_FOCUS_SHIMMER]     = ui->slot_params[PA_SLOT_REVERB][4];          /* SHIMMER: amount, interval, and the decay and send it depends on */
+    p[AND_FOCUS_SHIMMER + 1] = ui->slot_params[PA_SLOT_REVERB][5];
+    p[AND_FOCUS_SHIMMER + 2] = ui->slot_params[PA_SLOT_REVERB][0];
+    p[AND_FOCUS_SHIMMER + 3] = ui->slot_params[PA_SLOT_REVERB][3];
+    if (chain && !NODE_SHOWN_ON(chain->slots[PA_SLOT_MOD])) p[10] = 0;       /* a layer that is off shows no "+GLASS" */
+    ui_cosmic_render(&tel, (gran_preset_t)(ui->slot_type[PA_SLOT_DELAY] % AND_TYPE_COUNT),
+                     (uint8_t)((ui->selected_param % AND_FOCUS_COUNT) | ((ui->and_detail && ui->and_edit) ? 0x80u : 0u)), p,        /* bit 7: the hovered value is being edited */
+                     (uint8_t)(ui->preset_index + 1u), ui->preset_name, (uint8_t)ui->batt_pct);
+    draw_status_cluster(ui, 0);
+}
+
+static void render_andromeda_chain(pa_ui_ctx_t *ui, const pa_fx_chain_t *chain) {
+    and_chain_view_t v;
+    memset(&v, 0, sizeof v);
+    v.slot_no = (uint8_t)(ui->preset_index + 1u);
+    v.name = ui->preset_name;
+    v.type = (uint8_t)(ui->slot_type[PA_SLOT_DELAY] % AND_TYPE_COUNT);
+    for (int b = 0; b < 3; b++) v.on[b] = (chain && NODE_SHOWN_ON(chain->slots[k_chain_slot[b]])) ? 1u : 0u;
+    v.on[3] = (v.on[2] && ui->slot_params[PA_SLOT_REVERB][4] > 0) ? 1u : 0u;                                   /* the shimmer sounds when the reverb does and its feedback is up */
+    v.shimmer_interval = (uint8_t)(((int64_t)ui->slot_params[PA_SLOT_REVERB][5] * 4) >> 21); if (v.shimmer_interval > 3u) v.shimmer_interval = 3u;
+    v.layer_material = (uint8_t)(((int64_t)ui->slot_params[PA_SLOT_MOD][0] * 6) >> 21); if (v.layer_material > 5u) v.layer_material = 5u;
+    v.effect_material = (uint8_t)(((int64_t)ui->slot_params[PA_SLOT_DELAY][0] * 6) >> 21); if (v.effect_material > 5u) v.effect_material = 5u;
+    v.level[0] = ui->slot_params[PA_SLOT_DELAY][4];
+    v.level[1] = ui->slot_params[PA_SLOT_MOD][4];
+    v.level[2] = ui->slot_params[PA_SLOT_REVERB][3];
+    v.level[3] = ui->slot_params[PA_SLOT_REVERB][4];
+    v.focus = ui->sub_cursor >= CHAIN_BLOCKS ? 0u : ui->sub_cursor;
+    for (uint32_t i = 0; i < PA_PRESET_COUNT && i < 32u; i++) if (pa_preset_is_empty((uint8_t)i)) v.empty_mask |= 1u << i;
+    for (uint32_t i = 0; i < PA_PRESET_COUNT && i < 20u; i++) {                  /* each slot's effect: the colour of its square */
+        pa_preset_t pr;
+        if (pa_preset_load((uint8_t)i, &pr) == 0) v.slot_fx[i] = (uint8_t)((pr.slot_type[PA_SLOT_DELAY] / 4u) % AND_FX_COUNT);
+    }
+    ui_cosmic_render_chain(&v);
+    draw_status_cluster(ui, 0);
+}
+#endif
 
 static void render_frame(pa_ui_ctx_t *ui, const pa_fx_chain_t *chain, const pa_cpu_meter_t *meter) {
     /* 1. Clear screen to Onyx black */
@@ -3587,14 +4235,33 @@ static void render_frame(pa_ui_ctx_t *ui, const pa_fx_chain_t *chain, const pa_c
     /* 2. Dispatch view renderer */
     switch (ui->view) {
         case PA_UI_VIEW_MAIN_GRID:
+#if PA_PRODUCT_ANDROMEDA
+        case PA_UI_VIEW_COSMIC_RADAR:
+#else
         case PA_UI_VIEW_MOVING:
+#endif
             if (ui->home_view_mode == 1) {
                 render_home_list(ui, chain);
             } else {
+#if PA_PRODUCT_ANDROMEDA
+                render_andromeda_play(ui, chain);
+#else
                 render_home_header(ui);
                 render_home_grid(ui, chain);
+#endif
             }
+#if PA_PRODUCT_ANDROMEDA
             break;
+        case PA_UI_VIEW_MOVING:
+            render_home_header(ui);
+            render_home_grid(ui, chain);
+#endif
+            break;
+#if PA_PRODUCT_ANDROMEDA
+        case PA_UI_VIEW_CHAIN:
+            render_andromeda_chain(ui, chain);
+            break;
+#endif
         case PA_UI_VIEW_PARAM_EDIT:
             render_param_edit(ui, chain);
             break;
@@ -3605,16 +4272,22 @@ static void render_frame(pa_ui_ctx_t *ui, const pa_fx_chain_t *chain, const pa_c
             render_tuner(ui);
             break;
         case PA_UI_VIEW_SAVE_DIALOG:
+#if PA_PRODUCT_ANDROMEDA
+            if (ui->prev_view == PA_UI_VIEW_CHAIN) render_andromeda_chain(ui, chain); else render_andromeda_play(ui, chain);   /* the dialog sits over the page it was opened from */
+#else
             render_home_header(ui);
             render_home_grid(ui, chain);
+#endif
             render_save_dialog(ui);
             break;
         case PA_UI_VIEW_SAVED_TOAST:
             render_saved_toast(ui);           /* IMP-04: full-screen card */
             break;
+        #if !PA_PRODUCT_ANDROMEDA
         case PA_UI_VIEW_DRUMS:
             render_drums(ui);
             break;
+#endif
         case PA_UI_VIEW_SETTINGS:
             render_settings_menu(ui);
             break;

@@ -1,164 +1,114 @@
-# Pocket Amp recovery runbook
+# Andromeda recovery runbook
 
-How to back up, restore and un-brick a Pocket Amp over USB, with no soldering. Proven on
-unit 1 (serial `4150353835313708`) on 2026-10-30. For what went wrong along the way, see
-[LESSONS-LEARNED.md](LESSONS-LEARNED.md).
+How to back up the unit's flash, install and verify an Andromeda image, and recover a unit that does not boot, over USB and with no soldering. Installing a build normally goes through [docs/ANDROMEDA-FLASHING.md](docs/ANDROMEDA-FLASHING.md); this page is for backups and for units that are dead.
 
-## Status
+## The safety net
 
-| Capability | Status | Evidence |
+The chip's mask ROM contains a USB download mode (`UBOOT1.00`, USB `4C4A:8057`, a SCSI disk). It lives in ROM, so nothing in the flash, not a bad update and not a dead application, can disable it. The unit's screen stays **black** in download mode; that is normal. To leave it, switch the unit off and on.
+
+Ways in:
+
+| Way in | When it works |
+|---|---|
+| `python custom-fw/tools/flash_unit.py --enter-download-mode` | The running firmware answers USB MIDI. It sends the soft key `F0 22 24 35 7D F7`. |
+| **PARA held 2.5 s at power-on** | The firmware starts far enough to read the encoder. |
+| Automatic | A boot that does not finish within 5 s, repeated failed boots, a CPU fault, or the audio interrupt or main loop frozen for about 3 s. |
+| USB-key dongle (an RP2040 board running the Transporter firmware) | Always, even if nothing in the flash runs. The dongle sends the chip's USB key at power-on and the ROM then enters download mode. |
+
+## Flash map (1 MiB, JEDEC `856014`)
+
+| Range | Contents | Written by Andromeda's flash? |
 |---|---|---|
-| Enter ROM download mode (UBOOT1.00) on any firmware state | **proven** (6 entries, incl. a unit with a dead app) | `custom-fw/qa/backups/unit1*/console.log` |
-| Full-chip dump, two identical reads | **proven** on V1.03 and V1.05 | `custom-fw/qa/backups/unit1`, `unit1_v105` |
-| Restore the app `0x5000`–`0xB5000` | **proven** (all 176 sectors, stock V1.05) | `unit1_v105_patfw/drill_app.out` |
-| Recover a unit whose app is dead | **proven** (sector `0x5000` blanked, unit dead, repaired, boots) | `unit1_v105_recovery/` |
-| Restore sector `0x4000` (app file table + first 3.8 KB of app.bin) | supported, **not drilled** (the drills above predate finding that the app area starts at `0x4000`) | — |
-| Restore the boot area `0x0`–`0x4000` | supported (`--boot-area`), **not drilled** on purpose | — |
+| `0x000000`-`0x003FFF` | Boot area: flash header and bootloader (the way back in) | **never** (only with `--boot-area` in an emergency) |
+| `0x004000`-`0x085FFF` | App area: file table, `app.bin`, tool configuration | **yes** |
+| `0x086000`-`0x0B3FFF` | Store: settings, presets, user data | not by the flash. Andromeda writes its own preset bank here on first boot |
+| `0x0B5000`-`0x0BEFFF` | Radio calibration and address, device calibration written at the factory | **never** |
+| `0x0BF000`-`0x0FFFFF` | Data written at the factory (read-only for this project) | **never** |
 
-The ledger (`custom-fw/qa/hw_ledger.json`) records all of this; the QA gate's R-01…R-04 pass.
+"Never" is enforced by the flashing tools: they refuse writes outside the app area unless an emergency option is given.
 
-## How it works
+## Take a backup before the first flash
 
-At power-on the AC791N's mask ROM checks the USB data lines for the JieLi **USB_KEY**
-(`0x16EF`). If it sees it, it skips the flash entirely and enters **UBOOT1.00**, its built-in
-download mode (USB `4C4A:8057`, a SCSI disk). Because that check lives in ROM, no flash
-content (a bad update, a dead custom app) can disable it.
+A full-chip dump, read twice and compared, is the way back for any failure. Keep it in two places off the PC. `custom-fw/qa/hw_ledger.json` records the baseline hash that the tools check before they write.
 
-The dongle sends the key, then acts as a USB host for the Pocket Amp, uploads JieLi's
-`wl82loader` into its RAM and exposes the flash to the PC as a simple text protocol on a
-serial port. `custom-fw/tools/pa_transporter.py` is the PC side.
+```bash
+python custom-fw/tools/pa_transporter.py --timeout 300 dump <folder>
+```
+```bash
+python custom-fw/tools/qa_recovery.py verify <folder>/dump1.bin <folder>/dump2.bin --record
+```
 
-## What you need
+The first command reads the chip twice and writes `dump1.bin` and `dump2.bin`; the second compares them, hashes them and records the result under `custom-fw/qa/backups/<hash>/`.
 
-- **Seeed XIAO RP2040** with the **Pocket Amp Transporter** firmware
-  (build and install: [custom-fw/tools/transporter/README.md](custom-fw/tools/transporter/README.md)).
-  The upstream FM-1 build also enters and dumps, but can only write `0x4000`–`0x93000`.
-- A **USB-C pigtail** into the Pocket Amp's port, three wires:
+## The dongle route (for a unit that does not respond)
 
-  | XIAO pin | Pocket Amp USB |
+What you need:
+
+- A **Seeed XIAO RP2040** with the Transporter firmware ([custom-fw/tools/transporter/README.md](custom-fw/tools/transporter/README.md)).
+- A **USB-C pigtail** into the pedal's port, three wires:
+
+  | XIAO pin | Pedal USB |
   |---|---|
   | D6 (GP0) | D+ |
-  | D7 (GP1) | D− |
+  | D7 (GP1) | D- |
   | GND | GND |
-  | — | VBUS: **not connected** |
+  | none | VBUS: **not connected** |
 
-- The Pocket Amp on **battery** (charged). It is powered by its own battery, not by the dongle.
-- Python 3 with `pyserial`, and for the identity check `mido` + `python-rtmidi`.
-- The verified backup: `custom-fw/qa/backups/unit1_v105/dump1.bin`
-  (sha256 `66ac9ffd51172b2aed3deeee35583cc29a4e9e8047341a00fffc9c0ee69a4522`).
-  Its app area is byte-identical to the stock `Pocket AMP.fwsc` (V1.05).
+- The pedal on its **battery** (charged); it is not powered by the dongle.
+- Python 3 with `pyserial`.
 
-## Flash map (1 MiB Puya P25Q80, JEDEC `856014`; read from the unit)
+Before every session:
 
-| Range | Contents | Written by vendor update? | Dongle may write? |
-|---|---|---|---|
-| `0x000000`–`0x000FFF` | MBR / flash header (`uboot.boot`, `isd_config.ini`, `app_dir_head` → `0x4000`) | yes | only with `--boot-area` |
-| `0x001000`–`0x003FFF` | uboot (flash bootloader) | yes | only with `--boot-area` |
-| `0x004000`–`0x0B4FFF` | app area: file table, `app.bin` at `0x4120`, `cfg_tool.bin`, EXT table, ENC-scrambled (= `.fwsc` payload; see `custom-fw/tools/jl_app_area.py`) | yes | yes |
-| `0x0B5000`–`0x0BCFFF` | VM (runtime settings records) | no | **never** |
-| `0x0BD000`–`0x0BDFFF` | BTIF (Bluetooth MAC + data) | no | **never** |
-| `0x0BE000`–`0x0BEFFF` | USER (empty on unit 1) | no | **never** |
-| `0x0BF000`–`0x0FAFFF` | AM4 amp/cab bundle | no | **never** |
-| `0x0FB000`–`0x0FCFFF` | preset bank A (factory) | no | **never** |
-| `0x0FD000`–`0x0FEFFF` | preset bank B (user edits) | no | **never** |
-| `0x0FF000`–`0x0FFFFF` | settings record (`save1`) | no | **never** |
+1. Pedal **off**, pigtail connected to the dongle, the pedal **not** plugged into the PC.
+2. **Unplug and replug the dongle.** A dongle that has already run a session sits in host mode and does not send the key again.
+3. **Start the command first**, then switch the pedal **on** when it prints `Waiting for the Pocket Amp's ROM download mode`.
+4. Expect `UBOOT session up` after 13 to 35 s.
+5. Do the work in one go; the pedal does not stay in download mode forever. If a command prints `Waiting...` again, start over from step 1.
 
-"Never" is enforced twice: by the dongle firmware (window ends at `0xB5000`) and by
-`pa_transporter.py`.
+In `console.log`, success is `PULSE: D+ high (ROM pull-up)`, then `VID=4C4A PID=8057`, then `UBOOT READY`. Repeated `ACK` / `false ACK, resuming key` lines are normal.
 
-## Procedures
+## Restore the app area from your backup
 
-Run everything from the backup folder you want logs in. Every command keeps reading the
-dongle's console and appends it to `console.log` there.
-
-### Before every session (the part that makes it work)
-
-1. Pocket Amp **off**, pigtail connected to the dongle, Pocket Amp **not** plugged into the PC.
-2. **Unplug and replug the dongle.** A dongle that has already run a session sits in host mode
-   and does not send the key again.
-3. **Start the command first**, then switch the Pocket Amp **on** when it prints
-   `Waiting for the Pocket Amp's ROM download mode`.
-4. Expect `UBOOT session up after 13–35 s`. The Pocket Amp's screen stays **black** in
-   download mode; that is normal.
-5. Do the work in one go. The Pocket Amp does not stay in download mode forever; if a later
-   command prints `Waiting...` again, start over from step 1.
-
-What to look for in `console.log`: `ACK` / `false ACK, resuming key` lines repeat while the key
-is sent (normal). Success is `PULSE: D+ high (ROM pull-up)` → `VID=4C4A PID=8057` →
-`UBOOT READY`.
-
-### Dump the whole chip (backup)
+Writes only bytes from a verified backup, and only if that backup's hash is the one in the ledger. Each sector is erased, written, read back and compared.
 
 ```bash
-python ../../../tools/pa_transporter.py --timeout 300 dump .
+python custom-fw/tools/pa_transporter.py --timeout 300 drill <folder>/dump1.bin 0x4000-0x86000 --repair --full-verify
 ```
 ```bash
-python custom-fw/tools/qa_recovery.py verify <dir>/dump1.bin <dir>/dump2.bin --record
+python custom-fw/tools/pa_transporter.py runapp
 ```
-Reads twice, compares, hashes; `qa_recovery` extracts BTIF/USER/VM, compares with the stock
-`.fwsc` and writes `custom-fw/qa/backups/<hash>/`. Copy that folder to two places off the PC.
 
-### Restore the stock app (unit boots or not)
+- `--repair` rewrites sectors that differ; without it the drill refuses any sector that differs (a rehearsal with no change).
+- `--full-verify` re-reads the whole chip afterwards. Writing the app range takes about half a minute; the read-backs add a few minutes.
+- `runapp` boots the unit, or just power-cycle it without the dongle.
+
+To install an Andromeda image instead of restoring a backup, use `flash_unit.py` as described in [docs/ANDROMEDA-FLASHING.md](docs/ANDROMEDA-FLASHING.md).
+
+### A dead unit (black screen, nothing on USB)
+
+The same procedure. If you do not know which sectors are damaged, restore the whole app range.
+
+### The boot area (emergency only)
+
+Only if an update died while writing `0x0`-`0x4000`:
 
 ```bash
-python ../../../tools/pa_transporter.py --timeout 300 drill ../unit1_v105/dump1.bin 0x4000-0xB5000 --repair --full-verify
+python custom-fw/tools/pa_transporter.py --timeout 300 drill <backup dump> 0x1000-0x4000 --boot-area --repair --full-verify
 ```
-```bash
-python ../../../tools/pa_transporter.py runapp
-```
-- Writes only bytes from the verified backup, and only if that backup's hash is the ledger
-  baseline. Sectors that already match are rewritten identically; with `--repair`, sectors that
-  differ get the backup's bytes.
-- Each sector: erase, write, read back, compare. `--full-verify` re-reads the whole chip.
-- The 176 app sectors take about 25 s to write; the per-sector checks and the full re-read
-  add a few minutes. `runapp` boots the unit; or just power-cycle it without the dongle.
-- Without `--repair` the drill refuses any sector that differs (a no-change rehearsal).
 
-### Recover a dead unit (black screen, nothing on USB)
+The ROM download mode does not depend on these sectors, so a failed attempt can be retried. Avoid sector `0x0` unless it is the one that is damaged.
 
-Same as above. This exact case was tested: app sector `0x5000` blanked, the unit showed a
-black screen and no USB device, the dongle entered download mode, `drill 0x5000 --repair`
-restored it and it booted as `Pocket AMP_105`. If you don't know which sectors are damaged,
-restore the whole app range.
-
-### Restore the boot area (emergency only)
-
-Only if a vendor update died while writing `0x0`–`0x4000`, or to roll back to a version with a
-different boot area:
-```bash
-python ../../../tools/pa_transporter.py --timeout 300 drill <baseline dump> 0x1000-0x4000 --boot-area --repair --full-verify
-```
-Not drilled. The ROM download mode does not depend on these sectors, so a failed attempt can
-be retried. Avoid sector `0x0` unless it is the one damaged.
-
-### Check the unit afterwards
-
-Plug the Pocket Amp straight into the PC. It enumerates as `3654:7756` (V1.05; `4C4A:C755` on
-V1.03) and answers the identity query with `Pocket AMP_105` (`custom-fw/tools/mvave_device.py`,
-query `F0 00 32 45 00 00 00 40 7F F7`; unpack from the byte after `F0`).
-
-### Recovery test (proves a route; destructive until repaired)
+## Recovery test (destructive until repaired)
 
 ```bash
-python ../../../tools/pa_transporter.py --timeout 300 break ../unit1_v105/dump1.bin 0x5000 --i-understand
+python custom-fw/tools/pa_transporter.py --timeout 300 break <backup dump> 0x5000 --i-understand
 ```
-Blanks one app sector. It refuses unless the backup is the ledger baseline and the chip holds
-the baseline there. Confirm the unit is dead, then restore it as above. Record with
-`qa_recovery.py route usb_key_dongle --status proven --evidence ...`.
 
-## Other routes
-
-| Route | Status | Notes |
-|---|---|---|
-| Vendor OTA Updater (`F0 22 24 35 7F F7`) | works while the app runs USB | Leads to the vendor OTA MIDI loader (`ota-Pocket AMP_xxx`), which writes but cannot read. Not a recovery route for a dead app |
-| Button combinations at power-on | **failed** | 7 cycles, no download mode |
-| Custom-firmware PARA hold → `rc_recover_uboot()` | **unproven** | Only runs if the custom app boots; its SRAM/flag constants have no evidence yet |
-| SPI programmer on the flash chip | untested | Last resort if the ROM route ever fails |
+Blanks one app sector. It refuses unless the backup is the ledger baseline and the chip holds the baseline there. Confirm the unit is dead, then restore it as above, and record the route with `qa_recovery.py route usb_key_dongle --status proven --evidence ...`.
 
 ## Never
 
-- Never use `fm1t.py write` or any FM-1 write tool on the Pocket Amp: its window and map are
-  the FM-1's.
+- Never use another project's write tool on this pedal: its flash window and map differ.
 - Never use `jl-uboot-tool`'s own `write`, `erase`, `erasechip` or `burnchipkey`.
 - Never write from a backup whose hash is not recorded in the ledger.
-- Keep local diagnostic logs and binary backups in an untracked directory.
+- Keep diagnostic logs and binary backups in an untracked directory.

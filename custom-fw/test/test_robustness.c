@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * test/test_robustness.c - power-fail, flash-protection, blank-board and allocator tests.
  *
@@ -61,6 +64,11 @@ void pa_fx_chain_set_param(pa_fx_chain_t *c, pa_fx_slot_id_t s, int k, int32_t v
 void pa_fx_chain_set_preset_vol(pa_fx_chain_t *c, uint8_t v) { (void)c; (void)v; }
 void pa_fx_chain_set_input_gain(pa_fx_chain_t *c, int32_t g) { (void)c; (void)g; }
 void pa_fx_chain_relink_ordered(pa_fx_chain_t *c) { (void)c; }
+static uint8_t s_tape_scratch[65536];
+void *pa_gran_tape_borrow(void) { return s_tape_scratch; }
+void  pa_gran_tape_release(void) {}
+
+#define TEST_USER_SLOT ((uint8_t)(PA_PRESET_FACTORY + (PA_PRESET_COUNT > 45 ? 5 : 1)))
 
 static int g_fail = 0;
 #define CHECK(c, ...) do { if (!(c)) { g_fail++; printf("  FAIL: " __VA_ARGS__); printf("\n"); } } while (0)
@@ -129,10 +137,10 @@ int main(void) {
 
     /* 3. Many saves keep alternating and survive reboot (wear spread) */
     wipe_store(); reboot();
-    for (int i = 0; i < 40; i++) save_vol((uint8_t)(i % PA_PRESET_COUNT), (uint8_t)(10 + i));
+    for (int i = 0; i < (int)PA_PRESET_COUNT; i++) save_vol((uint8_t)i, (uint8_t)(10 + i));
     reboot();
-    CHECK(all_valid() && vol_of(39) == 49 && vol_of(0) == 10, "40 sequential saves not persisted");
-    printf("[3] 40 sequential saves persisted: ok\n");
+    CHECK(all_valid() && vol_of((uint8_t)(PA_PRESET_COUNT - 1)) == (uint8_t)(10 + PA_PRESET_COUNT - 1) && vol_of(0) == 10, "sequential saves not persisted");
+    printf("[3] sequential saves persisted: ok\n");
 
     /* 4. Torn factory reset */
     int fr_old = 0, fr_def = 0;
@@ -162,16 +170,16 @@ int main(void) {
         for (int k = 0; k <= 9; k++) {
             wipe_store(); reboot();
             save_vol(3, 42);                                   /* a stock slot the user edited: must survive the clean */
-            save_vol(45, 66);                                  /* a user slot: must be gone after a complete clean */
+            save_vol(TEST_USER_SLOT, 66);                                  /* a user slot: must be gone after a complete clean */
             pa_spi_nor_sim_fail_after(k);
             int rc = pa_preset_clean_user();
             reboot();
             CHECK(all_valid(), "clean-user k=%d: corrupt presets", k);
             CHECK(vol_of(3) == 42, "clean-user k=%d: a stock slot changed (vol %u)", k, vol_of(3));
-            int empty = pa_preset_is_empty(45);
-            CHECK(empty == 0 || vol_of(45) != 66, "clean-user k=%d: user slot P46 reads EMPTY but kept its sound", k);
+            int empty = pa_preset_is_empty(TEST_USER_SLOT);
+            CHECK(empty == 0 || vol_of(TEST_USER_SLOT) != 66, "clean-user k=%d: user slot P46 reads EMPTY but kept its sound", k);
             CHECK(rc == 0 ? empty == 1 : 1, "clean-user k=%d: reported success but P46 is not EMPTY", k);
-            if (empty) cu_new++; else { cu_old++; CHECK(vol_of(45) == 66, "clean-user k=%d: P46 half-cleaned (vol %u)", k, vol_of(45)); }
+            if (empty) cu_new++; else { cu_old++; CHECK(vol_of(TEST_USER_SLOT) == 66, "clean-user k=%d: P46 half-cleaned (vol %u)", k, vol_of(TEST_USER_SLOT)); }
         }
         printf("[4a] torn clean-user-presets sweep: old=%d cleaned=%d\n", cu_old, cu_new);
     }
@@ -183,7 +191,7 @@ int main(void) {
         wipe_store(); reboot();
         pa_preset_t factory5 = *pa_preset_test_slot(5);       /* what this firmware ships */
         save_vol(2, 23);                                      /* the user's own P03 (seq 2) */
-        save_vol(45, 66);                                     /* and a user slot P46 */
+        save_vol(TEST_USER_SLOT, 66);                                     /* and a user slot P46 */
         /* make P06 look like an older firmware's factory preset: other content, still seq 1 */
         pa_preset_t *old = pa_preset_test_slot(5);
         old->preset_vol = 11; old->amp_model_idx = 7; old->name[0] = 'Z';
@@ -197,7 +205,7 @@ int main(void) {
               "untouched P06 was not refreshed to the current factory preset (vol %u amp %u)",
               p6->preset_vol, p6->amp_model_idx);
         CHECK(vol_of(2) == 23, "the user's saved P03 was overwritten (vol %u)", vol_of(2));
-        CHECK(vol_of(45) == 66, "user slot P46 was touched (vol %u)", vol_of(45));
+        CHECK(vol_of(TEST_USER_SLOT) == 66, "user slot P46 was touched (vol %u)", vol_of(TEST_USER_SLOT));
         uint32_t seq = pa_preset_test_bank_seq();
         reboot();
         CHECK(pa_preset_test_bank_seq() == seq, "a boot with nothing to refresh wrote the flash");

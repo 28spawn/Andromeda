@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 #include "../../include/pa_config.h"
 /*
  * nam_engine.c — Pocket Amp NAM A2 16-Unit Q21 GRU Engine (Big Rock 2)
@@ -7,7 +10,18 @@
  *   - 7 rows of each gate matrix + LUT activations of the previous gate run
  *     simultaneously on the pi32v2 CPU!
  */
-#include "../../include/pa_evlog.h"
+#if PA_PRODUCT_ANDROMEDA
+#include <string.h>
+#include "../../include/pa_model.h"
+#include "../../include/pa_wavenet.h"
+#include "../../include/pa_fx.h"
+void pa_nam_reset(pa_nam_model_t *m) { if (m) memset(m, 0, sizeof(*m)); }
+void pa_nam_init_default(pa_nam_model_t *m) { if (m) memset(m, 0, sizeof(*m)); }
+void nam_model_init(pa_nam_model_t *m) { if (m) memset(m, 0, sizeof(*m)); }
+void pa_nam_prewarm(const pa_nam_model_t *m) { (void)m; }
+void nam_gru_run_block(pa_nam_model_t *m, int32_t *buf_q21, int nframes) { (void)m; (void)buf_q21; (void)nframes; }
+#else
+#include "../../include/pa_evlog.h" 
 #include <string.h>
 #include "../../include/pa_model.h"
 #include "../../include/pa_hw_accel.h"
@@ -930,3 +944,5 @@ PA_HOT void nam_gru_run_block(pa_nam_model_t *m, int32_t *buf_q21, int nframes) 
     }
 #endif
 }
+
+#endif /* !PA_PRODUCT_ANDROMEDA */

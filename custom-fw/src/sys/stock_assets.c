@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/sys/stock_assets.c - 20 stock amp models and 20 stock cabinet IRs
  *
@@ -13,7 +16,23 @@
 #include <string.h>
 #include "../../include/pa_xip.h"
 
-#ifndef PA_STOCK_FLASH_LOADER
+#if PA_PRODUCT_ANDROMEDA
+/* In Andromeda, Onyx amp models and cab IRs are completely unused.
+ * We stub them out so the 32.9 KB stock_assets_embedded.inc is not linked into the image. */
+pa_stock_amp_info_t g_pa_stock_amps[PA_STOCK_AMP_COUNT] = { { 0 } };
+pa_stock_cab_info_t g_pa_stock_cabs[PA_STOCK_CAB_COUNT] = { { 0 } };
+
+void pa_stock_assets_init(void) { }
+int pa_stock_has_factory_assets(void) { return 0; }
+const char *pa_stock_get_amp_name(uint8_t idx) { (void)idx; return "None"; }
+const char *pa_stock_get_cab_name(uint8_t idx) { (void)idx; return "None"; }
+int pa_stock_load_amp(uint8_t idx, pa_nam_model_t *out_model, float *out_dc_bias) {
+    (void)idx; (void)out_model; if (out_dc_bias) *out_dc_bias = 0.0f; return -1;
+}
+int pa_stock_load_cab(uint8_t idx, int32_t *out_taps_q18, uint32_t *out_num_taps) {
+    (void)idx; (void)out_taps_q18; if (out_num_taps) *out_num_taps = 0; return -1;
+}
+#elif !defined(PA_STOCK_FLASH_LOADER)
 /* ===================================================================== embedded tables */
 
 #if defined(__has_include)

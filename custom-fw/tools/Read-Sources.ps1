@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 # custom-fw/tools/Read-Sources.ps1 - the source manifest reader.
 #
 # custom-fw/sources.txt is the single place that says which modules each build

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/sys/smp_cpu1.c - core 1 runs the front of the chain with the amp (see include/pa_smp.h). Device only. */
 #include "pa_smp.h"
 
@@ -9,7 +12,8 @@ extern uint32_t g_boot_buttons;               /* main.c: the buttons as read at 
 extern uint32_t plat_ticks24(void);
 
 #define SMPS ((volatile uint32_t *)(uintptr_t)0x01C7D200u)
-/* 0 magic "SMPS", 1 online (1) or 0, 2 hand-overs, 3 core 1's last job (TIMER4 ticks), 4 its longest job, 5 the longest time core 0 waited
+/* The measurement channel also reads 10 (sum of core 1's job times, ticks / 16), 11 (jobs), 12 (its longest job, ticks), 13 (late blocks), all since its reset (pa_smp_meas_reset).
+ * 0 magic "SMPS", 1 online (1) or 0, 2 hand-overs, 3 core 1's last job (TIMER4 ticks), 4 its longest job, 5 the longest time core 0 waited
  * for core 1 at a hand-over (ticks), 6 why it is off (1 not started, 2 skipped by buttons, 3 start failed, 4 timeout, 5 bad job), 7 times core 0 had to wait at all */
 
 /* SWAP PROBE (pack 158, INSTRUMENTATION ONLY: it changes no behaviour), SRAM 0x01C7D240, 40 words: why does core 1's first amp job after a preset or model swap take ~30 ms
@@ -85,6 +89,9 @@ static void handoff(pa_fx_chain_t *chain, int32_t *L, int32_t *R, int n, int fro
                 r[3] = r[3] + (tr - t0); r[0] = r[0] | (4u << 24);                   /* state bit 2: the first job after the swap was late (kept pending, measured when it ends) */
             }
             SWD[3] = SWD[3] + 1u;                                                     /* late blocks, all told */
+#if PA_PRODUCT_ANDROMEDA
+            SMPS[13] = SMPS[13] + 1u;
+#endif
             if (++s_late_run >= SMP_LATE_MAX) {
                 smp_fail(4u);
                 pa_fx_chain_run_front(chain, L, R, n, lo, from, g.dry_L, g.dry_R);   /* this block's front runs here, with no latency */
@@ -102,6 +109,13 @@ static void handoff(pa_fx_chain_t *chain, int32_t *L, int32_t *R, int n, int fro
             r[3] = r[3] + w; r[4] = pa_c1_job_ticks_last(); r[0] = r[0] | (2u << 24);   /* state bit 1: the first job after the swap has finished (r3 = all the waiting, r4 = core 1's own time) */
             s_swd_job_first = 0u;
         }
+#if PA_PRODUCT_ANDROMEDA
+        {   /* the measurement channel: core 1's own time for the job that just finished */
+            const uint32_t jt = pa_c1_job_ticks_last();
+            SMPS[10] = SMPS[10] + (jt >> 4); SMPS[11] = SMPS[11] + 1u;
+            if (jt > SMPS[12]) SMPS[12] = jt;
+        }
+#endif
         if (w > 48u) SMPS[7] = SMPS[7] + 1u;                      /* core 0 really had to wait (more than 2 us) */
         if (w > SMPS[5]) SMPS[5] = w;
     }
@@ -117,6 +131,10 @@ static void handoff(pa_fx_chain_t *chain, int32_t *L, int32_t *R, int n, int fro
     SMPS[3] = pa_c1_job_ticks_last(); SMPS[4] = pa_c1_job_ticks_max();
 }
 
+#if PA_PRODUCT_ANDROMEDA
+void pa_smp_meas_reset(void) { SMPS[10] = 0u; SMPS[11] = 0u; SMPS[12] = 0u; SMPS[13] = 0u; SMPS[5] = 0u; }
+#endif
+
 void pa_smp_wait_idle(void) {                                     /* overrides the weak one in pa_audio_core.c */
     if (!s_online) return;
     if (s_pending) {
@@ -128,6 +146,9 @@ void pa_smp_wait_idle(void) {                                     /* overrides t
 }
 
 void pa_smp_init(pa_fx_chain_t *chain) {
+#if PA_PRODUCT_ANDROMEDA
+    SMPS[10] = 0u; SMPS[11] = 0u; SMPS[12] = 0u; SMPS[13] = 0u;
+#endif
     SMPS[0] = 0x53504D53u; SMPS[1] = 0u; SMPS[2] = 0u; SMPS[3] = 0u; SMPS[4] = 0u; SMPS[5] = 0u; SMPS[6] = 1u; SMPS[7] = 0u;
     s_online = 0; s_pending = 0; s_job = 0; s_ok_jobs = 0;
     for (uint32_t i = 0; i < 4u + 6u * SWD_N; i++) SWD[i] = 0u;

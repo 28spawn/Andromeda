@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """Provenance: the firmware and the emulator use only the project's own generated material.
 
   [1] the generated data in the firmware is exactly what its generator makes:
@@ -35,11 +38,23 @@ def check(ok, msg):
 
 
 print("=== [1] the generated files are what their generators make ===")
+is_andromeda = False
+try:
+    with open(os.path.join(FW, "include", "pa_config.h"), "r", encoding="utf-8") as pf:
+        is_andromeda = "PA_PRODUCT_ANDROMEDA" in pf.read()
+except Exception:
+    pass
+
 for tool, extra, what in (("gen_drum_kit.py", [], "src/dsp/drum_kit.inc"),
                           ("gen_drum_patterns.py", [], "src/dsp/drum_patterns.inc"),
                           ("gen_test_audio.py", [], "src/fx/cab_default_table.inc"),
                           ("import_stock_assets.py", [], "src/sys/stock_assets.c + pa_stock_assets.h"),
                           ("import_factory_presets.py", [], "src/sys/factory_presets.inc")):
+    if is_andromeda and tool in ("import_stock_assets.py", "import_factory_presets.py"):
+        with open(os.path.join(FW, "src", "sys", "stock_assets.c"), "r", encoding="utf-8") as sf:
+            has_stub = "pa_stock_has_factory_assets(void) { return 0; }" in sf.read()
+        check(has_stub, f"{what}: stubbed out for Andromeda (factory bundles not linked)")
+        continue
     r = subprocess.run([sys.executable, os.path.join(FW, "tools", tool), "--check", *extra],
                        capture_output=True, text=True)
     check(r.returncode == 0, f"{what} matches tools/{tool}" + ("" if r.returncode == 0 else

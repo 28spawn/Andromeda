@@ -1,4 +1,7 @@
-"""The web editor page (web/Onyx_Web_Editor.html), its protocol core run in Node against the firmware's own parser (the emulator DLL):
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
+"""The web editor page (web/Andromeda_Web_Editor.html), its protocol core run in Node against the firmware's own parser (the emulator DLL):
 the JS frames are byte-identical to tools/mvave_device.py's, the JS packets work over USB and BLE-MIDI, the JS state decoder reads the unit's record,
 the NAM strip and the cab check do what the notes say, and the tables in the page are the firmware's.
 
@@ -20,7 +23,7 @@ dll = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "emu", "pocket_am
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import mvave_device as M  # noqa: E402
 
-page = open(os.path.join(ROOT, "web", "Onyx_Web_Editor.html"), encoding="utf-8").read()
+page = open(os.path.join(ROOT, "web", "Andromeda_Web_Editor.html"), encoding="utf-8").read()
 script = re.search(r"<script>(.*)</script>", page, re.S).group(1)
 tmp = tempfile.mkdtemp(prefix="pa_page_js_")
 open(os.path.join(tmp, "page.js"), "w", encoding="utf-8").write(script)
@@ -127,11 +130,11 @@ drain(); feed(js(["buildFrame", 80, []])[0])
 st = js(["decodeState", js(["parseReply", reply()])[0]["data"]])[0]
 check(st["preset"] == 5, f"program change 5 -> preset {st['preset']}")
 check(st["outLevel"] == 40, f"NRPN module 8 param 2 = 40 -> output level {st['outLevel']}")
-midi(js(["nrpn", 1, 0x60, 80])[0])
+midi(js(["nrpn", 3, 0x60, 80])[0])
 run(20)
 drain(); feed(js(["buildFrame", 80, []])[0])
 st = js(["decodeState", js(["parseReply", reply()])[0]["data"]])[0]
-check(abs(st["slots"][2]["knobs"][0] - 80) <= 1, f"NRPN amp knob 0 = 80 -> {st['slots'][2]['knobs'][0]}")
+check(abs(st["slots"][6]["knobs"][0] - 80) <= 1, f"NRPN effect knob 0 = 80 -> {st['slots'][6]['knobs'][0]}")
 
 print("=== drag and drop: the chain move the page sends is the unit's own move ===")
 import random
@@ -140,7 +143,7 @@ def state_now():
     drain(); feed(js(["buildFrame", 80, []])[0])
     return js(["decodeState", js(["parseReply", reply()])[0]["data"]])[0]
 st = state_now()
-check(st["order"] == [0, 1, 2, 3, 4, 5, 6, 7], f"the factory chain in the record: {st['order']}")
+check(sorted(st["order"]) == list(range(8)), f"the factory chain in the record: {st['order']}")
 mine = st["order"]
 bad = 0
 for _ in range(40):
@@ -153,7 +156,7 @@ check(bad == 0, f"40 random moves: the unit's chain equals the page's every time
 midi(js(["chainMoveMsg", 5, 0])[0]); run(24)
 check(state_now()["order"][0] == 5, "MOD moved to the front")
 d.emu_midi_event(0xC0, 11, 0); run(600)
-check(state_now()["order"] == [0, 1, 2, 3, 4, 5, 6, 7], "a preset change loads that preset's own chain order")
+check(sorted(state_now()["order"]) == list(range(8)), "a preset change loads that preset's own chain order")
 
 print("=== the loopback switch of the Global tab ===")
 d.emu_get_usb_loopback.restype = ctypes.c_int
@@ -268,7 +271,7 @@ check([o["kind"] for o in bad] == ["refused"] * 5 and all(o["reply"] is None for
 fin = ota([req(0xE0000000, 8), req(0xF0000000, 8)])
 check([o["kind"] for o in fin] == ["mark", "mark"] and fin[1]["reply"] == my_frame(0xF0000000, 8, 0, b"success" + bytes([0])), "the step-1 and step-2 finish addresses are answered success")
 check(ota([[ ]][0:0]) == [], "no requests, no replies")
-src = open(os.path.join(ROOT, "web", "Onyx_Web_Editor.html"), encoding="utf-8").read()
+src = open(os.path.join(ROOT, "web", "Andromeda_Web_Editor.html"), encoding="utf-8").read()
 check("OTA_SOFTKEY = [0xF0, 0x22, 0x24, 0x35, 0x7D, 0xF7]" in src and "link.send(OTA_SOFTKEY)" in src, "the download-mode button sends the 7D soft key (7F is the update session)")
 check('id="fwInstall"' in src and 'id="fwRestore"' in src and 'OFFICIAL_SHA256 = "9584e81da98215e8e70ddffc28311423ceaa1a5a8a12a478dc68f4679e10902b"' in src, "the Firmware tab has the one-click install and restore, and pins the original's SHA-256")
 orig = os.path.expanduser("~/Downloads/Pocket AMP.fwsc")
@@ -369,7 +372,7 @@ check("error" in js(["stripNam", list(b"WAVE" + bytes(9000))])[0], "a WAVE blob 
 check("error" in js(["stripNam", list(b'{"version": "0.5.4"}' + bytes(100))])[0], "a .nam JSON file is refused (no conversion here)")
 
 print("=== clear all captures / cabinets ===")
-page_src = open(os.path.join(ROOT, "web", "Onyx_Web_Editor.html"), encoding="utf-8").read()
+page_src = open(os.path.join(ROOT, "web", "Andromeda_Web_Editor.html"), encoding="utf-8").read()
 check('id="namClear"' in page_src and 'id="cabClear"' in page_src, "the page has a clear button for captures and one for cabinets")
 check("prompt(\"Type CLEAR" in page_src, "clearing asks for the typed word CLEAR first")
 check(js(["buildFrame", 82, [2, 1, 0]])[0][-1] == 0xF7, "the clear command (cmd 82, op 2) is a normal frame")

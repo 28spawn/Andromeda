@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
-custom-fw/wasm/serve.py - a local HTTP server for the Pocket Amp WASM workbench.
+custom-fw/wasm/serve.py - a local HTTP server for the Andromeda WASM workbench.
 
 Serves the WebAssembly build and the test audio files:
 
@@ -59,7 +61,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             names = []
             if os.path.isdir(SAMPLES):
                 names = sorted(f for f in os.listdir(SAMPLES)
-                               if f.lower().endswith(".wav"))
+                               if f.lower().endswith(".wav") and not f.lower().startswith("di_"))
             self._json({"samples": names})
             return
 
@@ -92,13 +94,15 @@ class Server(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Pocket Amp WASM Workbench Server")
+    ap = argparse.ArgumentParser(description="Andromeda WASM Workbench Server")
     ap.add_argument("--port", type=int, default=8099, help="port to listen on (default: 8099)")
     ap.add_argument("--host", default="127.0.0.1", help="host address (default: 127.0.0.1)")
     ap.add_argument("--no-browser", action="store_true", help="do not open browser automatically")
     a = ap.parse_args()
 
-    wasm = os.path.join(HERE, "pocket_amp.wasm")
+    wasm = os.path.join(HERE, "andromeda.wasm")
+        if not os.path.isfile(wasm):
+            wasm = os.path.join(HERE, "pocket_amp.wasm")
     if not os.path.exists(wasm):
         print("pocket_amp.wasm not found - build it first:")
         print("  python custom-fw/wasm/build_wasm.py --zig <path to zig.exe>")

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """Host-side BLE monitor for a baseline unit (measured from the PC).
 
 Read-only towards the unit: it only scans, connects, discovers services, subscribes to the BLE-MIDI characteristic and disconnects.

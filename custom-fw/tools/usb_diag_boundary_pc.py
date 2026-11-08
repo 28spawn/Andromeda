@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/usb_diag_boundary_pc.py - does the unit's USB reply path lose replies of an exact multiple of 64 bytes? (pa_usb_chunk.h)
 

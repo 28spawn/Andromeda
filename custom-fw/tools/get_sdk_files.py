@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """custom-fw/tools/get_sdk_files.py - fetch the three JieLi SDK files an Onyx package is built from (tools/onyx_pkg_make.py): uboot.boot, cfg_tool.bin, cfg/eq_cfg_hw.bin.
 
 They are from the public JieLi AC79 SDK (Apache-2.0, https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK, the commit NOTICE.md names), not from M-VAVE, and are not stored in this repository: this tool

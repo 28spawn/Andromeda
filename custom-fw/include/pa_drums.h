@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/include/pa_drums.h — Groove Station drum machine
  *
  * The 49 styles (40 grooves + 9 metronome patterns) are the project's own rhythm library,

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/include/hal/pa_timer_hal.h — AC791N TIMER4/TIMER5 & cycle counter HAL (QW-2). */
 #ifndef PA_TIMER_HAL_H
 #define PA_TIMER_HAL_H

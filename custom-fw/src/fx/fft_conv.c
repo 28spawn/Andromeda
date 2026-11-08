@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 #include "../../include/pa_config.h"
 /*
  * custom-fw/src/fx/fft_conv.c - float FFT convolution for the cabinet (see include/fft_conv.h).
@@ -12,6 +15,16 @@
  *                          z    = IFFT64(E + iO),  x[2n] = Re z[n], x[2n+1] = Im z[n].
  */
 #include "fft_conv.h"
+#if PA_PRODUCT_ANDROMEDA
+void fc_tables_init(void) {}
+int  fc_init(fc_state_t *s, const float *ir, int taps) { (void)s; (void)ir; (void)taps; return 0; }
+void fc_set_limit(fc_state_t *s, int n) { (void)s; (void)n; }
+void fc_block(fc_state_t *s, const float *in, float *out) { (void)s; (void)in; (void)out; }
+int  fc_ir_spectra(fc_cpx (*H)[FC_BINS], const float *ir, int taps) { (void)H; (void)ir; (void)taps; return 0; }
+void fc_block2(fc_state_t *s, const fc_cpx (*H2)[FC_BINS], int parts2, const float *in, float *outL, float *outR) {
+    (void)s; (void)H2; (void)parts2; (void)in; (void)outL; (void)outR;
+}
+#else
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM) && !defined(PA_EMU_DLL) && !defined(__wasm__) && !defined(__EMSCRIPTEN__)
 extern uint32_t plat_ticks24(void);
 #define FC_PROF 1
@@ -326,3 +339,5 @@ PA_HOT void fc_block2(fc_state_t *s, const fc_cpx (*H2)[FC_BINS], int parts2, co
     irfft128(YR, y);
     memcpy(outR, y + FC_B, FC_B * sizeof(float));
 }
+
+#endif /* !PA_PRODUCT_ANDROMEDA */

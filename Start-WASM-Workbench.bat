@@ -1,6 +1,8 @@
 @echo off
+:: SPDX-License-Identifier: GPL-3.0-or-later
+:: Copyright (C) 2026 Andromeda contributors
 REM ---------------------------------------------------------------------------
-REM  Pocket Amp - WebAssembly workbench (the same firmware, in the browser).
+REM  Project ANDROMEDA - WebAssembly workbench (the same firmware, in the browser).
 REM
 REM  Serves the wasm build and opens the workbench (presets, the panel, tone loading and audio controls all run there).
 REM

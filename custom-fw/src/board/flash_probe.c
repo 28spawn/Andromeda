@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/board/flash_probe.c - PA_FLASH_PROBE: a READ-ONLY survey of the peripheral register space, to find the SPI flash
  * controller (see custom-fw/FLASH-ACCESS.md, section 4). OFF by default.

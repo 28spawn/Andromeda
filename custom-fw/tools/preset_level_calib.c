@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* IMP-02: measure each factory preset and print the preset_vol that lands it on the target */
 #include <stdio.h>
 #include <stdlib.h>

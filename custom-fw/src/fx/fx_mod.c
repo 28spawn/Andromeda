@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/fx/fx_mod.c - the MOD block: seven stereo modulation effects.
  *
  *   0 CHORUS       two modulated taps (15 / 16 ms +-5 ms), L/R in quadrature
@@ -29,8 +32,12 @@
 #include <string.h>
 #include "pa_fx.h"
 #include "pa_config.h"
-#include "../dsp/fixedpoint.h"
 
+#if PA_PRODUCT_ANDROMEDA
+fx_node_t *fx_mod_new(void) {
+    return (fx_node_t *)0;
+}
+#else
 #define MOD_FS        44100.0f
 #define MOD_BUF_LEN   1024u            /* longest tap: chorus 720 + 224 = 944 samples */
 #define MOD_BUF_MASK  (MOD_BUF_LEN - 1u)
@@ -345,3 +352,5 @@ fx_node_t *fx_mod_new(void) {
     n.tail_draining= 0;
     return &n;
 }
+
+#endif /* !PA_PRODUCT_ANDROMEDA */

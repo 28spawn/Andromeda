@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_diag_profile.c - the diagnostic channel's profile command (7D 03, src/sys/pa_diag.c): write and read the experiment switches, the reply, and that other commands still work. */
 #include <stdio.h>
 #include <string.h>
@@ -50,4 +53,9 @@ int main(void)
     CHECK(unpack_reply(body) >= 6 && body[2] == 0 && body[3] == 0);
     printf(fails ? "diag profile: %d FAILED\n" : "diag profile: all passed\n", fails);
     return fails != 0;
+}
+
+int pa_meas_diag(const uint8_t *in, uint32_t len, void (*reply)(uint8_t, const uint8_t *, uint32_t)) {
+    (void)in; (void)len; (void)reply;
+    return 0;
 }

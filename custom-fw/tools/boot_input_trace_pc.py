@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/boot_input_trace_pc.py - the RAW input signal after the audio started: its peak and mean per 46 ms for the first 8.8 s (pack 177). READ-ONLY.
 Answers "what is the 17 % raw input peak since boot": a steady offset that settles (the input stage powering up) shows in the mean column, a click or a burst of noise in the peak column,

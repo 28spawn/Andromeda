@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/usb_rec_check_pc.py - does Windows get a continuous recording from the unit's USB microphone? (USB-AUDIO-PLAN.md step B; the pack 157 pass gate)
 

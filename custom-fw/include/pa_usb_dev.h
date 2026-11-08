@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/include/pa_usb_dev.h - the Pocket Amp's USB device driver (full speed, class-compliant MIDI).
  *
  * The AC791N's USB0 controller, polled (no USB interrupt): pa_usb_dev_poll() is called from the main

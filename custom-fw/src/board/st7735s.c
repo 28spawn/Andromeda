@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/board/st7735s.c — Pocket Amp ST7789 240x240 RGB565 SPI1 DMA Display Driver (QW-6 / BR-4)
  *
@@ -179,7 +182,11 @@ void st7735s_init(void) {
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
 #define PA_BAND_ROWS 12u
 #define PA_BAND_COUNT (240u / PA_BAND_ROWS)
+#if PA_PRODUCT_ANDROMEDA
+static uint16_t s_band[240u * PA_BAND_ROWS] __attribute__((section(".lowram.band"), aligned(8)));   /* Andromeda: the low SRAM (app_andromeda.ld) */
+#else
 static uint16_t s_band[240u * PA_BAND_ROWS] __attribute__((section(".pool"), aligned(8)));
+#endif
 static uint32_t s_band_hash[PA_BAND_COUNT];
 static uint8_t  s_band_hash_ok;           /* 0 = the panel may hold something the hashes do not know (direct drawing happened) */
 static uint8_t  s_band_on;

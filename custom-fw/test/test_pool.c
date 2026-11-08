@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_pool.c - the DSP pool's real high-water mark with every effect on.
  *
  * The pool (src/sys/pa_pool.c) is a fixed static array; the effects ask it for

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ble_link_decode.py - the BLE stack's own diagnostic block (ble_dg) decoded on the host, for `jl_ram_read.py blelink`.
 

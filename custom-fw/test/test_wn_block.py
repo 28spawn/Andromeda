@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """custom-fw/test/test_wn_block.py - the WaveNet block engine against the float reference, on a real A2-Lite capture.
 
 Converts emu/test_capture.nam (or the .nam given as argv[1]) with emu/nam_loader.py, builds test_wn_block.c with the software accelerator model

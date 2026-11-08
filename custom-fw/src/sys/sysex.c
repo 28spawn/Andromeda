@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/sys/sysex.c — M-VAVE Pocket Amp SysEx Streaming Parser & Command Dispatcher
  */
@@ -44,8 +47,13 @@ static pa_sysex_parser_t  g_sx;
  * The buffers are in .pool (NOLOAD), so they do not grow the flash image. */
 #define SX_PACK_MAX 384u   /* the packed bytes of one message */
 
-static uint8_t  g_sx_pack[SX_PACK_MAX]   __attribute__((section(".pool")));
-static uint8_t  g_sx_inner[SX_PACK_MAX]  __attribute__((section(".pool")));
+#if PA_PRODUCT_ANDROMEDA
+#define SX_POOL_ATTR        /* Andromeda: in the RAM region; the .pool region is the granular tape's */
+#else
+#define SX_POOL_ATTR __attribute__((section(".pool")))
+#endif
+static uint8_t  g_sx_pack[SX_PACK_MAX]   SX_POOL_ATTR;
+static uint8_t  g_sx_inner[SX_PACK_MAX]  SX_POOL_ATTR;
 static uint32_t g_sx_pack_len = 0;
 static uint8_t  g_sx_in_msg   = 0;
 
@@ -167,7 +175,7 @@ static uint32_t pa_sysex_state_block(uint8_t *out) {
 /* 32 KB scratch for streaming a NAM/IR blob in over SysEx (PA_UPLOAD_BUFFER_SIZE).
  * It belongs in .pool (NOLOAD, so it does not grow the flash image) - in .bss it
  * pushed the RAM region over budget. */
-static pa_upload_session_t g_upload __attribute__((section(".pool")));
+static pa_upload_session_t g_upload SX_POOL_ATTR;
 
 void pa_upload_session_init(void) {
     memset(&g_upload, 0, sizeof(g_upload));

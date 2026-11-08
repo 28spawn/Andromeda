@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """Stock amps and cabs conversion verification.
 
   [1] the converter (tools/amx_gru_convert.py) reproduces the 20 AM3 blobs the firmware

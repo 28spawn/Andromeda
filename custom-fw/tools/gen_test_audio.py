@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """Generate the emulator's test audio and impulse responses, and the firmware's default cab.
 
 Everything here is SYNTHESISED (fixed seeds), so it is the project's own material:

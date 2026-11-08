@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* include/pa_dsp_cost.h - calibrated per-slot DSP cycle cost.
  *
  * The device measures the real thing with the pi32v2 free-running cycle
@@ -24,7 +27,12 @@ static const uint32_t pa_dsp_slot_cycles[PA_DSP_COST_NUM_SLOTS] = {
     38000u,  /* 3 CAB      */
     15000u,  /* 4 EQ       */
     22000u,  /* 5 MOD      */
+#if PA_PRODUCT_ANDROMEDA
+    42000u,  /* 6 DELAY = granular engine. ESTIMATE, not yet measured on the device: 8 voices x 64 samples x ~75
+              * cycles (66 instructions per voice-sample in the pi32v2 inner loop, 2026-11-05) + tape write and mix */
+#else
     24000u,  /* 6 DELAY    */
+#endif
     52000u,  /* 7 REVERB   */
 };
 

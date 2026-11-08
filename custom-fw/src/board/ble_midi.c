@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * custom-fw/src/board/ble_midi.c - the BLE-MIDI 1.0 framing.
  *

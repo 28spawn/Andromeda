@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
-custom-fw/emu/server.py — M-VAVE Pocket Amp Live Firmware Emulator & ASIO Audio Host
+custom-fw/emu/server.py — Project ANDROMEDA Live Firmware Emulator & ASIO Audio Host
 
 Features:
   - Enables PortAudio ASIO (`SD_ENABLE_ASIO=1`) to connect directly to USB ASIO audio interfaces
@@ -33,7 +35,9 @@ import sounddevice as sd
 from nam_loader import parse_nam_file, parse_wav_ir
 
 EMU_DIR = Path(__file__).resolve().parent
-DLL_PATH = EMU_DIR / "pocket_amp_emu.dll"
+DLL_PATH = EMU_DIR / "andromeda_emu.dll"
+if not DLL_PATH.exists():
+    DLL_PATH = EMU_DIR / "pocket_amp_emu.dll"
 UI_HTML_PATH = EMU_DIR / "ui.html"
 
 SAMPLE_RATE = 44100
@@ -198,6 +202,22 @@ dll.emu_get_slot_type.restype = ctypes.c_int
 dll.emu_get_slot_param.argtypes = [ctypes.c_int, ctypes.c_int]
 dll.emu_get_slot_param.restype = ctypes.c_int
 
+if hasattr(dll, "emu_andromeda_action"):
+    dll.emu_andromeda_action.argtypes = [ctypes.c_int]
+    dll.emu_andromeda_action.restype = None
+
+if hasattr(dll, "emu_andromeda_looper_state"):
+    dll.emu_andromeda_looper_state.argtypes = []
+    dll.emu_andromeda_looper_state.restype = ctypes.c_int
+
+if hasattr(dll, "emu_andromeda_frozen"):
+    dll.emu_andromeda_frozen.argtypes = []
+    dll.emu_andromeda_frozen.restype = ctypes.c_int
+
+if hasattr(dll, "emu_andromeda_ui_state"):
+    dll.emu_andromeda_ui_state.argtypes = []
+    dll.emu_andromeda_ui_state.restype = ctypes.c_int
+
 
 # Initialize firmware state
 emu_lock = threading.Lock()
@@ -207,7 +227,7 @@ with emu_lock:
 # Sample Player & Guitar DI Loops.
 # The test audio and the IR bank are the project's own, synthesised by
 # custom-fw/tools/gen_test_audio.py on first start (emu/samples/ and emu/irs/ are
-plucked-string DI phrases, modelled cabinets, plate and spring reverbs.
+# plucked-string DI phrases, modelled cabinets, plate and spring reverbs.
 sys.path.insert(0, str(EMU_DIR.parent / "tools"))
 try:
     import gen_test_audio
@@ -229,24 +249,22 @@ g_sample_clock = 0
 def load_audio_samples():
     global g_loaded_samples
     samples = {
-        # GuitarSet studio session multi-tracks (CC-BY 4.0)
-        "gs_funk_comp": ("gs_funk_comp.wav", "GuitarSet Funk 16th Rhythm Chops (112 BPM, C#)"),
-        "gs_funk_solo": ("gs_funk_solo.wav", "GuitarSet Funk Melodic Lead & Fills (114 BPM, Ab)"),
-        "gs_jazz_comp": ("gs_jazz_comp.wav", "GuitarSet Jazz Swing 7th/9th Comping (130 BPM, D)"),
-        "gs_jazz_solo": ("gs_jazz_solo.wav", "GuitarSet Jazz Bebop Melodic Runs (137 BPM, Eb)"),
-        "gs_rock_comp": ("gs_rock_comp.wav", "GuitarSet Rock Arpeggiated Rhythm (85 BPM, F)"),
-        "gs_rock_solo": ("gs_rock_solo.wav", "GuitarSet Rock Expressive Lead Solo (148 BPM, C)"),
-        "gs_bossa_comp": ("gs_bossa_comp.wav", "GuitarSet Bossa Nova Fingerstyle (154 BPM, E)"),
-        "gs_bossa_solo": ("gs_bossa_solo.wav", "GuitarSet Bossa Nova Melodic Lead (166 BPM, Ab)"),
-        "gs_acoustic_strum": ("gs_acoustic_strum.wav", "GuitarSet Acoustic Open Strumming (107 BPM, Ab)"),
-        "gs_acoustic_solo": ("gs_acoustic_solo.wav", "GuitarSet Acoustic Melodic Solo (100 BPM, C#)"),
-        # synthesised DI phrases (tools/gen_test_audio.py)
-        "di_clean": ("di_clean_chords.wav", "Clean strummed chords (G C D Em)"),
-        "di_arp": ("di_arpeggio.wav", "Clean arpeggios (Am F C G)"),
-        "di_rock": ("di_rock_riff.wav", "Rock riff, power chords + palm mutes"),
-        "di_metal": ("di_metal_chug.wav", "Metal chugs, low E 16ths"),
-        "di_blues": ("di_blues_lead.wav", "Blues lead line (A minor pentatonic)"),
-        "di_bass": ("di_bass_line.wav", "Bass line (E G A, root-octave-fifth)"),
+        # Jonas Hemmersbach clean guitar dry captures (courtesy Jonas Hemmersbach)
+        "jh_chords_1": ("jh_chords_1.wav", "Jonas Hemmersbach - Chords 1 (Clean DI)"),
+        "jh_chords_2": ("jh_chords_2.wav", "Jonas Hemmersbach - Chords 2 (Clean DI)"),
+        "jh_chords_3": ("jh_chords_3.wav", "Jonas Hemmersbach - Chords 3 (Clean DI)"),
+        "jh_chords_4": ("jh_chords_4.wav", "Jonas Hemmersbach - Chords 4 (Clean DI)"),
+        "jh_chords_5": ("jh_chords_5.wav", "Jonas Hemmersbach - Chords 5 (Clean DI)"),
+        "jh_lick_1": ("jh_lick_1.wav", "Jonas Hemmersbach - Lick 1 (Lead DI)"),
+        "jh_lick_2": ("jh_lick_2.wav", "Jonas Hemmersbach - Lick 2 (Lead DI)"),
+        "jh_lick_3": ("jh_lick_3.wav", "Jonas Hemmersbach - Lick 3 (Lead DI)"),
+        "jh_lick_4": ("jh_lick_4.wav", "Jonas Hemmersbach - Lick 4 (Lead DI)"),
+        "jh_lick_5": ("jh_lick_5.wav", "Jonas Hemmersbach - Lick 5 (Lead DI)"),
+        "jh_riff_1": ("jh_riff_1.wav", "Jonas Hemmersbach - Riff 1 (Rhythm DI)"),
+        "jh_riff_2": ("jh_riff_2.wav", "Jonas Hemmersbach - Riff 2 (Rhythm DI)"),
+        "jh_riff_3": ("jh_riff_3.wav", "Jonas Hemmersbach - Riff 3 (Rhythm DI)"),
+        "jh_riff_4": ("jh_riff_4.wav", "Jonas Hemmersbach - Riff 4 (Rhythm DI)"),
+        "jh_riff_5": ("jh_riff_5.wav", "Jonas Hemmersbach - Riff 5 (Rhythm DI)"),
     }
     for key, (fname, label) in samples.items():
         fpath = SAMPLE_DIR / fname
@@ -663,17 +681,26 @@ def start_audio_stream(preferred_id: str = ""):
 # Background thread to pump DSP when no hardware stream is active
 def fallback_dsp_worker():
     while True:
-        if g_stream is None or not g_stream.active:
-            mono_in = get_next_audio_input(BLOCK_SIZE, None)
-            out_L = np.zeros(BLOCK_SIZE, dtype=np.float32)
-            out_R = np.zeros(BLOCK_SIZE, dtype=np.float32)
-            with emu_lock:
-                dll.emu_process_audio_f32(
-                    mono_in.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
-                    out_L.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
-                    out_R.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
-                    BLOCK_SIZE,
-                )
+        is_active = False
+        try:
+            if g_stream is not None:
+                is_active = bool(g_stream.active)
+        except Exception:
+            is_active = False
+        if not is_active:
+            try:
+                mono_in = get_next_audio_input(BLOCK_SIZE, None)
+                out_L = np.zeros(BLOCK_SIZE, dtype=np.float32)
+                out_R = np.zeros(BLOCK_SIZE, dtype=np.float32)
+                with emu_lock:
+                    dll.emu_process_audio_f32(
+                        mono_in.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+                        out_L.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+                        out_R.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+                        BLOCK_SIZE,
+                    )
+            except Exception:
+                pass
         time.sleep(BLOCK_SIZE / float(SAMPLE_RATE))
 
 
@@ -703,6 +730,9 @@ class EmuRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_HEAD(self):
+        self.do_GET()
+
     def do_GET(self):
         if self.path == "/" or self.path.startswith("/index"):
             html = UI_HTML_PATH.read_bytes()
@@ -711,30 +741,6 @@ class EmuRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(html)))
             self.end_headers()
             self.wfile.write(html)
-            return
-
-        if self.path.startswith("/onyx/"):
-            screen_name = self.path[6:].split("?")[0]
-            base_screens = (EMU_DIR.parent / "ui_design" / "screens").resolve()
-            try:
-                png_file = (base_screens / screen_name).resolve()
-                if png_file.is_relative_to(base_screens) and png_file.is_file():
-                    data = png_file.read_bytes()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "image/png")
-                    self.send_header("Content-Length", str(len(data)))
-                    self.end_headers()
-                    self.wfile.write(data)
-                    return
-            except Exception:
-                pass
-            self.send_error(404, f"Screen {screen_name} not found")
-            return
-
-        if self.path == "/api/onyx_screens":
-            screens_dir = (EMU_DIR.parent / "ui_design" / "screens").resolve()
-            names = sorted([f.name for f in screens_dir.glob("*.png")]) if screens_dir.exists() else []
-            self._send_json({"screens": names})
             return
 
         if self.path == "/api/devices":
@@ -783,6 +789,10 @@ class EmuRequestHandler(BaseHTTPRequestHandler):
                 lcd_b64 = base64.b64encode(bytes(req_rgba)).decode("ascii")
             dll.emu_get_telemetry(ctypes.byref(telem))
             dll.emu_get_scope(scope_in, scope_out)
+
+            looper_st = dll.emu_andromeda_looper_state() if hasattr(dll, "emu_andromeda_looper_state") else 0
+            frozen_st = dll.emu_andromeda_frozen() if hasattr(dll, "emu_andromeda_frozen") else 0
+            and_ui_st = dll.emu_andromeda_ui_state() if hasattr(dll, "emu_andromeda_ui_state") else 0
 
             cur_sample = g_loaded_samples.get(g_test_mode)
             sample_pct = 0.0
@@ -835,7 +845,38 @@ class EmuRequestHandler(BaseHTTPRequestHandler):
                 "slot_params": [[dll.emu_get_slot_param(s, p) for p in range(6)] for s in range(8)],
                 "scope_in": [round(float(scope_in[i]), 4) for i in range(0, 256, 2)],
                 "scope_out": [round(float(scope_out[i]), 4) for i in range(0, 256, 2)],
+                "andromeda": {
+                    "looper_state": looper_st,
+                    "frozen": frozen_st,
+                    "ui_state": and_ui_st,
+                },
             })
+            return
+
+        if self.path.startswith("/api/preset"):
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query)
+            if "index" in qs:
+                try:
+                    idx = int(qs["index"][0])
+                    with emu_lock:
+                        dll.emu_select_preset(idx)
+                except ValueError:
+                    pass
+            telem = EmuTelemetry()
+            dll.emu_get_telemetry(ctypes.byref(telem))
+            self._send_json({"ok": True, "preset": telem.preset_index})
+            return
+
+        if self.path.startswith("/api/param"):
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query)
+            slot = int(qs.get("slot", [0])[0])
+            pid = int(qs.get("param", qs.get("param_id", [0]))[0])
+            val = int(qs.get("value", qs.get("val", [0]))[0])
+            with emu_lock:
+                dll.emu_set_slot_param(slot, pid, val)
+            self._send_json({"ok": True})
             return
 
         if self.path == "/api/telemetry":
@@ -1035,6 +1076,16 @@ class EmuRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": True})
             return
 
+        if self.path == "/api/andromeda/action":
+            action = int(body.get("action", 0))
+            with emu_lock:
+                if hasattr(dll, "emu_andromeda_action"):
+                    dll.emu_andromeda_action(action)
+            looper = dll.emu_andromeda_looper_state() if hasattr(dll, "emu_andromeda_looper_state") else 0
+            frozen = dll.emu_andromeda_frozen() if hasattr(dll, "emu_andromeda_frozen") else 0
+            self._send_json({"ok": True, "action": action, "looper_state": looper, "frozen": frozen})
+            return
+
         if self.path == "/api/drums":
             playing = int(body.get("playing", 0))
             bpm = int(body.get("bpm", 120))
@@ -1227,7 +1278,7 @@ def main():
         srv = ThreadingHTTPServer((host, port), EmuRequestHandler)
 
     print(f"==================================================================")
-    print(f" M-VAVE Pocket Amp Live Firmware Emulator Running!")
+    print(f" Project ANDROMEDA Live Firmware Emulator Running!")
     print(f" Audio Status : {g_audio_status}")
     print(f" Open Web UI  : http://{host}:{port}")
     print(f"==================================================================")

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/board/ble_midi_bridge.c - see include/pa_ble_midi_bridge.h. */
 #include "pa_ble_midi_bridge.h"
 

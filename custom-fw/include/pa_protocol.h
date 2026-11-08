@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* pa_protocol.h — USB-MIDI SysEx / syscmd control contract.
  * Pocket Amp MIDI & SysEx protocol definitions. */
 #ifndef PA_PROTOCOL_H

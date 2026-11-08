@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* include/pa_audio_core.h - Portable audio core shared by the device firmware,
  * the host emulator and the WebAssembly build, so all three produce the same
  * audio.

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """Offline test of the Bluetooth readout in tools/jl_ram_read.py: a fake ROM serves a status block laid out as include/pa_ble_radio.h says,
 and the decoder must name the right fields. Also checks that the Python field list matches the header's enum, in order."""
 import re

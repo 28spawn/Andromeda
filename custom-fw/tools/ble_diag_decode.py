@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ble_diag_decode.py - decode the Bluetooth link instrumentation block (include/pa_ble_diag.h) and print the report.
 

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* pa_input.h - the portable front-panel input layer.
  *
  * The firmware used to read the RAW button level every 60 Hz tick, which
@@ -25,6 +28,7 @@
 #define PA_INPUT_H
 
 #include <stdint.h>
+#include "pa_config.h"
 
 /* ---- the mask the UI sees ---------------------------------------------- */
 #define PA_BTN_HOME        (1u << 0)   /* HOME / BT switch                    */
@@ -60,7 +64,11 @@
 #define PA_IN_REPEAT_MS        70u  /* ... and then every this often         */
 #define PA_IN_HOLD1_MS       1000u
 #define PA_IN_HOLD2_MS       3000u   /* PARA: past this = the move hold (was 2 s, and a hold past 3 s did nothing) */
+#if PA_PRODUCT_ANDROMEDA
+#define PA_IN_HOME_HOLD_MS   1000u   /* Andromeda: HOME held 1 s = Settings */
+#else
 #define PA_IN_HOME_HOLD_MS   1500u
+#endif
 #define PA_IN_KEYHOLD_MS      800u   /* STOMP mode: VOL-, VOL+, <, > long press */
 
 typedef struct {

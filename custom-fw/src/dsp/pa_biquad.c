@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/dsp/pa_biquad.c - see include/pa_biquad.h */
 #include "pa_config.h"
 #include "pa_biquad.h"

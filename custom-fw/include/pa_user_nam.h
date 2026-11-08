@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_user_nam.h — Pocket Amp Persistent User NAM Capture Store & Registry
  *

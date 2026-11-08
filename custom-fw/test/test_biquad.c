@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_biquad.c - the shared biquad block against the inline code it replaced (the fizz filter and the global EQ): the same output word for word on ordinary levels. */
 #include <stdio.h>
 #include <string.h>

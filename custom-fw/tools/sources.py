@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """tools/sources.py - the source manifest reader.
 
 custom-fw/sources.txt is the single place that says which modules each build

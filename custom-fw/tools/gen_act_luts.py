@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 gen_act_luts.py — Generates minimax-refitted Tanh/Sigmoid tables for Full/Lite modes
 and outputs binary files matching the stock 4x 2 KB activation partition layout.

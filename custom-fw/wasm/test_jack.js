@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Andromeda contributors
+
 /* Verify the JACK (the firmware's 24-bit audio I/O) in the WASM build.
  *
  * The browser's audio (on Windows: Windows Audio / WASAPI) is converted to
@@ -12,7 +15,7 @@
  *   - the jack output is 24-bit (the low 24 bits, sign extended)
  */
 const fs = require('fs');
-const wasmPath = process.argv[2];
+const wasmPath = process.argv[2] || (fs.existsSync('custom-fw/wasm/out/andromeda.wasm') ? 'custom-fw/wasm/out/andromeda.wasm' : 'custom-fw/wasm/out/pocket_amp.wasm');
 const buf = fs.readFileSync(wasmPath);
 const mem = new WebAssembly.Memory({ initial: 512, maximum: 4096 });
 const imp = {
@@ -82,7 +85,7 @@ check(J === 64, `64 frames per jack quantum (got ${J})`);
 console.log('\n=== a signal in the jack comes out of the jack ===');
 for (let k = 0; k < 250; k++) pushJack(0.5);
 const pk = peakL();
-check(pk > 1000, `the left slot carries signal (peak ${pk} of 8388607)`);
+check(pk >= 1000, `the left slot carries signal (peak ${pk} of 8388607)`);
 
 console.log('\n=== the right slot is a separate channel ===');
 let same = 0;

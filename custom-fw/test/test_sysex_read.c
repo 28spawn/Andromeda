@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* The SysEx read commands, on the host.
  *
  * The firmware's parser and its reply path, with the flash and the preset
@@ -12,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include "pa_config.h"
 
 #include "pa_sysex.h"
 
@@ -127,7 +131,9 @@ int main(void) {
             check(strstr(text, "version=") != NULL,    "the record has version=");
             check(strstr(text, "DONNER Pocket AMP") != NULL,
                   "the name is one the editor matches (\"DONNER Pocket AMP\")");
-            check(strstr(text, "version=101") != NULL, "the version is 101 (PA_FW_VERSION: shown as 1.01, below the stock's 1.05)");
+            char exp_ver[32];
+            snprintf(exp_ver, sizeof(exp_ver), "version=%u", PA_FW_VERSION);
+            check(strstr(text, exp_ver) != NULL, "the version matches PA_FW_VERSION");
         }
     }
 

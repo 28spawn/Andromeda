@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_reverb.c - Reverb tank layout + decay law regression tests.
  *
  * Two things used to be silently wrong here, and neither of them clicks:

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 from pathlib import Path
 """QA: does the custom container keep the STOCK flash layout, and is the
 runtime write protection actually in place?

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/board/main.c — M-VAVE Pocket Amp Custom Firmware Main Integration Loop
  *
  * Unifies all Quick Wins (QW-1..8), Big Rocks (BR-1..5), and Secondary Priorities (SP-1..4):
@@ -39,11 +42,13 @@
 /* Global Subsystems */
 pa_fx_chain_t   g_fx_chain;
 pa_nam_model_t  g_nam_model  __attribute__((aligned(32)));
+#if PA_FEAT_WAVENET
 #ifndef PA_HOST_SIM
 pa_wavenet_model_t g_wn_model __attribute__((section(".pool"), aligned(32)));
 #else
 pa_wavenet_model_t g_wn_model __attribute__((aligned(32)));
 #endif
+#endif  /* Andromeda: the WaveNet's .pool space holds the granular tape (fx_andromeda.c) */
 int             g_active_amp_engine = 0; /* 0: GRU, 1: WaveNet */
 static fx_node_t      *g_cab_node = 0;
 static pa_ui_ctx_t     g_ui;
@@ -591,6 +596,23 @@ static void diag_clock_dump(void) {
     D[o + 16] = plat_p33_read(0x80u); D[o + 17] = plat_p33_read(0xA0u);
     D[7] = o;                                                   /* where the P33 words start */
     D[0] = 0x444B4C43u;                                         /* "CLKD" */
+#if PA_PRODUCT_ANDROMEDA
+    {   /* ANDROMEDA STAGE 0 (read only): the audio clock. The app never programs an I2S divider (audio_alnk.c writes only a clock-source select), so the 44,118 Hz comes from what the
+         * boot ROM / bootloader left. 48 MHz / (17 x 64) = 44,117.6 Hz fits; 48,000 Hz would need a divider of 15.625. These words show the real state: the clock-control block, the
+         * ALNK0 registers and the port IO map (SRAM 0x01C7EB00, "AUCK"; tools/andromeda_clock_dump_pc.py prints them). Same marker protection as above. */
+        volatile uint32_t *A = (volatile uint32_t *)(uintptr_t)0x01C7EB00u;
+        static const uint32_t abase[3] = { 0x00010000u, 0x00012E00u, 0x00051018u };
+        static const uint8_t  anw[3]   = { 16u, 11u, 8u };
+        uint32_t ao = 4u;
+        for (uint32_t r = 0; r < 3u; r++) {
+            DG_MARK = 0xD1A60000u | (0x10u + r);
+            A[1 + r] = abase[r];
+            for (uint32_t i = 0; i < anw[r]; i++) A[ao + i] = *(volatile uint32_t *)(uintptr_t)(abase[r] + 4u * i);
+            ao += anw[r];
+        }
+        A[0] = 0x4B435541u;                                     /* "AUCK" */
+    }
+#endif
     DG_MARK = 0xD1A6FFFFu;                                      /* done */
 }
 
@@ -857,12 +879,17 @@ static void pa_opcost_probe(void) {
  * 1 sequential 2048 loads, 2 magic, 4 g_active_amp_engine, 5 WaveNet model active, 6 GRU model active. */
 extern int g_active_amp_engine;
 extern pa_nam_model_t g_nam_model;
+#if PA_FEAT_WAVENET
 extern pa_wavenet_model_t g_wn_model;
+#define PA_WN_ACTIVE_FLAG ((uint32_t)g_wn_model.active)
+#else
+#define PA_WN_ACTIVE_FLAG 0u
+#endif
 static void pa_mem_probe_runtime(void) {
     /* READ-ONLY. The first version wrote a test pattern into 0x01C1E000.., which became live .bss once the data region grew
      * (that is what turned g_nam_model.active into 148). Now it only records the engine flags. */
     volatile uint32_t *R = (volatile uint32_t *)(uintptr_t)0x01C7C7C0u;
-    R[4] = (uint32_t)g_active_amp_engine; R[5] = (uint32_t)g_wn_model.active; R[6] = (uint32_t)g_nam_model.active;
+    R[4] = (uint32_t)g_active_amp_engine; R[5] = PA_WN_ACTIVE_FLAG; R[6] = (uint32_t)g_nam_model.active;
     R[2] = 0x52544D50u;                                      /* "RTMP" */
 }
 
@@ -1066,8 +1093,16 @@ void pa_firmware_init(void) {
     cpu_meter_set_clock(&g_cpu_meter, plat_cycles);
 #endif
 
+#if PA_PRODUCT_ANDROMEDA
+    fx_node_t *amp_nd = (fx_node_t *)0;
+    g_cab_node        = (fx_node_t *)0;
+#elif PA_FEAT_WAVENET
     fx_node_t *amp_nd = pa_amp_node_create(&g_nam_model, &g_wn_model, &g_active_amp_engine);
     g_cab_node        = fx_cab_ir_new();
+#else
+    fx_node_t *amp_nd = pa_amp_node_create(&g_nam_model, (pa_wavenet_model_t *)0, &g_active_amp_engine);   /* GRU only */
+    g_cab_node        = fx_cab_ir_new();
+#endif
     pa_fx_chain_init(&g_fx_chain, amp_nd, g_cab_node);
     g_fx_chain.meter = &g_cpu_meter;
 
@@ -1277,6 +1312,9 @@ void pa_main_loop(void) {
             BB_EVENT(BB_EV_OTA_REBOOT, 2u);
             extern int pa_ota_session_run(void);
             (void)pa_ota_session_run();
+#if PA_PRODUCT_ANDROMEDA
+            { extern void pa_gran_tape_release(void); pa_gran_tape_release(); }   /* the session's scratch was the granular tape */
+#endif
             g_ui.dirty = 1u;
         }
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/gen_ble_diag_layout.py - the byte layout of the BLE stack's diagnostic block (struct ble_diag in
 third_party/optimist_ble/src/ble_diag.h) for jl_ram_read.py's `blelink`.

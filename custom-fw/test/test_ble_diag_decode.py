@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """custom-fw/test/test_ble_diag_decode.py - the host decoder (tools/ble_diag_decode.py) against the C layout (include/pa_ble_diag.h) and a synthetic block."""
 import os
 import re

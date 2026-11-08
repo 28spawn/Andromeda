@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/sys/pa_user_nam.c — Pocket Amp Persistent User NAM Capture Store & Registry
  *
@@ -449,8 +452,16 @@ int pa_user_nam_set_name(uint8_t user_idx, const char *name) {
 
 /* Scratch for reading a NAM blob out of flash. .pool, not .bss - see the note in sysex.c. The RAM copy is PA_NAM_BLOB_MAX; a flash slot is PA_FLASH_USER_NAM_SLOT_SIZE (8 KB).
  * The update session (ota_hw.c) borrows it: it is idle while the main loop is inside the session. */
+#if PA_PRODUCT_ANDROMEDA
+/* Andromeda plays no captures. The update session's scratch borrows the granular tape (main.c gives
+ * it back if the update does not happen; a finished update reboots). */
+#include "../../include/pa_granular.h"
+#define s_model_blob_buf ((uint8_t *)pa_gran_tape_borrow())
+uint8_t *pa_user_nam_scratch(uint32_t *n) { *n = PA_NAM_BLOB_MAX; return s_model_blob_buf; }
+#else
 static uint8_t s_model_blob_buf[PA_NAM_BLOB_MAX] __attribute__((section(".pool"), aligned(4)));
 uint8_t *pa_user_nam_scratch(uint32_t *n) { *n = (uint32_t)sizeof s_model_blob_buf; return s_model_blob_buf; }
+#endif
 
 int pa_user_nam_delete(uint8_t user_idx) {
     if (!g_nam_registry_inited) pa_user_nam_init();
@@ -476,6 +487,10 @@ void pa_user_nam_rollback(uint8_t user_idx) {
 }
 
 int pa_user_nam_load_into_dsp(uint8_t user_idx, pa_nam_model_t *gru_model, pa_wavenet_model_t *wn_model) {
+#if PA_PRODUCT_ANDROMEDA
+    (void)user_idx; (void)gru_model; (void)wn_model;
+    return -1;                                                   /* no captures in Andromeda: the caller falls back to the stock GRU */
+#endif
     if (!g_nam_registry_inited) pa_user_nam_init();
     if (user_idx >= g_nam_registry.count || !g_nam_registry.slots[user_idx].active) return -1;
 

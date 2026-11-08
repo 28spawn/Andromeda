@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_usb_chunk.c - the bulk IN packetising rule (include/pa_usb_chunk.h): over every reply size from 1 to 600 event packets, a burst never ends on a full 64-byte
  * packet once the padding rule is applied, and the old behaviour fails on exactly the sizes the bench showed (RAM-read replies of 32 and 240 data bytes). */
 #include <math.h>

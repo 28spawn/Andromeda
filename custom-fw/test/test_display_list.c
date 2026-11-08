@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * test/test_display_list.c - the display list (ui_5x7.c) against direct drawing.
  *

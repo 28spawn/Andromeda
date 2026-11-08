@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* pa_cpu_meter.h — per-stage DSP load meter (roadmap E12).
  * Portable, I/O-free logic (host-testable). The only device dependency is the cycle source,
  * injected via cpu_meter_set_clock() so the same code runs on-device and in a PC simulation.

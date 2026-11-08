@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 #include "../../include/pa_config.h"
 /*
  * audio_alnk.c — Pocket Amp Full-Duplex ALNK0 I2S Driver & Ping-Pong ISR (Big Rock 1)
@@ -109,11 +112,40 @@ volatile uint8_t g_pa_gov_swap;                    /* set by the audio thread wh
 #define PA_STEREO_ON_US   1080u
 #define PA_STEREO_HOLD    2800u
 
+#if PA_PRODUCT_ANDROMEDA
+/* LATE STARTS. The overload popup shows on codec overruns (g_pa_audio.xrun_count: the next half-buffer was already complete when this block finished). The block times
+ * (isr_avg, the per-slot table) run from the interrupt's entry, so they cannot see an interrupt that was HELD OFF before it started (a higher-priority interrupt, a main-loop
+ * critical section). This measures the time between the starts of two consecutive blocks (nominal 1451 us) and keeps it where tools/volume_probe.py reads it (the symbol
+ * g_pa_isr_gap, found in the ELF):
+ *   [0] "GAPS"  [1] blocks seen  [2] the longest interval, us  [3..8] blocks by interval: <1500 <1650 <1900 <2400 <3500 >=3500 us  [9] events logged
+ * and a PA_EV_ISR_LATE event (at most one per 50 ms) for an interval over 1650 us, with the main loop's last marker and the previous block's own duration, so a late start
+ * (a = long, b's duration normal) is told from a block that ran long. */
+volatile uint32_t g_pa_isr_gap[10] = { 0x53504147u };
+static uint32_t s_gap_prev_t0, s_gap_prev_dur_us, s_gap_log_t;
+static volatile uint8_t s_gap_blk;                  /* set by the interrupt body when it processed a block (not the other DMA channel's early return); a block's own time says nothing about it: an idle one can take 100 us */
+#endif
+
 void pa_alnk0_isr_c(void) {
     uint32_t t0 = PA_READ32(JL_TIMER4_BASE + 0x04u);
     pa_alnk0_isr_body();
     PA_ISR_CP(0x05);
     uint32_t dt = PA_READ32(JL_TIMER4_BASE + 0x04u) - t0;
+#if PA_PRODUCT_ANDROMEDA
+    if (s_gap_blk) {                                         /* a real block (the other DMA channel's early return is not one) */
+        s_gap_blk = 0u;
+        if (s_gap_prev_t0) {
+            const uint32_t gap_us = (t0 - s_gap_prev_t0) / 24u;
+            g_pa_isr_gap[1]++;
+            if (gap_us > g_pa_isr_gap[2]) g_pa_isr_gap[2] = gap_us;
+            g_pa_isr_gap[3u + (gap_us < 1500u ? 0u : gap_us < 1650u ? 1u : gap_us < 1900u ? 2u : gap_us < 2400u ? 3u : gap_us < 3500u ? 4u : 5u)]++;
+            if (gap_us >= 1650u && (uint32_t)(t0 - s_gap_log_t) >= 50u * 24000u) {
+                s_gap_log_t = t0; g_pa_isr_gap[9]++;
+                pa_evlog(PA_EV_ISR_LATE, gap_us, (PA_READ32(0x01C7C3F4u) & 0xFFFFu) << 16 | (s_gap_prev_dur_us & 0xFFFFu));
+            }
+        }
+        s_gap_prev_t0 = t0; s_gap_prev_dur_us = dt / 24u;
+    }
+#endif
     volatile pa_bench_stats_t *st = PA_BENCH_STATS;
     st->isr_last_cyc = dt;
     if (dt > st->isr_max_cyc) st->isr_max_cyc = dt;
@@ -163,6 +195,9 @@ void pa_alnk0_isr_c(void) {
             else if (!g_pa_stereo_allow && s_raw_ema < (int32_t)(PA_STEREO_ON_US * 24u)) g_pa_stereo_allow = 1u;
         }
         g_pa_isr_avg_us = (uint32_t)s_raw_ema / 24u;
+#if PA_PRODUCT_ANDROMEDA
+        { extern void pa_meas_isr_sample(uint32_t dt_ticks24); pa_meas_isr_sample(dt); }      /* the measurement channel (pa_meas.h): max, mean, blocks over the budget */
+#endif
         {   /* the stereo's real cost, for the readout (SRAM 0x01C7D4C4: [0] average audio time in blocks WITH the stereo cabinet, [1] in blocks without,
              * both in us; [2] bit 0 = stereo allowed now, bits 8.. = times the governor switched it off) */
             static int32_t s_st_ema, s_mo_ema; static uint32_t s_st_trips; static uint8_t s_was_allow = 1u;
@@ -239,6 +274,9 @@ static void pa_alnk0_isr_body(void) {
     int32_t       *tx_half = &g_alnk_tx_dma[tx_half_idx * (PA_AUDIO_BLOCK_FRAMES * PA_AUDIO_CHANNELS)];
 
     PA_ISR_CP(0x03);
+#if PA_PRODUCT_ANDROMEDA
+    s_gap_blk = 1u;
+#endif
     pa_audio_process_half(rx_half, tx_half);
     PA_ISR_CP(0x04);
 

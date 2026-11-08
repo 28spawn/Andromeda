@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_reverb_type_clicks.c - changing the reverb's type while it rings must not click or burst.
  *
  * A reverb tail is smooth (the combs are damped, so neighbouring samples are close): the difference between two neighbouring samples is small next to the level. A switch

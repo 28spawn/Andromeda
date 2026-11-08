@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/ui_watch_pc.py - watch what the unit's UI state does while someone presses its buttons. READ-ONLY.
 Samples the UI context (g_ui, 256 bytes) and the test-state block (button mask) over the USB diagnostic channel at about 8 Hz and prints every change with a timestamp: which bytes of

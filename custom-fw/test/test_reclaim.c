@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test_reclaim.c — PC harness for dynamic resource reclaim (roadmap C7), host-native.
  * Builds the real fx_graph with effect nodes carrying illustrative state sizes + CPU costs, then
  * toggles effects and MEASURES the SRAM and CPU budget actually freed. Proves the reclaim policy

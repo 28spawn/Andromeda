@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/sys/pa_ota.c - the app side of the JieLi OTA handshake
  *
  * See include/pa_ota.h for the protocol.  Everything here is a pure function of the

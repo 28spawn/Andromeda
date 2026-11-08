@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* Render UI screens into a framebuffer and dump raw RGB565 files for before/after comparison */
 #include <stdio.h>
 #include <string.h>

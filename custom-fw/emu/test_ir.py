@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """Every IR in the emulator's cabinet bank must load.
 
 Python's `wave` module only understands PCM (format tag 1). Half of the bank

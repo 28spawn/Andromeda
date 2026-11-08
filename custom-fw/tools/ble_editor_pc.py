@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
-custom-fw/tools/ble_editor_pc.py - the web editor's Bluetooth path against the real unit, without a browser: the page's own protocol code (web/Onyx_Web_Editor.html, run in Node) builds the BLE-MIDI
+custom-fw/tools/ble_editor_pc.py - the web editor's Bluetooth path against the real unit, without a browser: the page's own protocol code (web/Andromeda_Web_Editor.html, run in Node) builds the BLE-MIDI
 packets and reads the notifications, bleak is only the radio. It does what the page does after "Connect Bluetooth": identity, the state record (cmd 80), the name lists (cmd 81), then a control
 that changes nothing (the output level written back at its own value) and a read to prove it.
 
@@ -15,7 +17,7 @@ from bleak import BleakClient, BleakScanner
 FW = Path(__file__).resolve().parent.parent
 SVC, CHR = "03b80e5a-ede8-4b33-a751-6ce34ec4c700", "7772e5db-3868-4112-a1a9-f2669d106bf3"
 TMP = tempfile.mkdtemp(prefix="pa_ble_editor_")
-page = (FW / "web" / "Onyx_Web_Editor.html").read_text(encoding="utf-8")
+page = (FW / "web" / "Andromeda_Web_Editor.html").read_text(encoding="utf-8")
 (Path(TMP) / "page.js").write_text(re.search(r"<script>(.*)</script>", page, re.S).group(1), encoding="utf-8")
 (Path(TMP) / "run.js").write_text(
     "const c=require('./page.js');const ops=JSON.parse(require('fs').readFileSync(0,'utf8'));"

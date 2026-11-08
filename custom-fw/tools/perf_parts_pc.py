@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/perf_parts_pc.py - READ-ONLY: where does the time of the CABINET, the DRIVE and the REVERB go, on the unit, per audio block (include/pa_prof.h, fft_conv.c FC_PROF)?
 

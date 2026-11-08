@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """ram_dump.py - save a range of the unit's SRAM to a file, through the ROM download mode (READ ONLY).
 
 Uses the same reader as jl_ram_read.py (the ROM's READ_MEMORY command only: nothing is written to memory or flash, no loader is uploaded). The unit has to be

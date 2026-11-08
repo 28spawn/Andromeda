@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """ram_diff.py - compare SRAM dumps taken with ram_dump.py: what did Bluetooth (or anything else) change?
 
     python custom-fw/tools/ram_diff.py A.bin B.bin [--base 0x01C00000] [--gap 64] [--top 20]

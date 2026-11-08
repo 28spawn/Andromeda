@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_model.h — Pocket Amp Exact NAM A2 16-Unit Q21 GRU Model Structure
  *

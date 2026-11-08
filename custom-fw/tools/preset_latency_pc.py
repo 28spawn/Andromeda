@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/preset_latency_pc.py - where does the time go between a preset-change signal and the new preset on the screen? READ-ONLY apart from the signals it injects.
 

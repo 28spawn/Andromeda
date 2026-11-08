@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/fx/fx_drive.c - the DRV block: six drive / fuzz pedals.
  *
  *   0 TS-808     Ibanez TS808: 720 Hz high-passed gain path into symmetric soft diodes,
@@ -29,14 +32,24 @@
 #include <math.h>
 #include "pa_fx.h"
 #include "pa_config.h"
-#include "../dsp/fixedpoint.h"
-#include "../dsp/pa_oversample.h"
-#include "pa_prof.h"
 
+volatile uint8_t g_pa_drive_os2 = 0;
+
+#if PA_PRODUCT_ANDROMEDA
+#include <string.h>
+static void drive_stub_run(fx_node_t *nd, int32_t *buf, int n) { (void)nd; (void)buf; (void)n; }
+fx_node_t *fx_drive_new(void) {
+    static fx_node_t node;
+    memset(&node, 0, sizeof(node));
+    node.frame = PA_BLOCK_N;
+    node.tag   = "drv";
+    node.run   = drive_stub_run;
+    return &node;
+}
+#else
 #define DRV_FS 44100.0f
 
-/* 1 = run the clipper at 2x instead of 4x (set by the load governor in audio_alnk.c when the audio interrupt runs too long). */
-volatile uint8_t g_pa_drive_os2 = 0;
+
 
 typedef enum {
     DRIVE_MW_808  = 0,
@@ -535,3 +548,5 @@ fx_node_t *fx_drive_new(void) {
     n.tail_draining= 0;
     return &n;
 }
+
+#endif /* !PA_PRODUCT_ANDROMEDA */

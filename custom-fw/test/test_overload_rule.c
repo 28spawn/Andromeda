@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_overload_rule.c - the OVERLOAD popup's xrun-burst rule (include/pa_overload.h): a quick scroll through presets (one overrun per swap) must not raise it, real bursts must. */
 #include <stdio.h>
 #include "../include/pa_overload.h"

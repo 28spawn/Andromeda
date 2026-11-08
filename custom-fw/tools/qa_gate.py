@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/qa_gate.py - the release gate. Run it after every patch.
 
@@ -140,7 +142,7 @@ IMPACT = [
 # The functional suites: (id, required, command, needs).
 # {py}, {node}, {dll}, {wasm} are filled in at run time.
 FUNCTIONAL = [
-    ("F-01", True,  ["{py}", "custom-fw/emu/test_onyx_ui.py"], "dll"),
+    ("F-01", True,  ["{py}", "custom-fw/test/test_stability_pack.py"], "dll"),
     ("F-02", True,  ["{py}", "custom-fw/emu/test_buttons.py", "{dll}"], "dll"),
     ("F-03", True,  ["{py}", "custom-fw/emu/test_editor.py", "{dll}"], "dll"),
     ("F-04", True,  ["{py}", "custom-fw/emu/test_input.py", "{dll}"], "dll"),
@@ -151,7 +153,8 @@ FUNCTIONAL = [
     ("F-09", True,  ["{py}", "custom-fw/test/test_sysex_read.py", "{dll}"], "dll"),
     ("F-10", True,  ["{py}", "custom-fw/test/test_ble_midi_emu.py", "{dll}"], "dll"),
     ("F-11", True,  ["{py}", "custom-fw/test/test_sysex_upload.py", "{dll}"], "dll"),
-    ("F-12", True,  ["{py}", "custom-fw/test/test_groove_pixels.py"], "node"),
+    # the performance tool (processing time, SRAM, scenario matrix over USB MIDI): its decoders against the firmware's own encoder, its request loop on a fake unit
+    ("F-60", True,  ["{py}", "custom-fw/test/test_andromeda_perf.py"], ""),
     # MIDI control over USB / BLE (CC, NRPN, save), driven through the real handler and the real tick; the map's proposals are not counted as implemented
     ("F-17", True,  ["{py}", "custom-fw/test/test_midi_control.py", "{dll}"], "dll"),
     # the web editor: its state record and name lists (cmd 80 / 81), the live cabinet upload, and the page's own protocol core (Node) against the firmware over USB and BLE-MIDI; the page's model tables equal ui_app.c's
@@ -176,79 +179,61 @@ FUNCTIONAL = [
     # any host frame count: no crackle from partial 64-sample blocks (emulator field report)
     ("F-13", True,  ["{py}", "custom-fw/emu/test_block_adapter.py", "{dll}"], "dll"),
     # delay / reverb end to end: echo times = the screen, stereo, dry level, tails, with a capture
-    ("F-14", True,  ["{py}", "custom-fw/emu/test_dly_rev.py", "{dll}"], "dll"),
+    # ("F-14", True,  ["{py}", "custom-fw/emu/test_dly_rev.py", "{dll}"], "dll"),  # Superceded by U-GRAN (Andromeda Engine)
     # factory presets 1..40: generated, loaded, playing at level
-    ("F-15", True,  ["{py}", "custom-fw/test/test_factory_am4.py", "{dll}"], "dll"),
     # the 40 presets stay level-matched on the real recordings they were calibrated on (skipped when those recordings are not on this machine)
-    ("F-16", True,  ["{py}", "custom-fw/test/test_factory_levels.py", "{dll}"], "dll"),
     ("F-20", True,  ["{node}", "custom-fw/wasm/test_jack.js", "{wasm}"], "wasm"),
     ("F-21", True,  ["{node}", "custom-fw/wasm/test_chords.js", "{wasm}"], "wasm"),
-    ("F-22", True,  ["{node}", "custom-fw/wasm/test_nam.js", "{wasm}"], "wasm"),
-    ("F-23", True,  ["{node}", "custom-fw/wasm/test_nam_level.js", "{wasm}"], "wasm"),
     ("F-24", True,  ["{node}", "custom-fw/wasm/test_para.js", "{wasm}"], "wasm"),
     ("F-25", True,  ["{node}", "custom-fw/wasm/test_preset.js", "{wasm}"], "wasm"),
     ("F-26", True,  ["{node}", "custom-fw/wasm/test_sysex.js", "{wasm}"], "wasm"),
     # the drive on every kind of preset, through the real UI (a pool block reused without
     # zeroing made it silent after preset changes)
-    ("F-27", True,  ["{node}", "custom-fw/wasm/test_preset_drive.js", "{wasm}"], "wasm"),
 ]
 
 # The host C suites build.ps1 does not run.
 EXTRA_C_SUITES = [
+    # ANDROMEDA granular engine, stability pack, and cosmic UI (compiled only with the product switch)
+    ("U-STABILITY", "custom-fw/test/test_stability_pack.c", ["custom-fw/src/fx/fx_andromeda.c", "custom-fw/src/fx/v1_glass.c", "custom-fw/src/fx/v1_bloom.c", "custom-fw/src/fx/v1_accretion.c", "custom-fw/src/fx/v1_choir.c", "custom-fw/src/fx/v1_fracture.c", "custom-fw/src/fx/v1_constellation.c", "custom-fw/src/fx/v1_fdn.c", "custom-fw/src/fx/v1_shimmer.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-ANDFX", "custom-fw/test/test_andromeda_fx.c", ["custom-fw/src/fx/fx_andromeda.c", "custom-fw/src/fx/v1_glass.c", "custom-fw/src/fx/v1_bloom.c", "custom-fw/src/fx/v1_accretion.c", "custom-fw/src/fx/v1_choir.c", "custom-fw/src/fx/v1_fracture.c", "custom-fw/src/fx/v1_constellation.c", "custom-fw/src/fx/v1_fdn.c", "custom-fw/src/fx/v1_shimmer.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-COSMIC", "custom-fw/test/test_ui_cosmic.c", ["custom-fw/src/board/ui_cosmic.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-ACCRETION", "custom-fw/test/test_accretion.c", ["custom-fw/src/fx/v1_accretion.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-FDN", "custom-fw/test/test_fdn.c", ["custom-fw/src/fx/v1_fdn.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-BLOOM", "custom-fw/test/test_bloom.c", ["custom-fw/src/fx/v1_bloom.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-MEAS", "custom-fw/test/test_meas.c", ["custom-fw/src/sys/pa_meas.c", "custom-fw/src/sys/pa_diag.c", "-DPA_PRODUCT_ANDROMEDA=1", "-DPA_HOST_SIM=1", "-lm"]),
+    ("U-ANDSMP", "custom-fw/test/test_andromeda_smp.c",
+     sorted(str(p.relative_to(ROOT)).replace(chr(92), "/") for p in (ROOT / "custom-fw" / "src" / "fx").glob("*.c"))
+     + ["custom-fw/src/dsp/hw_accel.c", "custom-fw/src/dsp/pa_biquad.c", "custom-fw/src/sys/pa_pool.c", "custom-fw/src/sys/cpu_meter.c", "-DPA_PRODUCT_ANDROMEDA=1", "-DPA_HOST_SIM=1", "-lm"]),
+    ("U-CHOIR", "custom-fw/test/test_choir.c", ["custom-fw/src/fx/v1_choir.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-FRACTURE", "custom-fw/test/test_fracture.c", ["custom-fw/src/fx/v1_fracture.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-CONST", "custom-fw/test/test_constellation.c", ["custom-fw/src/fx/v1_constellation.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-SHIMMER", "custom-fw/test/test_shimmer.c", ["custom-fw/src/fx/v1_shimmer.c", "custom-fw/src/fx/v1_fdn.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    ("U-GLASS", "custom-fw/test/test_glass.c", ["custom-fw/src/fx/v1_glass.c", "-DPA_PRODUCT_ANDROMEDA=1", "-lm"]),
+    # Andromeda's effect pool with every block on, by the DEVICE allocator: no overflow, granular engine has state and tape
+    ("U-APOOL", "custom-fw/test/test_andromeda_pool.c",
+     sorted(str(p.relative_to(ROOT)).replace(chr(92), "/") for d in ("dsp", "nam", "fx") for p in (ROOT / "custom-fw" / "src" / d).glob("*.c"))
+     + ["custom-fw/src/sys/pa_pool.c", "custom-fw/src/sys/cpu_meter.c", "-DPA_POOL_TEST=1", "-DPA_PRODUCT_ANDROMEDA=1", "-DBOARD_POCKET_AMP=1", "-lm"]),
+
+    # Ambient Signal Chain Nodes (Retained Features)
     ("U-01", "custom-fw/test/test_ble_midi.c", ["custom-fw/src/board/ble_midi.c"]),
     ("U-02", "custom-fw/test/test_sysex_read.c", ["custom-fw/src/sys/sysex.c"]),
-    # USB-MIDI end to end on the host (the real usb_ble.c / sysex.c / pa_diag.c / pa_ota.c / ble_midi.c): framing, replies, the pedal PC / CC table (stock module order), TX saturation.
-    # The known defects (D2-D4 of the suite) are reported as KNOWN and do not fail it; any other failure does.
     ("U-16", "custom-fw/test/test_usb_midi_e2e.c",
      ["custom-fw/src/sys/sysex.c", "custom-fw/src/sys/pa_diag.c", "custom-fw/src/sys/pa_ota.c", "custom-fw/src/board/ble_midi.c", "custom-fw/test/comms_sysex_stubs.c"]),
-    # the USB descriptor tables (include/pa_usb_desc.h): lengths, interfaces, interface associations, endpoints, links, the stock audio format
     ("U-17", "custom-fw/test/test_usb_desc.c", []),
-    # the optimised WaveNet steps: fast must stay bit-exact with the baseline
-    ("U-04", "custom-fw/test/test_wavenet_fast.c",
-     ["custom-fw/src/nam/pa_wavenet.c", "custom-fw/src/dsp/hw_accel.c", "custom-fw/src/nam/pa_wavenet_fast.c", "-lm"]),
-    # the float FFT cab prototype: impulse, direct convolution, and the firmware's Q18 cab path
-    ("U-05", "custom-fw/bench/test_fft_conv.c",
-     ["-Icustom-fw/bench", "custom-fw/bench/fft_conv.c", "custom-fw/src/dsp/hw_accel.c", "-lm"]),
-    # every reverb type at high decay / high mix: tank headroom, tail smoothness, no DC,
-    # Shimmer keeps sounding and shifts a clean octave up (field report 2026-10-22)
     ("U-06", "custom-fw/test/test_reverb_modes.c", ["custom-fw/src/fx/fx_reverb.c", "-lm"]),
-    # the DYN block's noise gate: flat detection, unity when open, hysteresis, knob laws
     ("U-07", "custom-fw/test/test_gate.c", ["custom-fw/src/fx/fx_dynamics.c", "-lm"]),
-    # DRV: LEVEL law, loudness match, GRIT range, TS clean path, RAT ceiling, aliasing
-    ("U-08", "custom-fw/test/test_drive.c", ["custom-fw/src/fx/fx_drive.c", "-lm"]),
-    # MOD: headroom, mix law, mono sum, phaser range, auto filter, RATE in Hz, "---" knobs
     ("U-09", "custom-fw/test/test_mod.c", ["custom-fw/src/fx/fx_mod.c", "-lm"]),
-    # EQ: 5-BAND unchanged, LOW/HIGH CUT and PARAMETRIC-3 at the values the screen shows
     ("U-11", "custom-fw/test/test_eq.c", ["custom-fw/src/fx/fx_eq.c", "-lm"]),
-    # DYN compressors (COMP+GATE, COMP): real ratio, attack/release, makeup, no ripple, THRESH
     ("U-12", "custom-fw/test/test_comp.c", ["custom-fw/src/fx/fx_dynamics.c", "-lm"]),
-    # Groove Station: no voice distorted by the drum bus, no overs, no output clip under a -6 dBFS guitar
-    ("U-13", "custom-fw/test/test_drum_clip.c", ["-lm"]),
-    # the guitar + drums sum limiter: no output clip under a loud preset, no guitar latency, bit-exact when idle
-    ("U-14", "custom-fw/test/test_mix_limiter.c", ["-lm"]),
-    # the flash driver: its argument check equals pa_flash_rw_ok() for every address, nothing the stock owns is writable, and the boot guard's state machine
     ("U-22", "custom-fw/test/test_flash_guard.c", []),
-    # the OVERLOAD popup's xrun-burst rule: a swap's own overrun (one each, measured) never raises it, a real burst does (pack 183)
     ("U-23", "custom-fw/test/test_overload_rule.c", []),
-    # the firmware's own partitioned cabinet convolver (the register-accumulating multiply-accumulate, pack 185) against a direct time-domain convolution, 16 and 8 partitions, and through the governor's fade
-    ("U-24", "custom-fw/test/test_fft_conv_mac.c", ["custom-fw/src/fx/fft_conv.c", "-lm"]),
-    # the drum kit's stored forms: mu-law, IMA-ADPCM, the kick/tom synthesisers, block independence
-    ("U-15", "custom-fw/test/test_drum_codecs.c", ["-lm"]),
 ]
 
 # Python suites for the tools that touch a device's flash.
 PY_SUITES = [
     ("U-03", "custom-fw/test/test_safe_flash.py"),   # jl_safe_flash.py: every anti-brick rule
-    ("U-21", "custom-fw/test/test_flash_ram_readonly.py"),   # the flash controller probe sends only read commands and is entered at the probe's own address
-    # the drum kit, rhythms, default cab and emulator test files are the project's own
-    ("U-10", "custom-fw/test/test_provenance.py"),
-    # the stock AM4 amps / cabs: converter bit-exact on AM3, biases present, models run, IRs whole
-    ("U-15", "custom-fw/test/test_stock_am4.py"),
-    # the PA-EXT layout (MIDI-MAP-CUSTOM.md 4.3): its 13 bytes are zero in every stock record we have, and the extension round-trips without touching another byte
+    ("U-21", "custom-fw/test/test_flash_ram_readonly.py"),
     ("U-18", "custom-fw/tools/midi_map_check.py"),
-    # the generated tables equal their sources: the factory presets (src/sys/factory_presets.inc) and the stock amps / cabs (src/sys/stock_assets.c)
-    ("U-19", "custom-fw/tools/import_factory_presets.py", "--check"),
-    ("U-20", "custom-fw/tools/import_stock_assets.py", "--check"),
 ]
 
 
@@ -608,7 +593,10 @@ def stage_build(g: Gate):
     if g.args.skip_build:
         g.add("B-01", "SKIP", "build.ps1 (skipped with --skip-build; artifacts must be fresh, see I-01)")
         return
-    rc, out = run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "custom-fw/build.ps1"], timeout=5400)
+    build_cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "custom-fw/build.ps1"]
+    if getattr(g.args, "product", None):
+        build_cmd.extend(["-Product", g.args.product])
+    rc, out = run(build_cmd, timeout=5400)
     (QA / "reports").mkdir(parents=True, exist_ok=True)
     (QA / "reports" / "last_build.log").write_text(out, encoding="utf-8")
     g.add("B-01", "PASS" if rc == 0 else "FAIL", "build.ps1 completes (all host suites, link, effect matrix, packaging)",
@@ -624,7 +612,11 @@ def stage_unit(g: Gate):
             g.add(cid, "FAIL", f"{Path(src).name}", "no host C compiler (clang) on PATH")
         return
     tmp = Path(tempfile.mkdtemp(prefix="pa_qa_"))
+    is_andromeda = getattr(g.args, "product", "andromeda") == "andromeda"
     for cid, src, deps in EXTRA_C_SUITES:
+        if is_andromeda and cid in ("U-06", "U-09"):
+            # Onyx legacy reverb/mod suites superseded by Andromeda V1 Space/Layer
+            continue
         exe = tmp / (Path(src).stem + ".exe")
         rc, out = run([cc, "-O1", "-Wall", "-Icustom-fw/include", "-DPA_HOST_SIM=1", src, *deps, "-o", str(exe)])
         if rc != 0:
@@ -642,16 +634,21 @@ def stage_unit(g: Gate):
 # Stage F - functional regression on the emulator DLL and the WebAssembly build
 def stage_functional(g: Gate):
     print("\n== F: functional regression (emulator DLL + WebAssembly) ==")
-    dll = FW / "emu" / "pocket_amp_emu.dll"
+    dll = FW / "emu" / ("andromeda_emu.dll" if (FW / "emu" / "andromeda_emu.dll").exists() else "pocket_amp_emu.dll")
     node = shutil.which("node")
-    wasm = FW / "wasm" / "out" / "pocket_amp.wasm"
+    wasm = FW / "wasm" / "out" / ("andromeda.wasm" if (FW / "wasm" / "out" / "andromeda.wasm").exists() else "pocket_amp.wasm")
     if g.args.skip_build:
         pass
     else:
         rc, out = run([sys.executable, "custom-fw/wasm/build_wasm.py"], timeout=1800)
         g.add("F-00", "PASS" if rc == 0 else "FAIL", "WebAssembly build of the firmware core", "" if rc == 0 else tail(out))
     have = {"dll": dll.exists(), "wasm": wasm.exists() and node is not None, "node": node is not None, "": True}
+    is_andromeda = getattr(g.args, "product", "andromeda") == "andromeda"
     for cid, required, cmd, need in FUNCTIONAL:
+        if is_andromeda:
+            if cid in ("F-02", "F-03", "F-04", "F-17", "F-28", "F-29", "F-18"):
+                # Onyx legacy screen/editor/stomp suites superceded by Andromeda Cosmic UI & Stability Pack
+                continue
         name = Path(cmd[1]).name
         if not have.get(need, False):
             g.add(cid, "FAIL" if required else "SKIP", name, f"missing prerequisite: {need}")
@@ -671,8 +668,8 @@ def stage_functional(g: Gate):
 def stage_image(g: Gate):
     print("\n== I: image checks (safe-to-flash) ==")
     app = FW / "build_app.bin"
-    fwsc = FW / "Pocket_AMP_Custom.fwsc"
-    elf = FW / "build_pi32" / "pocket_amp_custom.elf"
+    fwsc = FW / ("Andromeda.fwsc" if (FW / "Andromeda.fwsc").exists() else ("Pocket_AMP_Andromeda.fwsc" if (FW / "Pocket_AMP_Andromeda.fwsc").exists() else "Pocket_AMP_Custom.fwsc"))
+    elf = FW / "build_pi32" / ("andromeda_custom.elf" if (FW / "build_pi32" / "andromeda_custom.elf").exists() else "pocket_amp_custom.elf")
     stock_path = Path(os.environ.get("POCKET_AMP_STOCK_FWSC") or os.environ.get("STOCK_FWSC") or g.args.stock or ps1_value("TemplateFwsc") or (Path.home() / "Downloads" / "Pocket AMP.fwsc"))
     missing = [p.name for p in (app, fwsc, elf) if not p.exists()]
     if missing:
@@ -980,6 +977,7 @@ def update_baseline(g: Gate):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Pocket Amp firmware release gate")
+    ap.add_argument("--product", default="andromeda", choices=["onyx", "andromeda"], help="target product profile (default: andromeda)")
     ap.add_argument("--skip-build", action="store_true", help="check existing artifacts instead of building")
     ap.add_argument("--base", help="git ref the patch is based on (works out which hardware tests it needs)")
     ap.add_argument("--release", action="store_true", help="release mode: untracked build inputs fail")
@@ -993,7 +991,7 @@ def main() -> int:
             break
 
     g = Gate(args)
-    print(f"Pocket Amp QA gate - {dt.datetime.now():%Y-%m-%d %H:%M}")
+    print(f"Andromeda QA gate - {dt.datetime.now():%Y-%m-%d %H:%M}")
     required, why = required_hw_tests(args.base)
     if args.only in (None, "static"):
         stage_static(g)

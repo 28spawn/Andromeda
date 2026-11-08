@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/jl_ram_read.py - READ-ONLY RAM reader for the Pocket Amp in the ROM download mode,
 over the direct USB cable (no RP2040).

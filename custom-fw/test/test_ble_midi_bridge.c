@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_ble_midi_bridge.c - the BLE-MIDI bridge queues (src/board/ble_midi_bridge.c) on the host. */
 #include <stdio.h>
 #include <string.h>

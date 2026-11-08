@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """Generate custom-fw/src/dsp/drum_patterns.inc: the Groove Station's rhythm library.
 
 The library is written HERE, by hand, in a readable grid notation - it is the project's

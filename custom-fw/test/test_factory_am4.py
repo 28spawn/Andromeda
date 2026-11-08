@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """Factory presets 1..40: baseline preset bank, imported.
 
   [1] src/sys/factory_presets.inc is exactly what tools/import_factory_presets.py makes from

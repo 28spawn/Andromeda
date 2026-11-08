@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* Interrupt services for the imported radio driver, on this firmware's interrupt model (main.c, audio_alnk.c):
  *   - the vector table is the word array at 0x01C7FE00, one handler address per IRQ; a handler is an assembly
  *     trampoline that saves the caller-saved registers, calls the C body and returns with rti (entry.S isr_alnk0);

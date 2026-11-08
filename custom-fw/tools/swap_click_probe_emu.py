@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/swap_click_probe_emu.py - click probe for EVERY swap the firmware does under live audio, on the real firmware path (the emulator DLL: input layer, UI, the audio core's
 fade-out / swap-when-muted / fade-in, the whole chain). Host timing is not the unit's (a swap that takes 3 ms on the unit takes microseconds here), so this measures the ALGORITHMIC

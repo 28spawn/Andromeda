@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * custom-fw/emu/emu_bridge.c — Pocket Amp Hardware-in-the-Loop (HIL) Native C Emulator Bridge
  *
@@ -56,6 +59,9 @@ uint32_t plat_ms(void) { return s_emu_ms; }
 #include "../include/pa_model.h"
 #include "../include/pa_cab.h"
 #include "../include/pa_fx.h"
+#if PA_PRODUCT_ANDROMEDA
+#include "../include/pa_granular.h"
+#endif
 #include "../include/pa_ui.h"
 #include "../include/pa_usb_ble.h"
 #include "../include/pa_drums.h"
@@ -270,6 +276,9 @@ EMU_EXPORT void emu_init(void) {
     pa_preset_t initial_p;
     if (pa_preset_load(g_ui.preset_index, &initial_p) == 0) {
         pa_preset_apply_to_chain(&initial_p, &g_fx_chain);
+#if PA_PRODUCT_ANDROMEDA
+        pa_ui_sync_from_preset(&g_ui, &initial_p);      /* as pa_audio_core_init does on the device: the screen shows the knobs of the slot it booted into */
+#endif
         g_ui.preset_volume = initial_p.preset_vol;
         g_ui.master_volume = initial_p.preset_vol;
         /* Load corresponding factory stock amp model or user NAM capture & cabinet IR */
@@ -1451,6 +1460,16 @@ EMU_EXPORT int emu_get_ui(int what) {
 extern volatile uint8_t g_pa_overload_force;
 extern volatile uint8_t g_pa_drive_os2, g_pa_cab_parts_limit, g_pa_gov_level;
 extern volatile uint32_t g_emu_slot_pk[8];
+#if PA_PRODUCT_ANDROMEDA
+/* tests: the front-panel key actions of the effect (AND_ACT_*: strike, record/play/dub, freeze, clear), without the keys */
+EMU_EXPORT void emu_andromeda_action(int action) { if (g_fx_chain.slots[PA_SLOT_DELAY]) fx_andromeda_action(g_fx_chain.slots[PA_SLOT_DELAY], action); }
+/* tests: ACCRETION's state (0 idle, 1 recording, 2 playing, 3 dubbing), the effect's freeze, and the UI's block-page state (bit 0: opened from the chain page, bit 1: editing the hovered value) */
+EMU_EXPORT int emu_andromeda_looper_state(void) { gran_telemetry_t t; memset(&t, 0, sizeof t); if (g_fx_chain.slots[PA_SLOT_DELAY]) fx_granular_get_telemetry(g_fx_chain.slots[PA_SLOT_DELAY], &t); return (int)t.looper_state; }
+EMU_EXPORT int emu_andromeda_frozen(void) { gran_telemetry_t t; memset(&t, 0, sizeof t); if (g_fx_chain.slots[PA_SLOT_DELAY]) fx_granular_get_telemetry(g_fx_chain.slots[PA_SLOT_DELAY], &t); return t.frozen ? 1 : 0; }
+EMU_EXPORT int emu_andromeda_ui_state(void) { return (g_ui.and_detail ? 1 : 0) | (g_ui.and_edit ? 2 : 0); }
+#endif
+/* tests: a slot's knob (Q21) and type as the UI holds them: what a preset save would store and what a load restores */
+EMU_EXPORT int emu_get_slot_on(int slot) { return (slot >= 0 && slot < PA_SLOT_COUNT && g_fx_chain.slots[slot]) ? (g_fx_chain.slots[slot]->active ? 1 : 0) : -1; }
 EMU_EXPORT int emu_get_slot_peak(int slot) { return (slot >= 0 && slot < 8) ? (int)g_emu_slot_pk[slot] : 0; }      /* tests: the largest |sample| the slot produced since the last clear (Q21) */
 EMU_EXPORT void emu_clear_slot_peaks(void) { for (int i = 0; i < 8; i++) g_emu_slot_pk[i] = 0; }
 /* tests: set the load governor's level as the audio interrupt does (audio_alnk.c): 0 full, 1 drive at 2x, 2 + the cabinet's partitions cut to 8 */

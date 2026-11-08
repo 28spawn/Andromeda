@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 # custom-fw/Makefile — Host Simulation & pi32v2 Cross-Compilation Build System
 #
 # Usage:
@@ -54,6 +57,15 @@ FX_SRCS = \
 	src/fx/fx_eq.c \
 	src/fx/fx_mod.c \
 	src/fx/fx_delay.c \
+	src/fx/fx_andromeda.c \
+	src/fx/v1_glass.c \
+	src/fx/v1_bloom.c \
+	src/fx/v1_accretion.c \
+	src/fx/v1_fdn.c \
+	src/fx/v1_choir.c \
+	src/fx/v1_fracture.c \
+	src/fx/v1_constellation.c \
+	src/fx/v1_shimmer.c \
 	src/fx/fx_reverb.c
 
 SYS_SRCS = \
@@ -78,6 +90,7 @@ BOARD_SRCS = \
 	src/board/st7735s.c \
 	src/board/ui_5x7.c \
 	src/board/ui_app.c \
+	src/board/ui_cosmic.c \
 	src/board/usb_ble.c \
 	src/board/ble_midi.c \
 	src/board/main.c

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_wavenet_fast.h - faster A2-Lite (3-channel) WaveNet step for the AC791N's hardware
  * single-precision FPU. See src/nam/pa_wavenet_fast.c.

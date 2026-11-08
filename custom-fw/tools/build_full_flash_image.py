@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 Generates a complete 1 MB SPI NOR Flash image (1,048,576 bytes, the size of the real chip, PA_FLASH_SIZE in include/pa_flash_map.h)
 from the packaged flash.bin: the MBR, uboot and app.bin at their offsets, everything else erased (0xFF). The emulator's simulated flash is this image.

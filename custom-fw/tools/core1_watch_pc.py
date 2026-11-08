@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/core1_watch_pc.py - READ-ONLY: is the amp core (core 1) staying online, and how long do the audio blocks take? (the "metallic after the USB test" investigation, 2026-11-03)
 

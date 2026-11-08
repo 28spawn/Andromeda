@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_spi_nor.h — Pocket Amp SPI NOR Flash Hardware & Emulator Abstraction
  *

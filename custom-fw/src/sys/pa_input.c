@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* src/sys/pa_input.c - the portable front-panel input layer (see pa_input.h). */
 #include <string.h>
 #include "../../include/pa_input.h"
@@ -117,6 +120,18 @@ uint32_t pa_input_update(pa_input_state_t *s, uint32_t now_ms) {
      * Evaluated after button loop so any single button press bits queued on this
      * tick for chord buttons are cleanly stripped. */
     {
+#if PA_PRODUCT_ANDROMEDA
+        static const uint16_t k_combo_mask[3] = {
+            (uint16_t)(PA_BTN_VOL_MINUS | PA_BTN_VOL_PLUS),  /* tuner  */
+            (uint16_t)(PA_BTN_LEFT | PA_BTN_RIGHT),          /* bank   */
+            (uint16_t)(PA_BTN_HOME | PA_BTN_VOL_PLUS),       /* chain  */
+        };
+        static const uint32_t k_combo_bit[3] = {
+            PA_BTN_COMBO_TUNER, PA_BTN_COMBO_BANK,
+            PA_BTN_COMBO_CHAIN
+        };
+        for (int c = 0; c < 3; c++) {
+#else
         static const uint16_t k_combo_mask[4] = {
             (uint16_t)(PA_BTN_VOL_MINUS | PA_BTN_VOL_PLUS),  /* tuner  */
             (uint16_t)(PA_BTN_LEFT | PA_BTN_RIGHT),          /* bank   */
@@ -128,6 +143,7 @@ uint32_t pa_input_update(pa_input_state_t *s, uint32_t now_ms) {
             PA_BTN_COMBO_DRUMS, PA_BTN_COMBO_CHAIN
         };
         for (int c = 0; c < 4; c++) {
+#endif
             int active = (s->stable & k_combo_mask[c]) == k_combo_mask[c];
             if (active && !s->combo_fired[c]) {
                 s->combo_fired[c] = 1;

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * src/board/ui_5x7.c — Compact 5x7 ASCII Bitmap Font Renderer for ST7735S/ST7789 TFT (QW-6 / BR-4)
  */

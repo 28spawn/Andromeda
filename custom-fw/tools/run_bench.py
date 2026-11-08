@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/run_bench.py - run the A2-Lite WaveNet benchmark on a real Pocket Amp,
 from RAM, in the JieLi ROM download mode. The flash is never touched.

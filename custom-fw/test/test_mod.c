@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_mod.c - the MOD block (src/fx/fx_mod.c), measured.
  *
  *   [1] headroom: the chorus / flanger delay line is clean above 0 dBFS

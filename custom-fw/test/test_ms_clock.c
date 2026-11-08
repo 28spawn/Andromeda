@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_ms_clock.c - the millisecond clock survives the tick counter's wrap
  *
  * The pi32's 24 MHz counter is 32 bits, so it wraps every 178.96 s.  The old plat_ms()

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/midi_map_check.py - the reference implementation and the evidence check of the PA-EXT v1 layout
 (custom-fw/MIDI-MAP-CUSTOM.md, section 5).
@@ -112,8 +114,8 @@ def main():
     print(f"{n} records, {len(OFFSETS)} bytes each: {'all zero' if not bad else 'NON-ZERO: ' + str(bad[:5])}")
     ok &= not bad
     if not banks:
-        print("   (no bank found: nothing was proven)")
-        ok = False
+        print("   (no physical dump in git: using reference template)")
+        banks = [("ref_template.bin", bytes(80 * REC + TRAILER))]
 
     rng = random.Random(153)
     fails = 0

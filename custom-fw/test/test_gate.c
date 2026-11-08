@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test/test_gate.c - the noise gates of the DYN block, measured on the real node.
  *
  * Gate-only mode (type GATE, LEVEL ignored), so output = input x gate gain, and the gain

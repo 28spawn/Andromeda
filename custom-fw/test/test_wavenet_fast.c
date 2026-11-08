@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* test_wavenet_fast.c - the optimised WaveNet steps against the baseline.
  *
  *   pa_wavenet_step_sample_fast()  must be BIT-EXACT: every output sample and the whole

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/swap_capture_pc.py - what does the unit's output do around a preset change? Records the unit's USB recording endpoint (the amp's output, the same samples the firmware hands the codec)
 while this tool changes presets by MIDI Program Change at known times, then measures every swap and prints statistics. READ-ONLY on the unit apart from the Program Changes (and the one back to the

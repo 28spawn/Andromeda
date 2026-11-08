@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/enter_download_mode.py - find out where the STOCK firmware's
 "enter upgrade" command takes the device (TEST-PROTOCOL.md section 4.3, route

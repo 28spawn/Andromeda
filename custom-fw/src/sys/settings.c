@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* src/sys/settings.c — persistent system settings: magic + sequence + CRC32 (IMP-10).
  * The settings sector is an APPEND LOG of 64-byte slots (64 slots): a save programs the next blank slot (one 64-byte page write, about 0.3 ms plus the quiesce) and the sector is erased only when
  * the 64th slot is used, so a save does not cost a 17 ms erase and the flash sees 1/64th of the erases. The load takes the valid slot with the highest sequence number. A slot torn by a power cut fails
@@ -26,7 +29,7 @@ void pa_settings_defaults(pa_settings_t *s) {
     memset(s, 0, sizeof(*s));
     s->magic = PA_SETTINGS_MAGIC; s->version = PA_SETTINGS_VERSION; s->size = sizeof(*s);
     s->last_preset = 0;          s->home_view_mode = 0;   s->play_mode = 0;     s->fizz_level = 1;
-    s->display_brightness = 80;  s->display_auto_dim = 0; s->display_battery_pct = 1; s->theme = 0;
+    s->display_brightness = 100;  s->display_auto_dim = 0; s->display_battery_pct = 1; s->theme = 0;
     s->input_gain_db = 0;        s->gate_db = -80;        s->out_level_pct = 100;
     s->output_limit_mode = 0;     s->usb_loopback = 1;     /* the stock ships with the loopback ON */
     s->usb_mode = 0;             /* AMP: the unit's own sound; 1 / 2 are the audio-interface modes */

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/include/pa_smp.h - the second core (CPU1) as an audio helper.
  *
  * The AC791N has two pi32v2 cores. Verified on the unit (2026-10-31, src/board/cpu1.c): core 1 starts with the control

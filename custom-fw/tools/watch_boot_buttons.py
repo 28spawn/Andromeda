@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/watch_boot_buttons.py - Interactive USB PnP watcher for button boot testing.
 Monitors JieLi / Pocket Amp VID/PIDs (app: 3654:7756 on V1.05, 4C4A:C755 on V1.03) and reports enumeration state changes in real time.

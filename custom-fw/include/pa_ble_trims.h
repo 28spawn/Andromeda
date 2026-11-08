@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * pa_ble_trims.h - the radio calibration of THIS unit, read from the stock firmware's record log at boot.
  *

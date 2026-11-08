@@ -1,203 +1,227 @@
-# M-VAVE Pocket AMP Custom Firmware (Onyx)
-
-An open-source custom firmware and DSP project for the M-VAVE / Donner Pocket AMP, based on the JieLi AC791N (pi32v2) platform. The firmware, emulator, tools, and generated audio assets are developed in this repository.
-
 <p align="center">
-  <img src="docs/images/03_moving_block.png" width="23%" alt="8-Block Signal Grid" />
-  <img src="docs/images/02_list_view.png" width="23%" alt="Linear List View" />
-  <img src="docs/images/04_param_edit.png" width="23%" alt="Parameter Editor" />
-</p>
-<p align="center">
-  <img src="docs/images/05_eq_editor.png" width="23%" alt="Cabinet & EQ Controls" />
-  <img src="docs/images/06_tuner.png" width="23%" alt="Chromatic Tuner" />
-  <img src="docs/images/07_groove.png" width="23%" alt="Groove Station Drums" />
-  <img src="docs/images/08_bank_mode.png" width="23%" alt="Live Bank Mode" />
+  <img src="docs/images/andromeda/andromeda_pedal_studio_render.jpg" alt="Andromeda custom firmware for M-VAVE Pocket AMP" width="600">
 </p>
 
-## What it does
+<h1 align="center">Andromeda</h1>
 
-- Eight reorderable effect slots, guitar amp capture loading, cabinet IR convolution, presets, tuner, and a built-in drum machine.
-- A 240 × 240 front-panel UI, USB MIDI/SysEx paths, and a desktop emulator that runs the shared audio/UI code.
-- Host tests, firmware build and package checks, and a QA gate that combines automated results with per-device recovery evidence.
+<p align="center"><b>Granular, ambient and generative guitar firmware for the M-VAVE / Donner Pocket AMP pedal: six sound-design engines, a shared FDN reverb with shimmer, a secondary resonator layer, and a radar play screen running on dual pi32v2 cores.</b><br>
+Free software (GPL-3.0-or-later), built with the open JieLi custom firmware ecosystem (see <a href="#credits">Credits</a>).</p>
 
-Audio runs at 44.1 kHz in 64-sample blocks. The configured 360 MHz CPU clock is an assumption; the chip datasheet lists 320 MHz, and the clock and cycle budget still need device measurement. See [ARCHITECTURE.md](ARCHITECTURE.md).
+> [!WARNING]
+> ### Hardware Safety & Disclaimers
+> Flashing custom firmware writes to the physical SPI-NOR flash memory of your device. While Andromeda enforces rigorous hardware-level write fencing (`pa_flash_rw_ok()`, blocking all writes below `0x004000`), provides A/B double-buffering for user stores, and includes automated recovery mechanisms, flashing firmware is undertaken at your own risk. The authors accept no liability for hardware damage, warranty invalidation, or data loss. Ensure your pedal's battery is adequately charged before initiating firmware flashing operations, and always take a verified full-chip backup first.
 
-## Audio engine and effect blocks
+---
 
-The default signal order is `DYN → DRIVE → AMP → CAB → EQ → MOD → DELAY → REVERB`. The order can be changed in the firmware UI. Each slot can be bypassed; delay and reverb can preserve tails where supported.
+## Everything happens through the workbench and tools
 
-| Block | Models / algorithms in the current source |
+Use **Chrome or Edge** (which support Web MIDI), a standard USB-C data cable, and the native Python / PowerShell host tools.
+
+| Tool | What it does |
 |---|---|
-| **DYN** | GATE, BOOST+GATE, COMP+GATE, AI GATE MS, COMP. Gate models expose threshold/release/attack controls as applicable; LEVEL is output volume for GATE and AI GATE MS. Compressor models provide ratio, attack/release behavior, threshold, and level/makeup controls according to type. |
-| **DRIVE** | TS-808, Klon-style, OCD-style, RAT-style, Big Muff-style, Fuzz Face-style. Four-times oversampled clipping; GRIT, TONE, LEVEL. |
-| **AMP / NAM** | Float32 WaveNet inference for NAM A2 captures, including the embedded A2-Lite configuration. User captures are loaded into the active WaveNet path. This is the NAM engine used by the current firmware flow; the older fixed-point GRU code is not the active NAM A2 path. |
-| **CAB** | Cabinet impulse-response convolution (up to 2048 taps), with level, low-cut, and high-cut controls. Includes a generated default cabinet and supports user IR loading. |
-| **EQ** | 5-BAND graphic EQ; LOW/HIGH CUT; PARAMETRIC-3 (low shelf, sweepable mid, high shelf). |
-| **MOD** | CHORUS, PHASER, FLANGER, TREMOLO, VIBRATO, UNIVIBE, AUTO FILTER. |
-| **DELAY** | ANALOG, DUCKING, dTAPE, DUAL, LOFI, DIGITAL, PING PONG, REVERSE, SLAPBACK. |
-| **REVERB** | ROOM, HALL, SWELL, SPRING, SHIMMER, CLOUD, PLATE, AMBIENCE. |
+| [**Web Editor**](custom-fw/web/Andromeda_Web_Editor.html) | Connect over Web MIDI USB to manage presets P01–P20, adjust macro parameters, audition engines, and install firmware packages (`.bin` / `.fwsc`) with automatic sector safety verification. |
+| [**Desktop Emulator**](custom-fw/emu/README.md) | The entire firmware DSP and UI running as a native Windows DLL (`pocket_amp_emu.dll`), served with an interactive HTML5 front panel at `http://localhost:8080`. Streams real-time 44.1 kHz audio with live guitar input or 15 clean DI captures by **Jonas Hemmersbach**. |
+| [**WASM Workbench**](custom-fw/wasm/workbench.html) | Browser-based WebAssembly compilation of the Andromeda DSP graph and effect host for instant cross-platform verification and browser tests. |
+| [**Flashing & Recovery Tools**](docs/ANDROMEDA-FLASHING.md) | Command-line verified flashing (`flash_unit.py`), partition readouts (`jl_safe_flash.py`), and ROM download-mode recovery (`pa_transporter.py`). |
 
-The detailed algorithms and parameter mappings live beside their implementations in `custom-fw/src/fx/`. DSP uses both fixed-point and floating-point paths; the AC791N has a single-precision FPU. Actual real-time margins depend on device clock and must be measured on hardware.
+---
 
-## Groove Station drum machine
+## Target boards and hardware
 
-The drum machine uses **project-authored rhythm patterns** and a **project-generated synthesized kit**. The patterns are stored as a 48-step-per-4/4-bar grid, with per-step lane and velocity data. The kit voices are created by `custom-fw/tools/gen_drum_kit.py` from deterministic oscillators, noise, and filters; they are not recordings sampled from another product. Both generated include files are checked by the provenance test and should be regenerated from their tools rather than edited by hand.
+The repository compiles for two hardware targets via `custom-fw/build.ps1 -Board <target>`:
 
-The kit has kick, snare, rim/side-stick, closed hat, pedal hat, open hat, crash, ride, bell, and three tom voices, plus a metronome click. To keep the firmware small the kick and the toms are re-synthesised on the device (a pitch-gliding sine, a decaying overtone and a noise burst, a few multiplies a sample), the snare, rim, hats, ride and bell are stored as 4-bit IMA-ADPCM, the open hat and the crash as G.711 mu-law, and only the click is 16-bit PCM (`custom-fw/src/dsp/drum_codec.h`; the generator measures each stored form against its reference recipe). The sequencer uses a fractional fixed-point clock to keep tempo stable. The UI provides 49 patterns, tempo control, and drum volume. Source of truth: `custom-fw/src/dsp/drums_synth.c`, `drum_patterns.inc`, and `drum_kit.inc`.
-
-## Front panel and connectivity
-
-The firmware includes the LCD UI, physical button/encoder handling, tuner, preset navigation, settings, performance display, and Groove Station controls. The desktop emulator provides a browser front panel and audio I/O around the shared firmware core.
-
-USB MIDI and the SysEx/editor paths are implemented in the source and covered by host/emulator tests. **Bluetooth LE MIDI** (for wireless footswitches like the Chocolate Plus, and mobile editor apps) is fully supported at boot via the integrated open Optimist BLE stack. **Bluetooth Audio (A2DP media streaming from phone)** is not supported due to DSP RAM and dual-core real-time constraints.
-
-## Controls and User Guide
-
-### 1. Front-Panel Buttons and Gestures
-
-| Gesture | Function |
-|---|---|
-| **`HOME` (Tap)** | **Universal Home**: Returns to the main home screen from any sub-menu or editor. When already on the Home screen, opens the **Settings Menu** (Global EQ, Display Grid/List view, footswitch mappings, system information, and factory reset). |
-| **`HOME` (Hold 1.5 s)** | **Toggle Stomp / Preset Mode**: Switches the main home screen between **PRESET Mode** (preset switching) and **STOMP Mode** (using buttons as instant effect on/off pedals). |
-| **`PARA` (Rotate)** | **Navigate**: Moves the cursor across the 8 effect blocks in the signal chain. Inside menus and editors, adjusts knob values and options. |
-| **`PARA` (Click)** | **Edit Block**: Opens the deep parameter editor for the highlighted effect block. Click again inside the editor to toggle between selecting parameters and editing their values. |
-| **`PARA` (Hold 1.0 s)** | **Save Preset**: Opens the "Save to" dialog to store the current tone, edit preset names, or copy settings to another preset slot (`P01`–`P80`). |
-| **`PARA` (Hold 2.0 s)** | **Reorder Signal Chain (Moving Mode)**: Lifts the highlighted block. Rotate `PARA` left or right to move the block anywhere in the 8-slot chain. Click `PARA` to drop it into place, or press `HOME` / `VOL-` to cancel. |
-| **`<` / `>` (Tap)** | Changes current preset down/up (`P01` .. `P80`). Inside editors, navigates or modifies values. |
-| **`VOL-` / `VOL+` (Tap)** | Adjusts master device output volume with an on-screen level overlay. |
-
-### 2. Quick-Access Key Combinations (Chords)
-
-Press the following button pairs simultaneously from the home screen:
-
-| Key Combination | Shortcut Target | Description |
+| Target | Switch | Hardware specification |
 |---|---|---|
-| **`VOL-` + `VOL+`** | **Chromatic Tuner** | High-precision tuner with needle display, detected note, pitch frequency in cents, and selectable Reference Pitch (435–445 Hz). Toggle between MUTE and LIVE pass-through. Press `HOME` or the combo again to exit. |
-| **`<` + `>`** | **Live Bank Mode** | Groups presets into 4-slot performance banks (`P01-P04`, `P05-P08`, etc.). Switch slots instantly with a single button press (`VOL-` = Slot 1, `VOL+` = Slot 2, `<` = Slot 3, `>` = Slot 4). |
-| **`HOME` + `VOL-`** | **Groove Station** | Built-in drum machine. Press `PARA` to start/stop playback, turn `PARA` to dial tempo (40–250 BPM), and press `<` / `>` to select from 49 rhythm styles. |
-| **`HOME` + `PARA` (Hold 2.0 s)** | **Manual ROM Download Mode** | Hardware shortcut to reboot the processor directly into the mask-ROM USB download mode for flashing or recovery. |
+| **Pocket AMP** *(Default)* | `-Board pocket_amp` | Targets the M-VAVE / Donner Pocket AMP hardware (240x240 ST7735S display, PARA encoder, five keys, MASTER pot). |
+| **BlackBox** | `-Board blackbox` | Targets compatible JieLi AC791N hardware variants. |
 
-### 3. Entering Mask-ROM Download Mode
+---
 
-The Pocket AMP contains a built-in mask-ROM bootloader (`WL82 UBOOT1.00`) used for low-level flashing, memory inspection, and recovery:
+## Your first install
 
-1. **Manual Hardware Button Combination**:
-   - While the unit is powered on and running, press and hold **`HOME` + `PARA` simultaneously for 2 seconds**.
-   - The display turns black, audio ceases, and the device reboots into mask-ROM download mode.
-   - On Windows, the unit enumerates on USB as a SCSI disk device named `WL82 UBOOT1.00` (VID/PID `4C4A:8057`).
-   - **To exit Download Mode**: Simply toggle the hardware power switch OFF and back ON. The device will boot normally into the custom firmware.
-2. **One-Click via Web Editor**:
-   - Open [`custom-fw/web/Onyx_Web_Editor.html`](custom-fw/web/Onyx_Web_Editor.html) in Chrome or Edge over Web MIDI.
-   - On the firmware flasher panel, click **"Put the unit in download mode"**.
-3. **Emergency Hardware Recovery (Bricked / Non-Booting Units)**:
-   - If the firmware image in flash is ever damaged and the unit cannot boot to respond to button presses, a hardware USB dongle (an RP2040 running the Transporter recovery firmware) can force ROM download mode at power-on via the USB D+/D− data lines. See [RECOVERY.md](RECOVERY.md) for full schematics and instructions.
+1. **Take a full-chip backup.** Before writing anything to flash, create a byte-for-byte backup of your pedal using the recovery tool:
+   ```powershell
+   python custom-fw/tools/pa_transporter.py --timeout 300 dump backup/
+   python custom-fw/tools/qa_recovery.py verify backup/dump1.bin backup/dump2.bin --record
+   ```
+2. **Build and package.** Compile the checked Andromeda firmware release package:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File custom-fw/build.ps1 -Product andromeda
+   ```
+   The verified release image is placed in `custom-fw/release/Pocket_AMP_Andromeda_<version>/`.
+3. **Install.** 
+   - **Via Web Editor:** Open `custom-fw/web/Andromeda_Web_Editor.html` in Chrome or Edge, click **Connect MIDI**, navigate to the **Firmware** tab, select `Pocket_AMP_Andromeda_<version>.bin` (or `.fwsc`), and click **Flash**.
+   - **Via Command Line:**
+     ```powershell
+     python custom-fw/tools/flash_unit.py custom-fw/build_app.bin
+     ```
+4. **First boot.** The pedal restarts into Andromeda. On first cold boot, the firmware detects an uninitialised store and automatically formats the 20 preset slots (writing the 12 factory ambient chains to P01–P12 and preparing P13–P20 for user saves).
+
+---
+
+## Getting back
+
+- **To the stock firmware:** In the Web Editor or via `pa_transporter.py`, restore the app partition (`0x4000..0x85FFF`) from your baseline backup dump:
+  ```powershell
+  python custom-fw/tools/pa_transporter.py --timeout 300 drill backup/dump1.bin 0x4000-0x86000 --repair --full-verify
+  python custom-fw/tools/pa_transporter.py runapp
+  ```
+- **If the unit fails to boot:** Andromeda includes an automatic boot guard. If a boot does not complete within 5 seconds, the watchdog will trip the unit into mask ROM download mode. You can also force this manually by **holding the PARA encoder down for 2.5 seconds during power-on** (the screen remains black; the unit enumerates as `UBOOT1.00`, USB `4C4A:8057`).
+- **Emergency unbrick (RP2040 Transporter dongle):** If the flash is erased or corrupted, an RP2040 dongle (such as a Seeed XIAO RP2040 connected to the USB-C port via three wires: D+, D-, GND) injects the ROM USB key at power-on, recovering the device over USB with no soldering required. See [RECOVERY.md](RECOVERY.md).
+
+---
+
+## What is in it
+
+- **Six generative sound-design engines:** hosted within a 147 KB dynamic overlay in fast SRAM:
+  - **GLASS:** 12 stereo tuned resonators excited by guitar transients or manual strikes (Crystal, Bell, Kalimba, Marimba).
+  - **BLOOM:** Spectral grain cloud swelling, pitch-shifting, and freezing the history of your playing into lush pads (Garden, Dusk, Drift, Raw).
+  - **ACCRETION:** 2-second stereo ADPCM tape loop that records, overdubs, degrades, and saturates with tape flutter and limiter feedback (SOS, Tape, Decay, Mirror).
+  - **CHOIR:** Microtonal and interval vocal pitch-shifting swarm holding chords and octave detunes (Angels, Mourn, Deep, Infinite).
+  - **FRACTURE:** Tempo-synced granular buffer slicer with reverse bursts, skips, and pitch hops locked to the internal BPM (Clock, Water, Heart, Skip).
+  - **CONSTELLATION:** 16-step generative scale and arpeggio sequencer generating melodies from played guitar chords (Stardust, Gravity, Dance, Orbit).
+- **Shared processing blocks:**
+  - **SPACE:** 8-delay feedback-delay-network (FDN) reverb on every preset slot, with dedicated decay, size, tone, and send levels.
+  - **SHIMMER:** Harmonic pitch octave / interval feedback climbing through the reverb tail (+12, +7, +12/+7, +19).
+  - **LAYER:** Secondary tuned GLASS resonator running in parallel under any primary engine.
+  - **Input & Dynamics:** Mono input conditioning, input limiter, 3-band parametric EQ, and soft-clip master ceiling.
+- **Measured-cost dual-core allocator:** Core 0 runs the audio interrupt and UI; heavy effect chains automatically split early slots to Core 1 at a cost of 1 block (1.45 ms) latency. If Core 1 ever misses a deadline or faults, execution seamlessly reverts to Core 0 with zero audio dropouts.
+- **Specifications:** 44,118 Hz codec rate, 64-sample blocks (1.45 ms), 24-bit audio I/O, 512 KB SRAM, 20 preset slots, chromatic tuner (< 2 cents accuracy), USB audio, USB MIDI, and BLE MIDI.
+
+<p align="center">
+  <img src="docs/images/andromeda/01_glass_crystal.png" width="19%" alt="GLASS Crystal" />
+  <img src="docs/images/andromeda/03_bloom_garden.png" width="19%" alt="BLOOM Garden" />
+  <img src="docs/images/andromeda/05_accretion_dub.png" width="19%" alt="ACCRETION overdubbing" />
+  <img src="docs/images/andromeda/07_choir_angels.png" width="19%" alt="CHOIR Angels" />
+  <img src="docs/images/andromeda/08_fracture_clock.png" width="19%" alt="FRACTURE Clock" />
+</p>
+<p align="center">
+  <img src="docs/images/andromeda/09_constellation_stardust.png" width="19%" alt="CONSTELLATION Stardust" />
+  <img src="docs/images/andromeda/02_glass_bell.png" width="19%" alt="GLASS Bell" />
+  <img src="docs/images/andromeda/04_bloom_frozen.png" width="19%" alt="BLOOM frozen" />
+  <img src="docs/images/andromeda/06_accretion_rec.png" width="19%" alt="ACCRETION recording" />
+  <img src="docs/images/andromeda/11_signal_chain.png" width="19%" alt="Signal Chain" />
+</p>
+
+*Screen renders generated directly from the firmware UI renderer (`custom-fw/tools/render_screens.c`).*
+
+---
+
+## The guide
+
+| Topic | Documentation & Resources |
+|---|---|
+| **Interface & Shortcuts** | [Controls & Physical Gestures](#the-interface) • [Signal Chain Page](docs/ANDROMEDA-DESIGN.md) • [Settings Menu](docs/ANDROMEDA-DESIGN.md) |
+| **Engines & Sound Design** | [The Six Ambient Engines](#what-is-in-it) • [Effect Audibility Measurements](custom-fw/tools/effect_audibility.py) • [Design Specification](docs/ANDROMEDA-DESIGN.md) |
+| **System Architecture** | [ARCHITECTURE.md](ARCHITECTURE.md) • [Dual-Core Performance & Latency](docs/ANDROMEDA-PERF.md) • [Memory & SRAM Overlay Map](ARCHITECTURE.md#5-memory) |
+| **Flashing & Bench Protocol** | [Flashing Guide](docs/ANDROMEDA-FLASHING.md) • [QA Gate Protocol](TEST-PROTOCOL.md) • [Bench Checklist](docs/ANDROMEDA-FLASHING.md#bench-checklist) |
+| **Backup & Recovery** | [RECOVERY.md](RECOVERY.md) • [Flash Map](RECOVERY.md#flash-map-1-mib-jedec-856014) • [RP2040 Transporter Dongle](custom-fw/tools/transporter/README.md) |
+| **MIDI & Communication** | [MIDI Map Specification](custom-fw/MIDI-MAP-CUSTOM.md) • [SysEx Diagnostic Channel](custom-fw/tools/usb_midi_probe.py) • [Web Editor Protocol](custom-fw/tools/update_editor_andromeda.py) |
+| **Licensing & Provenance** | [LICENSING.md](LICENSING.md) • [Third-Party Notice](NOTICE.md) • [Root License](LICENSE) • [Build Roadblocks & Provenance](LICENSING.md#how-we-got-our-build-working) |
+
+---
+
+## The interface
+
+The pedal front panel features a 240x240 ST7735S colour display, five tactile switches (`HOME`, `VOL-`, `VOL+`, `<`, `>`), the `PARA` push-encoder, and the analog `MASTER` potentiometer.
+
+| Physical Control | In the Play Screen | In a Block's Parameter Page | In the Signal Chain Page |
+|---|---|---|---|
+| **`PARA` turn** | Adjusts the active macro parameter | Hovers over knobs; when clicked, edits the value | Moves the cursor across the blocks |
+| **`PARA` click** | Cycles focus across the 4 macro knobs | Selects hovered knob for editing (click again to deselect) | Toggles the active block ON or OFF |
+| **`PARA` hold (1 s)** | Opens the Preset Save dialog | Opens the Preset Save dialog | Opens the Preset Save dialog |
+| **`<` and `>`** | Engine actions (strike, freeze, dub, burst, reroll) | Navigates parameters | Moves block selection cursor |
+| **`<` hold (0.8 s)** | Resets engine (erases tape, clears grains, rings) | Resets parameter to default | — |
+| **`HOME` tap** | Opens the Signal Chain view | Returns to the Signal Chain view | Opens the selected block's edit page |
+| **`HOME` hold (1 s)** | Opens the System Settings menu | Opens the System Settings menu | Opens the System Settings menu |
+| **`VOL-` / `VOL+`** | Steps through presets P01–P20 | Cycles through active blocks in preset | Cycles effect variant or block types |
+| **`VOL-` / `VOL+` hold** | Fast preset decrement / increment (0.8 s) | Steps presets while staying on page | Steps presets while staying on chain |
+| **`VOL-` + `VOL+`** | Toggles the Chromatic Tuner (with audio mute) | Toggles the Chromatic Tuner | Toggles the Chromatic Tuner |
+| **`PARA` hold at boot** | Forces mask ROM download mode (2.5 s) | — | — |
+
+The analog **MASTER** knob controls output volume via an analog-taper linear slew with dither.
+
+---
+
+## Build it on your computer
+
+Requirements: Windows 10/11 with PowerShell, Python 3.10+, LLVM/Clang (LLVM-MinGW or WinGet MartinStorsjo.LLVM-MinGW), the JieLi pi32v2 toolchain (`$env:PI32_ROOT` or `C:\JL\pi32`), and Node.js for WASM suites. The emulator also requires NumPy and python-sounddevice.
+
+```powershell
+# Clone the repository
+git clone https://github.com/28spawn/Andromeda.git
+cd Andromeda
+
+# 1. Build and package Andromeda firmware (runs host tests, compiles device ELF, packages .fwsc/.bin)
+powershell -ExecutionPolicy Bypass -File custom-fw/build.ps1 -Product andromeda
+
+# 2. Run the automated static, build, unit, functional and image QA gate
+python custom-fw/tools/qa_gate.py
+
+# 3. Launch the desktop emulator with real-time audio and browser front panel
+powershell -ExecutionPolicy Bypass -File custom-fw/emu/run_emu.ps1
+```
+
+### Build Pipeline Safety Features
+
+- **Strict fail-fast pipeline:** `build.ps1` wraps all compilers and native commands in `Invoke-Checked`, ensuring zero-tolerance for ignored native exit codes.
+- **Clean object directory:** `custom-fw/build_pi32` is deleted and recreated on every build run to eliminate stale object link hazards.
+- **Source drift guard:** `custom-fw/sources.txt` guarantees every C file is tracked across all targets; checked at stage `[1/5]` by `check_sources.py`.
+- **Exact section load extraction:** `llvm-nm.exe` extracts exact load addresses (`_rt_load`, `_c1_load`, `_rf_load`, `_ff_load`, `_data_load`), preventing 48-byte initialized variable displacement and packing `.flashfn` directly at its execution address.
+- **Circular runtime library scanning:** Encloses `libcompiler_rt.a`, `libm.a`, and `libc.a` in `--start-group ... --end-group` to resolve soft-float `__subdf3` symbols.
+- **Vendor-free packaging:** Packages only open-source code and public Apache-2.0 SDK configuration blobs; contains no proprietary vendor binaries.
+
+See [LICENSING.md](LICENSING.md#how-we-got-our-build-working) for the complete engineering chronicle.
+
+---
 
 ## Repository map
 
 ```text
 custom-fw/
-  include/       Firmware interfaces and configuration
-  src/           Board support, DSP, effects, NAM, audio core, presets and protocols
-  test/          C and Python regression suites, including effect-specific tests
-  emu/           Native desktop emulator and browser workbench
-  wasm/          WebAssembly build and tests
-  tools/         Build, packaging, QA, recovery and asset-generation tools
-  qa/            Hardware evidence ledger and QA baselines/reports
+  include/       Firmware interfaces, configuration (pa_config.h), and engine headers
+  src/board/     Hardware drivers (ST7735S, ALNK audio codec, SPI NOR, GPIO buttons, USB/BLE)
+  src/dsp/       Fixed-point math primitives, biquads, tuner, and hardware accelerator stubs
+  src/fx/        The six ambient engines (v1_*.c), FDN reverb, shimmer, and two-core graph allocator
+  src/sys/       Audio core, SMP core 1 worker, presets, store, SysEx, and diagnostic channels
+  test/          Automated C and Python regression suites and host simulation harnesses
+  emu/           Native desktop emulator DLL, Jonas Hemmersbach DI audio loops, and browser UI
+  wasm/          WebAssembly build and browser workbench
+  tools/         Build scripts, packaging utilities (onyx_pkg_make.py), and flash recovery tools
+  qa/            Hardware evidence ledger, test reports, and baseline dumps
   build.ps1      Checked Windows build and packaging pipeline
-  app.ld         AC791N linker layout
-ARCHITECTURE.md  Module map, call graphs and execution model
-TEST-PROTOCOL.md Flash/recovery requirements and regression protocol
-NOTICE.md        Licensing, attribution and third-party-material scope
+docs/            Flashing guides, performance measurements, architecture and plan documents
+ARCHITECTURE.md  Modules, execution contexts, audio path, and memory layout
+TEST-PROTOCOL.md Automated QA gate and hardware bench test protocol
+RECOVERY.md      Flash map, backup instructions, and Transporter unbrick runbook
+NOTICE.md        Third-party acknowledgements and audio credits
+LICENSING.md     Full legal provenance, component terms, and build breakdown
 ```
 
-## Installation prerequisites
+---
 
-The project does not currently provide a single dependency installer. Install the tools for the workflow you plan to use:
+## AI-assisted development
 
-### Firmware build and full QA gate
+This project was developed through human-in-the-loop pair programming with AI models (Anthropic Claude and Google DeepMind Antigravity / Gemini). The maintainer (@28spawn) architected the system, directed the implementation, designed the sound engines, and verified all firmware on real hardware; DSP routines, UI drivers, host simulations, and test suites were authored and reviewed with AI assistance. Every change passes automated static analysis, host unit suites, and the QA gate before being flashed to physical hardware.
 
-- **Windows 10/11 with Windows PowerShell 5.1 or PowerShell 7** for the documented `.ps1` scripts.
-- **Python 3** available as `python` on `PATH`. The QA and packaging tools use the standard library; the full QA gate also invokes the build and functional suites.
-- **LLVM/Clang for the host build** (`clang.exe` on `PATH`). The build script can find a typical LLVM-MinGW WinGet installation.
-- **JieLi pi32v2 toolchain for the target build**, including `clang.exe`, `pi32v2-ld.exe`, `llvm-objcopy.exe`, and the `pi32v2-include` and `pi32v2-lib/r3` directories. The build script checks `$env:PI32_ROOT`, `$env:USERPROFILE\tools\jieli\C$\JL\pi32`, and `C:\JL\pi32`.
-- **A valid stock `.fwsc` template** for packaging. Set `$env:STOCK_FWSC`, place `Pocket AMP.fwsc` in the repository root or in your `Downloads` folder. The packer uses this template to construct the signed container structure.
-- **Node.js** for the WebAssembly functional suites included in the full QA gate.
-
-### Desktop emulator
-
-The emulator also needs **NumPy** and **python-sounddevice** in the Python environment used to launch it. A working audio input/output device is needed for live audio; ASIO support depends on the installed driver and host setup. `soxr` is optional and used when available for streaming resampling.
-
-### Flashing and recovery (One-Click Web Editor)
-
-Firmware installation, verification, and factory restoration can be done directly in your browser without compiling or installing Python tools:
-- Open [`custom-fw/web/Onyx_Web_Editor.html`](custom-fw/web/Onyx_Web_Editor.html) in Google Chrome or Microsoft Edge (requires Web MIDI).
-- Connect the Pocket AMP with a USB data cable.
-- **Install Onyx Firmware**: One-click install over USB MIDI SysEx; the running firmware verifies the package, stages the update loader, and writes the app partition.
-- **Restore Stock Firmware**: One-click button to restore the factory M-VAVE stock firmware; also recovers a unit stuck in update mode if a transfer was interrupted.
-- **Verify Flash**: Real-time byte-for-byte comparison of the unit's flash memory against the firmware file.
-
-For deep unbricking of a non-responsive unit (ROM download mode), see [RECOVERY.md](RECOVERY.md).
-
-## Build, emulator, and regression checks
-
-### Firmware build
-
-On Windows, with the JieLi pi32v2 toolchain and Python available:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File "custom-fw/build.ps1"
-```
-
-The script runs checked host suites, cross-compiles and links the firmware, verifies packaging, and only emits final images after preceding build checks pass. The exact source list is maintained in `custom-fw/sources.txt`; use that manifest and the build output rather than relying on a fixed module count in documentation.
-
-### QA gate
-
-Run the full gate after a patch:
-
-```powershell
-python custom-fw/tools/qa_gate.py --base main
-```
-
-The gate runs static, build, unit, functional, packaging, and recorded hardware/recovery checks. It writes a report under `custom-fw/qa/reports/`. A passing host gate is not equivalent to a hardware release approval. Follow [TEST-PROTOCOL.md](TEST-PROTOCOL.md), especially its backup, recovery-drill, and verdict requirements, before any device flash.
-
-### Desktop emulator
-
-Build and run the emulator from the repository root:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File "custom-fw/emu/run_emu.ps1"
-```
-
-The workbench is served at `http://localhost:8080`. Host audio interfaces and ASIO support depend on the local Python/audio setup. Emulator coverage is useful for DSP and UI regression, but does not replace checks on the physical Pocket AMP.
-
-## Flashing and recovery status
-
-Firmware installation and recovery are supported through two paths:
-1. **Browser One-Click (Recommended)**: Use [`custom-fw/web/Onyx_Web_Editor.html`](custom-fw/web/Onyx_Web_Editor.html) in Chrome or Edge over Web MIDI. It handles flashing, update recovery, flash integrity verification, and one-click restoration to the stock M-VAVE firmware.
-2. **Hardware ROM Recovery**: If a unit is completely non-responsive or has a corrupted boot, a hardware USB recovery route using ROM download mode can restore the factory firmware sector by sector. Procedure: [RECOVERY.md](RECOVERY.md).
-
-## Open-source scope
-
-The firmware, DSP implementations, pattern generator, synthesized drum-kit generator, and generated drum assets are intended to remain open source in this repository. The drum machine does not depend on proprietary product rhythm libraries or product recordings. Review [NOTICE.md](NOTICE.md) for licensing and provenance notes before redistributing builds or bundled materials.
-
-## AI-Assisted Development Notice
-
-This project was developed through human-in-the-loop pair programming using artificial intelligence (Anthropic Claude and Google DeepMind Antigravity / Gemini models):
-- **Architecture, prompt steering, and hardware debugging:** Directed and tested on physical hardware by the human maintainer (@28spawn).
-- **DSP algorithms, firmware architecture, and test suites:** Generated, refined, and documented with AI assistance.
-- **Verification:** All DSP routines, memory allocations, and USB/SysEx protocols undergo host unit testing and strict automated regression gates (`qa_gate.py`) before flashing to physical hardware.
+---
 
 ## Credits
 
-- **Bluetooth LE MIDI.** The BLE stack for this chip's radio is the work of the **Optimist** project (<https://github.com/w0ts/optimist>): the link layer, GATT/ATT, pairing and the radio driver were written by **hdavid** for Optimist, and Optimist builds on **Felucca** (Leo Kuroshita / Hügelton Instruments), **SLOOP** and the other projects it lists. We import it unmodified into `custom-fw/third_party/optimist_ble/` under its GPL-3.0-only OR MPL-2.0 licence; the radio start-up values in it are licensed under Apache-2.0 (JieLi). Details and exact commit: [NOTICE.md](NOTICE.md).
-- **Prior art on the FM-1.** The Felucca maintainers' write-up of why a GPL firmware can't link the vendor Bluetooth stack (issue #17) and the firmwares that already ship Bluetooth MIDI on this chip (Optimist, fm1-dock, Saadet) are summarised in [custom-fw/BT-PRIOR-ART.md](custom-fw/BT-PRIOR-ART.md). Thank you to all of them.
-- **Vendor SDK.** The public AC79 SDK and open development interfaces (Apache-2.0) are referenced for interface specifications only; no proprietary code is linked into the custom firmware.
+Andromeda stands on the foundational work of the open-source JieLi and Pocket AMP developer community. Each imported or derived component is marked in its source files and detailed in [LICENSING.md](LICENSING.md):
 
-## Disclaimer
+- **[Optimist](https://github.com/w0ts/optimist)** by hdavid, Leo Kuroshita (@kurogedelic), Hügelton Instruments, and the Optimist contributors: The low-level Bluetooth LE MIDI stack for the AC791N / WL82 radio, radio register analysis, and documentation.
+- **[Pendel](https://github.com/hugelton/Pendel)** & **[pendel-bsp](https://github.com/hugelton/pendel-bsp)** by Leo Kuroshita (@kurogedelic), Hügelton Instruments: The open update loader architecture, package container layout, and hardware abstraction layer (MPL-2.0).
+- **[Melodee](https://github.com/keremimo/melodee)** by Kerem Kilic (Ellic Studio) and Adrien Tibi (Recursive Field Instruments): The dual-core SMP task runner and USB MIDI host foundation (MPL-2.0).
+- **Jonas Hemmersbach:** Self-captured dry guitar direct input (DI) recordings (chords, lead licks, rhythm riffs) used in the desktop emulator and workbench.
+- **Public JieLi AC79 AIoT SDK:** Zhuhai Jieli Technology Co., Ltd. (Apache-2.0), referenced for public register sequences and boot configuration binaries.
 
-Provided as-is, for research and interoperability. Flashing custom firmware is at your own risk and may void warranties or brick the device. All trademarks (including M-VAVE, Donner, JieLi, and TONE3000) belong to their respective owners; this project is an independent interoperability and research effort and is not affiliated with or endorsed by M-VAVE, Donner, JieLi, or TONE3000.
+Unofficial: Andromeda is an independent research and interoperability project. It is not made, endorsed, or supported by Zhuhai Shengke Electronics Co., Ltd. (M-VAVE), Donner, or Zhuhai Jieli Technology Co., Ltd. All trademarks belong to their respective owners.
 
-## License
+---
 
-This project is licensed under the **GNU General Public License v3.0** (GPL-3.0-or-later) to ensure alignment with upstream open-source components. See [LICENSE](LICENSE) for the full text.
+## Licence and contributing
 
+- **Source code:** Licensed under the **GNU General Public License v3.0 or later** (`GPL-3.0-or-later`, full text in [LICENSE](LICENSE)).
+- **Sub-components:** Update loader and OTA session are **MPL-2.0**; Bluetooth LE stack is **GPL-3.0-only OR MPL-2.0**; radio configuration data and SDK blobs are **Apache-2.0**. Full legal provenance is mapped in [LICENSING.md](LICENSING.md).
+- **Contributions:** Contributions are welcomed under `GPL-3.0-or-later` (or `MPL-2.0` for loader/BLE files). Please ensure all changes pass `build.ps1` and `python custom-fw/tools/qa_gate.py` before submitting a pull request.

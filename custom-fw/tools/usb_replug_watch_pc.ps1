@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 # custom-fw/tools/usb_replug_watch_pc.ps1 - counts complete enumerations while you unplug and replug the unit (hardware test HW-13: "10/10 replugs enumerate").
 # Read-only. Start it, then unplug the USB cable, wait for "unplugged", plug it back in, wait for the result line, and repeat until it prints the verdict.
 #   powershell -File custom-fw\tools\usb_replug_watch_pc.ps1 -Cycles 10

@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/test/test_ota.c - the app side of the JieLi OTA handshake
  *
  * The two frames the updater sends over USB MIDI, and the ID block the query is answered

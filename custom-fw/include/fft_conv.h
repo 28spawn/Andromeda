@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /*
  * custom-fw/include/fft_conv.h - float FFT convolution for the cab IR (used by src/fx/fx_cab_ir.c).
  *

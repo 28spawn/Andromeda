@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
 """
 custom-fw/tools/test_10min_soak.py - HW-04 & HW-16 10-Minute Audio Stress & Headroom Soak Test
 

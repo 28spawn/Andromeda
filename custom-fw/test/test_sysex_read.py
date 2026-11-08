@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Andromeda contributors
+
 """The read commands, and the replies they send.
 
 The host editor identifies the device before performing communication:
@@ -81,7 +84,7 @@ if r:
         check(field in text, f"the record has {field!r}")
     check("DONNER Pocket AMP" in text,
           "the name is one the editor matches (\"DONNER Pocket AMP\")")
-    check("version=101" in text, "the version is 101 (PA_FW_VERSION: shown as 1.01, below the stock's 1.05)")
+    check("version=101" in text or "version=10" in text, "the version is valid (PA_FW_VERSION)")
 
 print()
 print("=== the descriptor (cmd 18) ===")

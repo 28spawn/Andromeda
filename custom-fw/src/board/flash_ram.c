@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* custom-fw/src/board/flash_ram.c - the SPI NOR flash driver, step 1: a READ-ONLY probe that runs from SRAM.
  *
  * Why: the firmware cannot write its flash yet (pa_spi_nor_erase_sector / _write return -2: FLASH-ACCESS.md says the controller's registers were unknown to this repo). Optimist's open

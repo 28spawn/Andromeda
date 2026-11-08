@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Andromeda contributors */
+
 /* pa_config.h — build-time configuration knobs.
  * Pocket Amp custom firmware (JieLi AC791N / wl82). Change these to push limits;
  * see ROADMAP.md for the rationale/costs of each. */
@@ -24,6 +27,30 @@
 #if !defined(BOARD_BLACKBOX)
 #define BOARD_POCKET_AMP       1
 #endif
+#endif
+
+/* Product configuration:
+ *   1 = Andromeda (granular, ambient & generative engine; default) */
+#ifndef PA_PRODUCT_ANDROMEDA
+#define PA_PRODUCT_ANDROMEDA   1
+#endif
+
+#if PA_PRODUCT_ANDROMEDA
+/* Andromeda's memory map (app_andromeda.ld): the .pool region holds the 256 KB granular tape
+ * (fx_andromeda.c) and a 64 KB effect pool. To make room: no WaveNet model, the cabinet is a stub
+ * (its FFT state was 17 KB), the core-1 stack and the LCD band live in the low SRAM the WaveNet's
+ * matrices used, the SysEx buffers live in the RAM region, and the factory reset and the update
+ * staging borrow the tape (pa_gran_tape_borrow). test/test_andromeda_pool.c measures the effect
+ * pool's high-water mark with the device allocator. */
+#define PA_FEAT_WAVENET        0
+#define PA_FEAT_DRUMS          0
+#define PA_DSP_POOL_BYTES      65536u   /* 64 KB: the AMP and CAB are locked off, so the peak (reverb + mod + granular state) is ~58 KB */
+#define PA_ANDROMEDA_FW_VERSION 10u   /* shown as 0.10 */
+#ifndef PA_FW_VERSION
+#define PA_FW_VERSION          PA_ANDROMEDA_FW_VERSION
+#endif
+#else
+#define PA_FEAT_WAVENET        1
 #endif
 
 /* The firmware version the editor and the updater compare against;
@@ -54,7 +81,9 @@
  * SysEx upload buffer), which freed 65,536 B. The measured high-water mark with
  * every effect on is budgeted - do not budget this from
  * arithmetic. */
+#ifndef PA_DSP_POOL_BYTES
 #define PA_DSP_POOL_BYTES      147456u
+#endif
 
 /* NAM A2 GRU. Baseline architecture: single-layer GRU, input 1, hidden 16, Q21.
  * Raise PA_NAM_HIDDEN to 24/32 ("A2-Full") only with dynamic alloc + reclaimed budget (C7). */
@@ -70,7 +99,9 @@
 #define PA_FEAT_CPU_METER      1   /* E12: per-stage cycle telemetry on ST7789 */
 #define PA_FEAT_DENSE_ACT_LUT  1   /* A2: 512-entry linear-interpolated LUT vs stock 128-entry */
 #define PA_FEAT_SMP_CPU1       0   /* SP-1: Dual-core CPU1 offload (disabled until verified on physical AC791N hardware) */
+#ifndef PA_FEAT_DRUMS
 #define PA_FEAT_DRUMS          1   /* SP-2: Built-in procedural 808/909 drum & metronome synth */
+#endif
 
 /* The front panel has a MASTER volume pot on SARADC channel 0 (0..4095, Q12).
  * On device this ADC does not exist (digital VOL-/+ buttons);
