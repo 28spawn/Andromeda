@@ -1,124 +1,87 @@
-# The emulator (`custom-fw/emu`)
+# Andromeda Desktop Emulator (`custom-fw/emu`)
 
-The emulator runs the **real firmware** — the same `pa_audio_core_tick()`, the
-same input layer, the same DSP — compiled into a native DLL that a host drives
-over USB-MIDI-shaped APIs. The browser workbench (`custom-fw/wasm`) is the
-same thing in WASM.
+The emulator runs the **real Andromeda firmware** — the same `pa_audio_core_tick()`, the same input processing layer, the exact dual-core DSP and effect engines — compiled into a native 64-bit Windows dynamic library (`andromeda_emu.dll`, with backward-compatible `pocket_amp_emu.dll`). The browser workbench (`custom-fw/wasm`) runs the identical engine in WebAssembly.
 
-```
+```powershell
 powershell -ExecutionPolicy Bypass -File custom-fw\emu\run_emu.ps1
 ```
 
-builds the DLL, starts the ASIO host and serves the UI at <http://localhost:8080>.
-Connected ASIO devices are picked up automatically; without one the emulator falls back
-to `[Safe Offline] Simulation Only`.
+Compiles the DLL, initializes the ASIO audio host, and serves the interactive HTML5 front panel at <http://localhost:8080>. Connected ASIO audio interfaces (or WASAPI / DirectSound devices via sounddevice) are detected automatically; in absence of physical hardware, the emulator runs safely in offline simulation mode.
 
 ---
 
-## The front-panel buttons
+## Front-Panel Controls & Gestures
 
-The firmware's input layer (`src/sys/pa_input.c`) turns the **raw level** of
-the front-panel buttons into one-tick action pulses:
+The firmware's input layer (`src/sys/pa_input.c`) decodes front-panel physical controls into deterministic action events:
 
-* the four instant buttons (VOL-, VOL+, `<`, `>`) fire on the **press edge**,
-  and repeat after 350 ms while they are held;
-* **PARA and HOME fire their CLICK on the RELEASE edge** — a quick press is a
-  click, a long one is a hold, and the two are mutually exclusive;
-* the HOLD durations are read at the release too: PARA 1 s → the save dialog,
-  PARA 3 s → the effect's clear, HOME 1 s → Settings;
-* a chord consumes the buttons it is made of, so they do not also click.
+* **Instant buttons (`VOL-`, `VOL+`, `<`, `>`):** Fire on the **press edge** and auto-repeat after 350 ms while held.
+* **Rotary Push-Encoder (`PARA`) & `HOME`:** Fire their click action on the **release edge** — a quick press is a click, while a prolonged press is evaluated as a hold.
+* **Hold thresholds:**
+  * `PARA` held 1.2s $\to$ Cosmic Preset Save Dialog (`PARA_HOLD_MS = 1200`)
+  * `PARA` held 3.0s $\to$ Long Tape Buffer Mode toggle (5.94s extended memory)
+  * `HOME` held 1.0s $\to$ System Settings Menu
+  * `HOME` held 1.5s $\to$ Infinite Buffer Freeze Drone Pad
+  * `<` held 0.8s $\to$ Accretion tape reset / clear
+  * `VOL-` / `VOL+` held 0.8s $\to$ Preset stepping from within block pages
+* **Chords:** Multi-button chords (e.g. `[VOL- + VOL+]` for Chromatic Tuner HUD) atomically consume the participating keys to suppress false individual clicks.
 
-**A button that is never released never clicks and never holds.** That is why
-the emulator has a press/release API instead of a single level setter.
+---
 
-### The API
+## Front-Panel Emulator API
 
-| call | what it does |
+| Call | What it does |
 |---|---|
-| `emu_ui_tap(mask, hold_ms)` | a **complete gesture**: press, hold, release. One call = one gesture. |
-| `emu_ui_press(mask)` | the buttons go down (for a mouse press-and-hold) |
-| `emu_ui_release(mask)` | the buttons come up; a contact shorter than the firmware's 20 ms debounce is held to 60 ms so it is not lost |
-| `emu_ui_enc(delta)` | the encoder, without touching the buttons |
-| `emu_ui_pot(q12)` | the MASTER pot, without touching the buttons |
-| `emu_ui_input(mask, enc, pot)` | the old **level** setter — kept for the host tests, which drive a press and a release themselves |
+| `emu_ui_tap(mask, hold_ms)` | Executes a complete atomic gesture: press, hold duration, release. |
+| `emu_ui_press(mask)` | Depresses button mask (used for interactive mouse-down holds). |
+| `emu_ui_release(mask)` | Releases button mask (enforces debounce minimums to guarantee detection). |
+| `emu_ui_enc(delta)` | Rotates the PARA rotary encoder (positive clockwise, negative counter-clockwise). |
+| `emu_ui_pot(q12)` | Adjusts the MASTER volume pot (0 to 4095, mapping to -40 dB .. 0 dB taper). |
+| `emu_ui_input(mask, enc, pot)` | Low-level level setter driven by automated test harnesses. |
 
-Over HTTP (`POST /api/input`):
+### REST & WebSocket API (`POST /api/input`):
 
 ```jsonc
-{"tap": 1}                  // a tap of HOME
-{"hold": 32, "ms": 1200}    // PARA held for 1.2 s
-{"press": 1} / {"release": 1}
-{"enc_delta": 1}
-{"master_pot": 4095}
-{"buttons": 1}              // the legacy level api
+{"tap": 1}                  // Tap HOME (switches between Radar HUD and Signal Chain)
+{"hold": 32, "ms": 1200}    // Hold PARA for 1.2s (opens Preset Save Dialog)
+{"enc_delta": 1}            // Turn PARA clockwise
+{"master_pot": 4095}        // Set MASTER volume to 100%
 ```
-
-The web UI sends **one gesture per request** and queues the requests, so a
-press and its release can never be reordered (the server is threaded) and a
-HOLD's duration is enforced by the emulator on the firmware's clock — a
-browser timer would be throttled in a background tab, and a 1 s hold could turn
-into a 2 s hold and select the wrong action.
-
-### The clock
-
-The audio callback **is** the firmware's clock while the audio is running.
-The idle path only folds the host clock in when the callback is *not* running.
-When both did it, the firmware's clock ran at about twice the speed — every
-timer, the auto-repeat and the HOLD thresholds included — and a button
-contact could be swallowed whole before the firmware's debounce saw it.
 
 ---
 
-## The level
+## Front-Panel UI Elements
 
-Two level controls, and they are not the same thing:
-
-| control | where | what it does |
-|---|---|---|
-| the **MASTER pot** (and the Settings OUTPUT LEVEL) | the front panel / the Settings menu | the master taper: **-40 dB at 0 % .. 0 dB at 100 %** (`pa_audio_core_master_q15`) |
-| the **preset volume** (MIDI CC 7 or NRPN) | MIDI | a linear **0..100 %** gain inside the chain, stored per preset (`pa_fx_chain_set_preset_vol`) |
-
-The emulator's MASTER pot starts at **full scale** — the firmware's factory
-default. It used to start at 2048 (the middle of the 12-bit range), so the
-emulator ran its master at 50 %, which on that taper is **twenty decibels**
-of attenuation: the emulator was that much quieter than the browser build and
-than the device, while its own UI showed the knob at 100 %.
-
-`test_level.py` checks the pot, the law and the measured input → output gain,
-so the emulator cannot quietly go quiet again.
-
-## The tests
-
-```
-python custom-fw\emu\test_buttons.py   # the front panel: click, hold, chord, repeat
-python custom-fw\emu\test_input.py     # the input model: one tap = one action
-python custom-fw\emu\test_editor.py    # the editor protocol
-python custom-fw\emu\test_level.py     # the MASTER pot and the output level
-```
-
-`test_buttons.py` drives the DLL through the same API the web UI uses and
-asserts the effect the firmware documents — the screen it switches to.
-
----
-
-## What the UI can do
-
-| control | what it does |
+| Control | Function in Andromeda |
 |---|---|
-| the 5 physical buttons | press/release, so holding them repeats like the real switch |
-| the chord buttons | one complete gesture each |
-| `Save (1s)` / `Clear (3s)` | PARA held 1 / 3 s |
-| `● CLICK` | a PARA click |
-| the keyboard | `H` HOME, `-`/`=` VOL-/VOL+, `←`/`→` cursor, `Enter` PARA, `T` tuner, `C` chain page, `S` settings |
+| **Celestial Radar HUD** | Circular radar plotting live engine telemetry, voice activity, tape playheads, and star clusters. |
+| **`[Tuner]` Button** | Chords `[VOL- + VOL+]` to enter the chromatic tuner HUD (< 2 cents accuracy). |
+| **`[Settings (1.1s)]`** | Long-presses `HOME` to access system settings. |
+| **`[Clear (0.8s)]`** | Clears the active engine state (erases Accretion tape, clears grain history, dampens rings). |
+| **`[PARA Click]`** | Cycles active macro coordinate: `ORBIT` $\to$ `WARP` $\to$ `FLUX` $\to$ `GRAV`. |
+| **`[◀]` (Reverse)** | Fires Reverse Grain Burst or triggers Accretion tape record. |
+| **`[▶]` (SOS Looper)**| Cycles phrase looper state: `STOPPED` $\to$ `REC` $\to$ `PLAY` $\to$ `OVERDUB`. |
+| **`[Save (1.2s)]`** | Launches preset save dialog to store user chain into P13–P20. |
+| **`[BT State]`** | Toggles simulated Bluetooth LE advertising state. |
+| **Pill Bar Badges** | `FREEZE (HOLD 1.5s)`, `PRESET - (DECREMENT)`, `PRESET + (INCREMENT)`, `REVERSE (BURST)`, `SOS LOOP (REC/PLAY/DUB)`. |
 
-### The host API
+---
 
-`GET /api/state` returns the whole firmware state: the screen, the presets,
-the slot types and parameters, the telemetry, the LCD framebuffer and the
-scopes. `POST /api/sysex` feeds raw SysEx into the firmware's own parser.
+## Verification Test Suites
 
-`POST /api/ble_midi` feeds a **BLE-MIDI 1.0 packet** (hex) — the same entry
-point a GATT write on the MIDI characteristic would use: the framing is
-stripped by the firmware's own BLE-MIDI layer and the bytes land in the same
-ring the USB MIDI path uses, so both links drive the device through one
-protocol.
+```powershell
+# Andromeda navigation and gesture regression:
+python custom-fw\emu\test_andromeda_nav.py
+
+# Complete 11-gate Andromeda UI visual protocol:
+python custom-fw\emu\test_andromeda_ui.py
+
+# Input debouncing and button timing verification:
+python custom-fw\emu\test_buttons.py
+python custom-fw\emu\test_input.py
+
+# Audio levels and master taper verification:
+python custom-fw\emu\test_level.py
+
+# Web MIDI editor protocol verification:
+python custom-fw\emu\test_editor.py
+```

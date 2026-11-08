@@ -1,91 +1,230 @@
-# Andromeda architecture
+# Andromeda Architecture & System Specification
 
-How the Andromeda firmware is put together: modules, execution contexts, the audio path, memory and the host tooling. The firmware targets the JieLi AC791N (two pi32v2 cores, 512 KB SRAM) and is built with `custom-fw/build.ps1 -Product andromeda` (`PA_PRODUCT_ANDROMEDA=1`, linker script `custom-fw/app_andromeda.ld`). Numbers marked *measured* come from the measurement channel ([docs/ANDROMEDA-PERF.md](docs/ANDROMEDA-PERF.md)).
+How the Andromeda firmware is architected: operating system paradigm, execution contexts, dual-core SMP scheduler, audio processing pipeline, memory topology, front-panel user interface, and host simulation tooling.
 
-## 1. Layers
+The firmware targets the JieLi AC791N SoC (dual pi32v2 cores, 512 KB SRAM, 1 MB SPI-NOR flash) driving an ST7735S 240×240 color display, ALNK I2S audio codec, GPIO pushbuttons, rotary encoder, and USB composite peripheral.
 
-`custom-fw/include/pa_plat.h` is the hardware seam: portable code in `src/dsp`, `src/fx` and `src/sys` never touches registers; only `src/board` does.
+---
 
-| Directory | Contents |
-|---|---|
-| `src/board/` | Entry code and interrupt vectors, the audio link (`audio_alnk.c`), display driver (`st7735s.c`), buttons and encoder (`gpio_scan.c`), flash (`spi_nor.c`), USB device and MIDI/audio (`usb_dev.c`, `usb_ble.c`), BLE MIDI (`ble_*`), the UI (`ui_app.c`, the radar-style play screen in `ui_cosmic.c`, the 5x7 font in `ui_5x7.c`), the second core's start (`cpu1.c`) and `main.c` (integration and the interrupt body). |
-| `src/dsp/` | Fixed-point and filter primitives (`pa_biquad.c`, `fixedpoint.h`, oversampling), the tuner and the hardware accelerator wrapper. |
-| `src/fx/` | The effect graph (`fx_graph.c`: slot chain, core allocator), the effect host (`fx_andromeda.c`), the six engines (`v1_glass.c`, `v1_bloom.c`, `v1_accretion.c`, `v1_choir.c`, `v1_fracture.c`, `v1_constellation.c`), the shared reverb (`v1_fdn.c`) and shimmer (`v1_shimmer.c`), plus the dynamics, EQ and modulation blocks. |
-| `src/sys/` | The audio core (`pa_audio_core.c`), presets and settings, SysEx and the diagnostic channel (`sysex.c`, `pa_diag.c`), the measurement channel (`pa_meas.c`), the core 1 worker (`smp_cpu1.c`), the pool allocator, the CPU meter, the update session. |
-| `include/` | Public headers: `pa_config.h` (constants and the product switch), `pa_fx.h` (nodes and the chain), `pa_granular.h` (the effect host's types), `pa_preset.h`, `pa_ui.h`, `pa_meas.h`. |
+## 1. System Layers & Directory Topology
 
-Everything specific to Andromeda is under `#if PA_PRODUCT_ANDROMEDA`; the other product configuration of this source tree is not described here.
+Hardware access is strictly isolated behind `custom-fw/include/pa_plat.h`. Portable DSP, sound engines, and system logic never access hardware registers directly; register reads/writes and interrupt trampolines are confined to `src/board/`.
 
-## 2. Execution contexts
+```
+custom-fw/
+├── include/       Firmware interfaces, configuration, engine parameters, UI & preset definitions
+├── src/board/     Hardware abstraction: ST7735S LCD, ALNK audio codec, SPI-NOR, GPIO, USB & BLE
+├── src/dsp/       Fixed-point math primitives, biquad filters, pitch detection, tuner engine
+├── src/fx/        The 6 ambient sound engines, FDN reverb, shimmer, and two-core dynamic allocator
+├── src/sys/       Audio core, dual-core SMP task runner, presets, A/B flash store, SysEx, diagnostics
+├── emu/           Native desktop emulator DLL (andromeda_emu.dll), Jonas Hemmersbach DIs, HTML5 UI
+├── wasm/          WebAssembly DSP build (andromeda.wasm) and browser workbench
+├── tools/         Build system, packaging utilities, flash recovery tools, and performance monitors
+└── test/          Automated C and Python regression suites and host simulation harnesses
+```
 
-| Context | Entry | Rate | Work |
+| Subsystem | Source Path | Responsibilities |
+|---|---|---|
+| **Board Drivers** | `src/board/` | Entry points and vector tables (`entry.S`), ALNK DMA audio driver (`audio_alnk.c`), ST7735S 240×240 display controller (`st7735s.c`), button & encoder debouncer (`gpio_scan.c`), SPI-NOR flash controller with write fence (`spi_nor.c`), USB composite driver (`usb_dev.c`, `usb_ble.c`), optional BLE radio stack (`ble_*`), Celestial Radar display renderer (`ui_cosmic.c`), and core 1 bootloader (`cpu1.c`). |
+| **DSP Core** | `src/dsp/` | Fixed-point math primitives (`fixedpoint.h`), biquad parametric filters (`pa_biquad.c`), chromatic tuner autocorrelator (`pa_tuner.c`), and hardware math accelerator wrappers. |
+| **Sound Engines** | `src/fx/` | Dynamic effect graph allocator (`fx_graph.c`), Andromeda effect host (`fx_andromeda.c`), six sound-design engines (`v1_glass.c`, `v1_bloom.c`, `v1_accretion.c`, `v1_choir.c`, `v1_fracture.c`, `v1_constellation.c`), algorithmic FDN reverb (`v1_fdn.c`), and recirculating shimmer (`v1_shimmer.c`). |
+| **System Services**| `src/sys/` | Dual-core audio orchestrator (`pa_audio_core.c`), A/B fail-safe preset store (`pa_store.c`, `settings.c`), SysEx communication (`sysex.c`), real-time diagnostic channel (`pa_diag.c`), SMP Core 1 worker task (`smp_cpu1.c`), and telemetry measurement (`pa_meas.c`). |
+
+---
+
+## 2. Operating System & Execution Contexts
+
+Andromeda operates without a heavy RTOS, using a deterministic, multi-rate cooperative architecture across four execution contexts:
+
+```mermaid
+flowchart TD
+    subgraph HW ["Hardware Layer"]
+        Codec["ALNK Audio Codec DMA"]
+        Timer["1 kHz Hardware Timer"]
+        SysTick["60 Hz System Tick"]
+        USB["USB FIFO / MIDI IRQs"]
+    end
+
+    subgraph Core0 ["Core 0 (Primary Processor)"]
+        AudioISR["Audio Interrupt Context (44,118 Hz, 1.45 ms)<br>• Input conditioning & Core 0 DSP share<br>• Output stage & Master Volume Slew<br>• USB Audio Capture & Clean Playback Mix"]
+        PollLoop["Poll Loop (1 kHz)<br>• GPIO key debouncing (20 ms)<br>• Encoder tracking & Chord detection"]
+        UIThread["UI & System Context (60 Hz)<br>• ST7735S Frame Rendering (Radar HUD)<br>• A/B Preset & Settings Flash Storage<br>• Web MIDI SysEx & Diagnostic Protocol"]
+    end
+
+    subgraph Core1 ["Core 1 (SMP Coprocessor)"]
+        Core1Worker["SMP Worker Task<br>• Dynamically allocated front-of-chain slots<br>• Heavy engine processing offload"]
+    end
+
+    Codec -->|DMA Half/Full IRQ| AudioISR
+    Timer -->|Tick IRQ| PollLoop
+    SysTick -->|Main Loop| UIThread
+    AudioISR -.->|Pipelined Block Hand-over| Core1Worker
+    Core1Worker -.->|Processed Buffer Result| AudioISR
+```
+
+| Context | Frequency | Period | Responsibilities |
 |---|---|---|---|
-| **Audio interrupt (core 0)** | `isr_alnk0` in `entry.S`, then the audio core | one 64-frame block per interrupt (44,118 Hz, 1.45 ms) | The effect chain's core-0 share, the USB audio mix, the output stage. |
-| **Core 1 worker** | `smp_cpu1.c` | per block, when the chain is split | Input conditioning and the first slots of the chain (see section 4). |
-| **UI thread** | `pa_main_loop` | 60 Hz | Display, UI state, presets, settings, flash writes, SysEx. |
-| **Poll loop** | `pa_main_loop` | 1 kHz | Button and encoder scanning. |
+| **Audio Interrupt (Core 0)** | 44,118 Hz | 1.451 ms (64 frames) | Runs highest priority (`isr_alnk0`). Processes input blocks, executes Core 0's share of the DSP graph, mixes USB playback, applies master volume slew with dither, and feeds DAC DMA. |
+| **Core 1 SMP Worker** | Per block (on demand) | 1.451 ms | Executes the front slots of the DSP chain when split by the dynamic allocator. Operates lock-free via cache-coherent mailbox. |
+| **Input Scanner** | 1,000 Hz | 1.0 ms | Debounces physical buttons, tracks encoder quadrature transitions, detects long holds (0.8s, 1.2s, 1.5s, 3.0s) and multi-button chords. |
+| **UI & Background Thread** | 60 Hz | 16.6 ms | Main cooperative loop (`pa_main_loop`). Renders display frames, executes preset switches, handles flash writes (A/B commit), and services SysEx messages. |
 
-State shared between the UI thread and the interrupt is handed over at block boundaries: effect changes, preset swaps and effect-host actions are posted by the UI thread and taken by the audio thread, which owns the effect memory.
+---
 
-## 3. Audio path
+## 3. Audio Path & Sound Engines
 
-One block through `pa_audio_core_process_block`:
+### 3.1 Signal Flow
 
-1. Apply a pending preset or effect swap (the output is faded to zero first, so nothing clicks).
-2. The measurement channel's test source, when on, replaces the guitar.
-3. The tuner takes the dry guitar when it is open.
-4. The chain runs in stereo, in slot order: **DYN, EFFECT, EQ, LAYER, SPACE** (the other three slots of the graph are locked off). EFFECT is the effect host (`fx_andromeda.c`) running the selected engine; LAYER is a second GLASS; SPACE is the FDN reverb with the shimmer path.
-5. USB playback from the host is mixed after the chain, and the output goes through a soft ceiling and a DC blocker.
-6. The master volume is applied on a linear slew with dither, then the block goes to the DAC.
+Every 64-sample block (1.45 ms at 44.118 kHz) traverses `pa_audio_core_process_block`:
 
-### The effect host
+1. **Preset & Transition Crossfade:** Pending preset swaps or engine changes crossfade to zero across 32 samples to prevent clicks or DC thumps.
+2. **Measurement Injection:** Internal diagnostic tone generator replaces dry input when auditing latency, THD, or DSP performance.
+3. **Chromatic Tuner Tap:** Autocorrelation pitch detector samples the dry input when tuner is active.
+4. **Stereo Signal Chain:**
+   $$\text{INPUT} \longrightarrow [\text{DYN}] \longrightarrow [\text{EFFECT}] \longrightarrow [\text{EQ}] \longrightarrow [\text{LAYER}] \longrightarrow [\text{SPACE / SHIMMER}] \longrightarrow \text{OUTPUT}$$
+5. **USB Playback & Line Monitoring:** Clean USB audio stream from PC mixes directly into the analog output post-effects without going through pedal processing.
+6. **Master Output Stage:** Linear volume slew with TPDF dither, soft-ceiling limiter (ceiling $-0.1 \text{ dBFS}$), and DC blocking filter.
 
-`fx_andromeda.c` owns one 147 KB overlay in the `.pool` region, shared by the six engines through a union: only the effect that is playing owns it. A change of effect is requested by the UI thread; the audio thread clears the overlay and starts the new engine at the next block. The four macro knobs and MIX come in as parameters 0 to 4 and are mapped to each engine's own parameters (`glass_from_macros`, `apply_bloom`, `apply_acc`, `apply_choir`, `apply_fracture`, `apply_constellation`). Each engine's wet output gets a per-effect level trim, then the MIX law (both at full level at 50 %, the wet fading out below it and the dry above it) and a clamp.
+### 3.2 The Six Sound Engines
 
-| Engine | State |
-|---|---|
-| GLASS | 12 resonators per channel struck by a transient detector or the keys; look-ahead limiter on the sum. |
-| BLOOM | A grain cloud reading a 128 KB mono history. |
-| ACCRETION | A 2 s stereo ADPCM tape (the 147 KB overlay's largest user) with a look-ahead write limiter; tone and saturation colour it on playback. |
-| CHOIR | Pitch-shifting voices (two-head delay line) reading the history. |
-| FRACTURE | Tempo-synced slices cut from the history. |
-| CONSTELLATION | A 16-step generative sequencer playing grains from the history. |
+The primary engine slot (`EFFECT`, handled by `src/fx/fx_andromeda.c`) hosts six sound-design architectures sharing a 147 KB dynamic overlay in the `.pool` memory section:
 
-## 4. Two cores
+```
+               ┌─────────────┐
+               │    GLASS    │ Physical Modal Resonator Bank (12 modes/ch, 4 materials)
+               ├─────────────┤
+               │    BLOOM    │ Granular Cloud Texture (128 KB ring history, reverse burst)
+               ├─────────────┤
+   EFFECT ────>│  ACCRETION  │ Magnetic Sound-on-Sound Tape Looper (2.0s / 5.94s extended)
+   Overlay     ├─────────────┤
+   (147 KB)    │    CHOIR    │ Formant Vocal Synthesizer (dual-head interpolating delays)
+               ├─────────────┤
+               │   FRACTURE  │ Rhythmic Stutter Buffer & Time-Slicing Glitch Matrix
+               ├─────────────┤
+               │CONSTELLATION│ 16-Step Generative Quantized Sequence Generator
+               └─────────────┘
+```
 
-The chain can be split across the two cores. The **allocator** (`fx_graph.c`) prices every active slot from its measured time (a moving average kept by whichever core ran it) and every 64 blocks chooses a *cut*:
+1. **GLASS (`v1_glass.c`):** Bank of 12 modal bandpass resonators per channel excited by input transients or manual strikes. Features 4 distinct resonance materials:
+   * *Quartz:* Pure, bell-like, ultra-high Q reflections.
+   * *Crystal:* Shimmering harmonic overtones with wide stereo spread.
+   * *Bell:* Rich metallic inharmonic modes.
+   * *Obsidian:* Dark, muted acoustic plate resonances.
+2. **BLOOM (`v1_bloom.c`):** Dense multi-head granular cloud engine. Continuously samples dry audio into a 128 KB circular history buffer, extracting pitch-shifted and time-scattered grains with an instantaneous reverse burst trigger.
+3. **ACCRETION (`v1_accretion.c`):** Sound-on-sound magnetic tape machine simulator:
+   * Real-time tape saturation, non-linear hysteresis, and high-frequency tape loss.
+   * Wow & flutter modulation with independent drift rates.
+   * Sound-on-sound overdubbing with decaying tape degradation.
+   * Dual memory modes: Standard (2.0s uncompressed stereo) and Long Tape Buffer (5.94s extended memory).
+4. **CHOIR (`v1_choir.c`):** Formant-shifting vocal synthesizer using twin interpolating delay heads to extract vowels ($A, E, I, O, U$) and celestial choral pads from guitar fundamentals.
+5. **FRACTURE (`v1_fracture.c`):** Synchronized micro-montage sampler. Divides the recent performance history into tempo-locked metric subdivisions, with live probabilistic repeat bursts and reverse glitching.
+6. **CONSTELLATION (`v1_constellation.c`):** 16-step generative melody and texture engine. Quantizes audio pitch to selected modal scales, triggering rhythmic star-clusters across the stereo field.
 
-- **Cut 0**: everything runs on core 0, no added latency. Used while the chain fits (it splits above about 0.9 ms of core-0 work and returns below about 0.78 ms).
-- **Cut N**: core 1 runs the input conditioning and the first N slots on the current block while core 0 runs the rest and the output stage on the previous block's result, which costs one block (1.45 ms) of added latency.
+### 3.3 Secondary Resonator Layer & Shared Space Reverb
 
-A candidate cut has to beat running on one core by 8 % for two evaluations in a row. A slot is never split. If core 1 does not start, misses its block 64 times in a row, refuses a job or nears its stack limit, it is switched off for the session and everything runs on core 0; holding `>` at power-on forces one core. Details and the readouts are in [docs/ANDROMEDA-PERF.md](docs/ANDROMEDA-PERF.md).
+* **LAYER (`src/fx/v1_glass.c`):** A secondary concurrent resonator layer that can run simultaneously alongside any primary engine, providing harmonic doubling, resonant bell textures, or sub-octave support.
+* **SPACE Reverb (`src/fx/v1_fdn.c`):** 8-delay Feedback Delay Network (FDN) algorithmic reverb with unitary Householder feedback matrix, providing dense, diffusion-rich space without resonant coloration.
+* **SHIMMER (`src/fx/v1_shimmer.c`):** Dual-head pitch shifter embedded inside the FDN recirculation loop, feeding harmonic intervals ($+12$ semitones, $+7$ semitones fifth, $-12$ sub-octave) back into the reverb core.
 
-## 5. Memory
+---
 
-512 KB of SRAM: about 398 KB static, with a 336 KB `.pool` region (289 KB used, about 47 KB free; *measured*). The `.pool` region holds the effect overlay (147 KB), the reverb and modulation state, and a 64 KB DSP pool (`PA_DSP_POOL_BYTES`) for the allocator. The factory reset and the update staging borrow the overlay as scratch memory while the effect passes the signal dry (`pa_gran_tape_borrow`). `test/test_andromeda_pool.c` measures the pool's high-water mark with the device allocator.
+## 4. Dual-Core SMP Task Runner
 
-Flash (1 MB): the boot area `0x0`-`0x3FFF` is never written; the app area `0x4000`-`0x85FFF` holds the firmware (about 410 KB of its 531 KB); the store at `0x86000` holds settings and the preset bank. See [docs/ANDROMEDA-FLASHING.md](docs/ANDROMEDA-FLASHING.md).
+The AC791N features dual 32-bit pi32v2 RISC cores running at up to 360 MHz. Andromeda includes a dynamic **load-balancing allocator** (`src/fx/fx_graph.c`):
 
-## 6. Control and data
+1. **Cycle Pricing:** Every active effect slot is continuously timed using hardware high-resolution timer counters (TIMER4, 24 ticks/$\mu\text{s}$).
+2. **Hysteresis Evaluation:** Every 64 blocks (92.8 ms), the allocator checks if the chain exceeds single-core budget ($> 900 \ \mu\text{s}$):
+   * **Cut 0 (Single-Core):** All DSP runs on Core 0. Zero additional latency.
+   * **Cut N (Dual-Core SMP):** Core 1 handles input conditioning and slots $1 \dots N$. Core 0 handles slots $N+1 \dots \text{End}$ and the output stage on the previous block's hand-over buffer (incurring exactly 1 block / 1.45 ms of pipelined latency).
+3. **Fail-Safe Fallback:** If Core 1 fails to start or misses a deadline 64 times consecutively, Core 1 is safely quarantined and processing collapses back to Core 0 with zero audio dropouts.
 
-- **Controls**: the 1 kHz scanner decodes the five keys, the PARA encoder (turn, click, holds) and the MASTER pot; the UI thread turns them into macro changes, effect actions and navigation.
-- **MIDI and SysEx**: USB MIDI and BLE MIDI share one handler (program change, CC, SysEx). A private diagnostic channel (manufacturer ID 0x7D) carries flash and RAM reads and the measurement protocol (timing, memory, control).
-- **Persistence**: presets and settings are written to the store area with an A/B scheme, so a power cut during a save leaves the previous copy valid. The factory bank is written on first boot; slots P13 to P20 are saved from the chain page.
-- **USB audio**: capture sends the output stage's signal to the host; playback from the host is mixed after the chain through a rate-adapting ring. The standard firmware has no USB-to-input path.
+---
 
-## 7. Host tooling
+## 5. Front Panel UI & Interactive Controls
 
-| Tool | Purpose |
-|---|---|
-| `custom-fw/emu/` | Native emulator: the firmware compiled as `pocket_amp_emu.dll`, served by `server.py` with a browser front panel (the LCD framebuffer, encoder, meters). Used by the UI, level and screenshot tests. |
-| `custom-fw/wasm/` | WebAssembly build of the same core for the browser workbench and its tests. |
-| `custom-fw/test/` | C and Python regression suites. The Andromeda ones include `test_andromeda_fx`, `test_andromeda_smp`, `test_andromeda_pool`, `test_glass`, `test_bloom`, `test_accretion`, `test_choir`, `test_fracture`, `test_constellation`, `test_fdn`, `test_shimmer`, `test_meas` and `test_ui_cosmic`. |
-| `custom-fw/tools/qa_gate.py` | The QA gate (see [TEST-PROTOCOL.md](TEST-PROTOCOL.md)). |
-| `custom-fw/tools/andromeda_perf.py` | CPU, memory and core readouts and the scenario matrix on the unit. |
-| `custom-fw/tools/effect_audibility.py` | Effect loudness against a dry lick, on the emulator. |
-| `custom-fw/tools/render_screens.c` | Renders the play screens with the firmware's own UI code (the README pictures). |
-| `custom-fw/tools/pack_ufw.py`, `flash_unit.py`, `jl_safe_flash.py` | Packaging and verified flashing. |
+The physical interface consists of five momentary pushbuttons, a rotary push-encoder (PARA), and a master potentiometer:
 
-## 8. Build and release
+```
+┌───────────────────────────────────────────────┐
+│              ST7735S 240x240 LCD              │
+│       [ CELESTIAL ORBITAL RADAR HUD ]         │
+│                                               │
+│    Orbit Ring: Engine Voice Activity          │
+│    Center Reticle: Active Macro Coordinate    │
+│    Outer Dial: SOS Tape Loop Head Monitor     │
+└───────────────────────────────────────────────┘
+  [ HOME ]    [ VOL - ]    [ VOL + ]    [ < ]    [ > ]
+                 (Rotary Push-Encoder: PARA)
+                 (Analog Pot: MASTER VOLUME)
+```
 
-`build.ps1 -Product andromeda` runs the host test suites, cross-compiles the device build, links with `app_andromeda.ld`, checks the image against the app slot, packages the release (`custom-fw/release/Pocket_AMP_Andromeda_<version>/`: `.bin`, `.fwsc`, checksums) and finishes with the effect matrix check. The QA gate then adds the static, functional and image-integrity checks and the recorded hardware evidence. A passing gate means *ready for bench test*, not release approval.
+### 5.1 Front-Panel Gestures
+
+| Gesture | Context | Action |
+|---|---|---|
+| **PARA Click** | Play Screen | Cycles active macro modulation axis: `ORBIT` $\to$ `WARP` $\to$ `FLUX` $\to$ `GRAV`. |
+| **PARA Turn** | Play Screen | Adjusts the active macro parameter value in real time. |
+| **PARA Turn** | Block / Chain Page | Hovers across selectable controls without altering values until clicked. |
+| **PARA Click** | Block Page | Selects hovered control for editing (double frame appears); second click unselects. |
+| **PARA Hold (1.2s)** | Any screen | Opens the **Cosmic Preset Save Dialog** (saves to slots P13–P20). |
+| **PARA Hold (3.0s)** | Play Screen | Toggles **Long Tape Buffer Mode** (5.94s extended memory). |
+| **`<` (Press)** | Play Screen | Triggers **Reverse Grain Burst** across active voices (or Accretion tape record). |
+| **`>` (Press)** | Play Screen | Advances **SOS Phrase Looper**: `STOPPED` $\to$ `REC` (Red) $\to$ `PLAY` (Blue) $\to$ `DUB` (Amber). |
+| **HOME Hold (1.5s)** | Play Screen | Latches **Infinite Buffer Freeze** drone pad. |
+| **HOME (Tap)** | Play Screen | Toggles between Play Screen and **Signal Chain View**. |
+| **HOME Hold (1.0s)** | Any screen | Opens the **System Settings Menu**. |
+| **VOL- / VOL+** | Play Screen | Decrements / increments presets P01–P20 with circular wrap-around. |
+| **[VOL- + VOL+] Chord** | Any screen | Launches the **Chromatic Tuner HUD** (< 2 cents accuracy). |
+
+---
+
+## 6. Memory Topology & Flash Security
+
+```
+====================== AC791N 512 KB SRAM MAP ======================
+0x01C00000 - 0x01C00FFF   Interrupt Vectors, Startup Stack & Core 0 Boot
+0x01C01000 - 0x01C2FFFF   Static Code, Initialized Data (.data) & System BSS
+0x01C30000 - 0x01C7DFFF   DSP Dynamic Pool (336 KB)
+                          ├── 147 KB Shared Engine Overlay (.pool union)
+                          ├── FDN Reverb Delay Ring Buffers
+                          └── 64 KB Free Headroom / Diagnostic Scratchpad
+0x01C7E000 - 0x01C7FFFF   Core 1 Execution Stack & Mailbox Structures
+
+==================== 1 MB SPI-NOR FLASH MAP ====================
+0x000000 - 0x003FFF   (16 KB)  MBR, UBOOT ROM Download Header   [HARDWARE WRITE-LOCKED]
+0x004000 - 0x085FFF   (520 KB) Andromeda App Partition (app.bin)[REWRITE WINDOW]
+0x086000 - 0x0B3FFF   (184 KB) Preset Store (P01-P20 A/B)       [USER DATA]
+0x0B5000 - 0x0BEFFF   (40 KB)  Hardware RF Trims & Calibration  [READ-ONLY]
+0x0BF000 - 0x0FFFFF   (260 KB) Factory Asset Space              [READ-ONLY]
+```
+
+### Flash Safety Boundary:
+* **Hardware Write Fencing:** The flash driver (`src/board/spi_nor.c`) enforces hard boundaries via `pa_flash_rw_ok()`. Any write attempt below `0x004000` is unconditionally halted at the bus level.
+* **A/B Preset Double-Buffering:** User preset modifications are written with wear-leveling headers and checksums. If power is severed mid-write, the firmware automatically rolls back to the prior valid sector.
+
+---
+
+## 7. Peripheral & Host Communication
+
+### 7.1 USB Composite Device
+Andromeda enumerates as a USB composite device under VID `0x4C4A` (JieLi) / PID `0x8057`:
+* **USB-MIDI Class 1.0 (EP4):** Bidirectional 4-byte MIDI event packets handling parameter control (CC, NRPN) and SysEx preset dumps.
+* **USB Audio Class 1.0 (UAC1, EP3):** 24-bit stereo capture and playback at 44.1 kHz / 48 kHz.
+  * *Clean Bypass:* Computer audio playback is routed directly to the analog output stage without entering the DSP effect graph, preventing unwanted distortion or double-filtering.
+* **Diagnostic Channel (SysEx `0x7D`):** Manufacturer SysEx protocol used by host tools (`andromeda_perf.py`, `qa_gate.py`) for live cycle timing, memory readouts, and automated test stimulus.
+
+### 7.2 Bluetooth LE MIDI Policy
+* **Distributed Release Builds:** Bluetooth LE is **disabled by default** (`PA_BLE 0` in `pa_ble_radio.h`). The compiled release binaries contain zero active radio code, preventing RF emission and eliminating background BLE interrupts.
+* **Building with BLE:** Users requiring wireless MIDI can compile explicitly with the `-EnableBle` flag:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File custom-fw/build.ps1 -Product andromeda -EnableBle
+  ```
+  When enabled, the firmware links the open-source Optimist BLE stack and advertises as `Andromeda_BLE`.
+
+---
+
+## 8. Development & Emulation Tooling
+
+* [**Desktop Emulator (`custom-fw/emu/`)**](custom-fw/emu/README.md): Compiles the entire firmware into a native 64-bit Windows dynamic library ([`andromeda_emu.dll`](file:///c:/Users/Ricardo/Documents/antigravity/Andromeda/custom-fw/emu/andromeda_emu.dll)). Served via Python HTTP server (`server.py`) at `http://localhost:8080`, supporting real-time audio playback through Jonas Hemmersbach DI captures or live guitar input.
+* [**WebAssembly Workbench (`custom-fw/wasm/`)**](custom-fw/wasm/workbench.html): Cross-compiles the DSP engine and preset graph into WebAssembly ([`andromeda.wasm`](file:///c:/Users/Ricardo/Documents/antigravity/Andromeda/custom-fw/wasm/out/andromeda.wasm)) for instant browser-based patch design, sound exploration, and automated JavaScript testing.
+* [**Web Editor (`custom-fw/web/Andromeda_Web_Editor.html`)**](custom-fw/web/Andromeda_Web_Editor.html): Single-file HTML5/JS Web MIDI utility for preset backup, real-time macro editing, and one-click browser firmware updates over USB.

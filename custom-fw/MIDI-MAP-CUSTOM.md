@@ -5,7 +5,7 @@ What the firmware does with MIDI over USB and Bluetooth LE. Both transports shar
 ## 1. Transports
 
 - **USB MIDI**: a class-compliant device (4-byte event packets), shown to the host as "Custom MIDI".
-- **BLE MIDI 1.0**: service `03B80E5A-EDE8-4B33-A751-6CE34EC4C700`, characteristic `7772E5DB-3868-4112-A1A9-F2669D106BF3` (notify and write without response). The Bluetooth stack is described in [NOTICE.md](../NOTICE.md).
+- **BLE MIDI 1.0**: service `03B80E5A-EDE8-4B33-A751-6CE34EC4C700`, characteristic `7772E5DB-3868-4112-A1A9-F2669D106BF3` (notify and write without response). Note: Bluetooth LE is an optional build feature (`-EnableBle`), disabled in default distributed release images. The Bluetooth stack is described in [NOTICE.md](../NOTICE.md).
 
 ## 2. Program change
 

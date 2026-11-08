@@ -33,7 +33,7 @@ Levels were set against a dry synthetic lead so that each effect alone sits with
 
 ## 3. Controls
 
-PARA turns the focused value and clicks to move the focus (four macros, MIX, SPACE); `<` and `>` are the effect's actions; `HOME` moves between a block's page and the signal chain page, and on the chain page it opens the page of the block under the cursor (EFFECT, LAYER, SPACE or SHIMMER, so every block's knobs can be tuned without changing the slot); `VOL-` and `VOL+` step through the slots; `VOL-` with `VOL+` opens the tuner. The full gesture table is in the README. On the chain page PARA picks a block, `<` and `>` change it and a click switches it on or off; the squares at the bottom are the 20 slots, and a PARA hold of 1 s saves the chain to the current slot.
+PARA turns the focused value and clicks to move the focus (four macros, MIX, SPACE); `<` and `>` are the effect's actions; `HOME` moves between a block's page and the signal chain page, and on the chain page it opens the page of the block under the cursor (EFFECT, LAYER, SPACE or SHIMMER, so every block's knobs can be tuned without changing the slot); `VOL-` and `VOL+` step through the slots; `VOL-` with `VOL+` opens the tuner. The full gesture table is in the README. On the chain page PARA picks a block, `<` and `>` change it and a click switches it on or off; the squares at the bottom are the 20 slots, and a PARA hold of 1.2 s saves the chain to the current slot.
 
 ## 4. Visual feedback
 

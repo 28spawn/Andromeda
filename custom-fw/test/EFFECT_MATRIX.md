@@ -3,8 +3,8 @@
 The method behind `custom-fw/tools/stress_effects.py`. It exists so the same test can be re-run after any change to the DSP, and so a failure can be understood rather than guessed at. `build.ps1 -Product andromeda` runs it as step 3, with `--andromeda`.
 
 ```
-python custom-fw/tools/stress_effects.py --dll custom-fw/emu/pocket_amp_emu.dll --andromeda
-python custom-fw/tools/stress_effects.py --dll custom-fw/emu/pocket_amp_emu.dll --types --andromeda    # every type of every block
+python custom-fw/tools/stress_effects.py --dll custom-fw/emu/andromeda_emu.dll --andromeda
+python custom-fw/tools/stress_effects.py --dll custom-fw/emu/andromeda_emu.dll --types --andromeda    # every type of every block
 python custom-fw/tools/stress_effects.py --quick --andromeda                                         # only the single-effect cases
 ```
 
@@ -12,7 +12,7 @@ Exit code 0 means every case passed.
 
 ## What runs
 
-The test drives the **real firmware** through the emulator DLL (`custom-fw/emu/pocket_amp_emu.dll`, built with `emu/build_dll.ps1 -Product andromeda`): the device's audio path, so what is measured is what the device would produce. Each case configures a set of blocks, an order and a knob setting, feeds a signal (a sine, a synthetic pluck, a recording) and measures the output.
+The test drives the **real firmware** through the emulator DLL (`custom-fw/emu/andromeda_emu.dll`, built with `emu/build_dll.ps1 -Product andromeda`): the device's audio path, so what is measured is what the device would produce. Each case configures a set of blocks, an order and a knob setting, feeds a signal (a sine, a synthetic pluck, a recording) and measures the output.
 
 `--andromeda` tells the test about Andromeda's chain: the MOD slot is the GLASS layer (it rings from attacks and adds nothing to a steady sine), and the checks that belong to blocks Andromeda does not use are skipped.
 

@@ -12,7 +12,7 @@ The firmware source for the Pocket AMP's JieLi AC791N (pi32v2, two cores; `PA_CP
 | `src/fx/` | The effect graph and allocator, the effect host and the six engines, reverb, shimmer. |
 | `src/sys/` | Audio core, presets, settings, SysEx, diagnostic and measurement channels, core 1 worker. |
 | `test/` | C and Python regression suites. |
-| `emu/` | The native emulator and browser front panel (`pocket_amp_emu.dll`, `server.py`, `ui.html`). |
+| `emu/` | The native emulator and browser front panel (`andromeda_emu.dll`, `server.py`, `ui.html`). |
 | `wasm/` | WebAssembly build and tests. |
 | `tools/` | Build, packaging, QA, measurement and recovery tools. |
 | `web/` | The web editor. |

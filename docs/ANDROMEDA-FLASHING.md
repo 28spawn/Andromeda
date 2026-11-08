@@ -56,7 +56,7 @@ a time-stamped snapshot of the chip is taken first.
 Run in an **Administrator** terminal, from the repository root:
 
 ```
-python custom-fw\tools\flash_unit.py --image custom-fw\Pocket_AMP_Andromeda_app_area.bin --ref <backup folder>\full_dump.bin --jl-tool <path to jl-uboot-tool> --enter-download-mode
+python custom-fw\tools\flash_unit.py --image custom-fw\Andromeda_app_area.bin --ref <backup folder>\full_dump.bin --jl-tool <path to jl-uboot-tool> --enter-download-mode
 ```
 
 1. `--enter-download-mode` reboots the running unit into the ROM download mode: the screen goes
@@ -69,7 +69,7 @@ python custom-fw\tools\flash_unit.py --image custom-fw\Pocket_AMP_Andromeda_app_
 
 Rehearse first with no device (same plan, simulated flash):
 ```
-python custom-fw\tools\jl_safe_flash.py --mock-flash <copy of full_dump.bin> write custom-fw\Pocket_AMP_Andromeda_app_area.bin --at 0x4000 --ref <copy of full_dump.bin>
+python custom-fw\tools\jl_safe_flash.py --mock-flash <copy of full_dump.bin> write custom-fw\Andromeda_app_area.bin --at 0x4000 --ref <copy of full_dump.bin>
 ```
 
 ## First-boot checks

@@ -39,7 +39,7 @@ Every original file in this repository carrying an `SPDX-License-Identifier: GPL
 - **The firmware application layer:** `custom-fw/src/` (audio core `pa_audio_core.c`, effect graph `fx_graph.c`, effect host `fx_andromeda.c`, the six generative/granular engines `v1_*.c`, FDN reverb `v1_fdn.c`, shimmer `v1_shimmer.c`, cosmic play screen `ui_cosmic.c`, front panel state machine `ui_app.c`, board drivers `st7735s.c`, `audio_alnk.c`, `gpio_scan.c`, `spi_nor.c`).
 - **The linker scripts:** `custom-fw/app_andromeda.ld`, `custom-fw/app.ld`.
 - **The host verification suites:** `custom-fw/test/` (`test_andromeda_fx.c`, `test_andromeda_smp.c`, `test_andromeda_pool.c`, `test_glass.c`, `test_bloom.c`, `test_accretion.c`, `test_choir.c`, `test_fracture.c`, `test_constellation.c`, `test_fdn.c`, `test_shimmer.c`, `test_meas.c`, `test_ui_cosmic.c`, and all regression tests).
-- **The desktop emulator and tools:** `custom-fw/emu/` (native DLL harness `pocket_amp_emu.dll`, web frontend server `server.py`, `ui.html`), `custom-fw/wasm/` (WebAssembly audio core), and `custom-fw/web/` (browser web editor).
+- **The desktop emulator and tools:** `custom-fw/emu/` (native DLL harness `andromeda_emu.dll`, web frontend server `server.py`, `ui.html`), `custom-fw/wasm/` (WebAssembly audio core), and `custom-fw/web/` (browser web editor).
 - **The build and QA pipeline:** `custom-fw/build.ps1`, `custom-fw/tools/qa_gate.py`, `custom-fw/tools/stress_effects.py`, `custom-fw/tools/effect_audibility.py`, `custom-fw/tools/andromeda_perf.py`, `custom-fw/tools/check_sources.py`.
 - **Packaging utilities:** `custom-fw/tools/onyx_pkg_make.py` and `custom-fw/tools/lz4blk.py` (derived from Pendel's `tools/pa_pkg_make.py`, GPL-3.0-only, Copyright (C) 2026 Leo Kuroshita, Hügelton Instruments).
 
@@ -108,7 +108,7 @@ Porting a modern dual-core audio DSP environment to the JieLi AC791N SoC (pi32v2
       }
   }
   ```
-  Every single compile step, host test execution, linking step, and packaging script is wrapped in `Invoke-Checked`. Flashable binary outputs (`Pocket_AMP_Andromeda.bin`, `.ufw`, `.fwsc`) are purged at the very start of the script and are written *only* when the pipeline passes 100% of its verification stages.
+  Every single compile step, host test execution, linking step, and packaging script is wrapped in `Invoke-Checked`. Flashable binary outputs (`Andromeda.bin`, `.ufw`, `.fwsc`) are purged at the very start of the script and are written *only* when the pipeline passes 100% of its verification stages.
 
 ### 2. Eliminating stale compilation artifacts
 - **The problem:** When switching between targets (e.g. Onyx amp-modelling vs Andromeda granular) or changing header macros, stale object files in the build cache led to undefined symbol combinations and phantom memory bugs.

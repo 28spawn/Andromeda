@@ -2,7 +2,7 @@
 
 Andromeda is free software. Its original code is licensed under the **GNU General Public License**,
 version 3 or later (`GPL-3.0-or-later`, or `GPL-3.0-only` for modules derived from GPL-3.0-only upstreams;
-full text in [LICENSE](LICENSES/LICENSE)).
+full text in [LICENSE](LICENSE)).
 
 Andromeda is an independent custom firmware, DSP engine, desktop emulator, and tooling platform authored for the
 **M-VAVE / Donner Pocket AMP** (JieLi AC791N SoC: dual pi32v2 cores, 512 KB SRAM, 1 MB SPI NOR flash, ST7735S 240x240 LCD).
@@ -10,8 +10,8 @@ It provides an ambient, granular, and generative sound architecture (the GLASS, 
 alongside a feedback-delay-network reverb, shimmer, and cosmic radar UI).
 
 To maintain verifiable legal provenance, modular interoperability, and clean separation of concerns, Andromeda builds upon
-foundational work and permissive/open modules from the wider JieLi custom firmware ecosystemâ€”most notably **Pendel** and **pendel-bsp**
-(Leo Kuroshita, HÃ¼gelton Instruments), **Optimist** (Leo Kuroshita, hdavid, and the Optimist contributors), **Melodee** (Kerem Kilic),
+foundational work and permissive/open modules from the wider JieLi custom firmware ecosystem—most notably **Pendel** and **pendel-bsp**
+(Leo Kuroshita, Hügelton Instruments), **Optimist** (Leo Kuroshita, hdavid, and the Optimist contributors), **Melodee** (Kerem Kilic),
 and the public **JieLi AC79 AIoT SDK** (Zhuhai Jieli Technology Co., Ltd., Apache-2.0).
 
 ---
@@ -39,9 +39,9 @@ Every original file in this repository carrying an `SPDX-License-Identifier: GPL
 - **The firmware application layer:** `custom-fw/src/` (audio core `pa_audio_core.c`, effect graph `fx_graph.c`, effect host `fx_andromeda.c`, the six generative/granular engines `v1_*.c`, FDN reverb `v1_fdn.c`, shimmer `v1_shimmer.c`, cosmic play screen `ui_cosmic.c`, front panel state machine `ui_app.c`, board drivers `st7735s.c`, `audio_alnk.c`, `gpio_scan.c`, `spi_nor.c`).
 - **The linker scripts:** `custom-fw/app_andromeda.ld`, `custom-fw/app.ld`.
 - **The host verification suites:** `custom-fw/test/` (`test_andromeda_fx.c`, `test_andromeda_smp.c`, `test_andromeda_pool.c`, `test_glass.c`, `test_bloom.c`, `test_accretion.c`, `test_choir.c`, `test_fracture.c`, `test_constellation.c`, `test_fdn.c`, `test_shimmer.c`, `test_meas.c`, `test_ui_cosmic.c`, and all regression tests).
-- **The desktop emulator and tools:** `custom-fw/emu/` (native DLL harness `pocket_amp_emu.dll`, web frontend server `server.py`, `ui.html`), `custom-fw/wasm/` (WebAssembly audio core), and `custom-fw/web/` (browser web editor).
+- **The desktop emulator and tools:** `custom-fw/emu/` (native DLL harness `andromeda_emu.dll`, web frontend server `server.py`, `ui.html`), `custom-fw/wasm/` (WebAssembly audio core), and `custom-fw/web/` (browser web editor).
 - **The build and QA pipeline:** `custom-fw/build.ps1`, `custom-fw/tools/qa_gate.py`, `custom-fw/tools/stress_effects.py`, `custom-fw/tools/effect_audibility.py`, `custom-fw/tools/andromeda_perf.py`, `custom-fw/tools/check_sources.py`.
-- **Packaging utilities:** `custom-fw/tools/onyx_pkg_make.py` and `custom-fw/tools/lz4blk.py` (derived from Pendel's `tools/pa_pkg_make.py`, GPL-3.0-only, Copyright (C) 2026 Leo Kuroshita, HÃ¼gelton Instruments).
+- **Packaging utilities:** `custom-fw/tools/onyx_pkg_make.py` and `custom-fw/tools/lz4blk.py` (derived from Pendel's `tools/pa_pkg_make.py`, GPL-3.0-only, Copyright (C) 2026 Leo Kuroshita, Hügelton Instruments).
 
 You may study, modify, and distribute it under the terms of the GNU General Public License. If you distribute binaries built from this repository or derivative firmware, you must make the complete corresponding source code available under the same license.
 
@@ -49,9 +49,9 @@ You may study, modify, and distribute it under the terms of the GNU General Publ
 
 ## The update loader and OTA engine (MPL-2.0)
 
-The update loader and device-side OTA session handler are licensed under the **Mozilla Public License 2.0** (`MPL-2.0`, full text in [custom-fw/LICENSES/MPL-2.0.txt](LICENSES/MPL-2.0.txt)):
+The update loader and device-side OTA session handler are licensed under the **Mozilla Public License 2.0** (`MPL-2.0`, full text in [custom-fw/LICENSES/MPL-2.0.txt](custom-fw/LICENSES/MPL-2.0.txt)):
 
-- `custom-fw/third_party/pendel_loader/`: The complete **pendel-bsp** hardware abstraction and update loader layer (<https://github.com/hugelton/pendel-bsp>), Copyright (C) 2026 Leo Kuroshita (@kurogedelic), HÃ¼gelton Instruments, imported unmodified with its original notice and license files.
+- `custom-fw/third_party/pendel_loader/`: The complete **pendel-bsp** hardware abstraction and update loader layer (<https://github.com/hugelton/pendel-bsp>), Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments, imported unmodified with its original notice and license files.
 - `custom-fw/loader/onyx_loader.c`: Andromeda's staging loader, derived from `boards/pocketamp/pa_loader.c` (MPL-2.0).
 - `custom-fw/src/sys/pa_ota_session.c`: The firmware's in-app SysEx OTA receiver, derived from `chip/ota.c` (MPL-2.0).
 
@@ -63,7 +63,7 @@ The update loader and device-side OTA session handler are licensed under the **M
 
 The low-level Bluetooth Low Energy MIDI stack for the AC791N / WL82 integrated radio in `custom-fw/third_party/optimist_ble/` is imported from **Optimist** (<https://github.com/w0ts/optimist>, commit `fcdc4881e8788365c62ea8be7fa11b4d82966bac`, pinned in `UPSTREAM-COMMIT.txt`):
 
-- **Authorship:** Authored for Optimist by **hdavid**; Optimist is Copyright (C) 2026 Leo Kuroshita (@kurogedelic), HÃ¼gelton Instruments, and the Optimist contributors.
+- **Authorship:** Authored for Optimist by **hdavid**; Optimist is Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments, and the Optimist contributors.
 - **Licensing choice:** Offered under either `GPL-3.0-only OR MPL-2.0`, at the recipient's choice. Andromeda consumes the files under the **MPL-2.0** option.
 - **Scope of import:** Link layer, baseband hardware driver, security manager, and framing (`src/ble_hw_wl82.c`, `src/ble_ll.c`, `src/ble_smp.c`, `hal/fm1_ble.h`, `hal/fm1_ble_rf.h`, and tests in `tests/`).
 - **Marked modifications (`PA-MOD`):** To ensure total auditability against upstream, all modifications in `custom-fw/third_party/optimist_ble/` are explicitly tagged with `/* PA-MOD: ... */`:
@@ -78,7 +78,7 @@ The low-level Bluetooth Low Energy MIDI stack for the AC791N / WL82 integrated r
 
 ## Hardware configuration tables & SDK data (Apache-2.0)
 
-- **Radio configuration parameters:** `custom-fw/third_party/optimist_ble/hal/ble_rf_tables_v15.h` contains hardware radio register initialization sequences and lookup tables. As documented by Optimist, these values originate from JieLi (Zhuhai Jieli Technology Co., Ltd.) and M-VAVE under the **Apache-2.0** license (`SPDX-License-Identifier: Apache-2.0`, text in [custom-fw/LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt)). They represent factual hardware configuration parameters, not executable code.
+- **Radio configuration parameters:** `custom-fw/third_party/optimist_ble/hal/ble_rf_tables_v15.h` contains hardware radio register initialization sequences and lookup tables. As documented by Optimist, these values originate from JieLi (Zhuhai Jieli Technology Co., Ltd.) and M-VAVE under the **Apache-2.0** license (`SPDX-License-Identifier: Apache-2.0`, text in [custom-fw/LICENSES/Apache-2.0.txt](custom-fw/LICENSES/Apache-2.0.txt)). They represent factual hardware configuration parameters, not executable code.
 - **Boot and EQ configuration binaries:** `uboot.boot`, `cfg_tool.bin`, and `cfg/eq_cfg_hw.bin` are fetched on demand from the official public JieLi AC79 repository (`https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK`, commit `5fa84a9b2f723a5e9337ad79dc2ad741fc98fe2d`, Apache-2.0) by `custom-fw/tools/get_sdk_files.py`. They are SHA-256 validated and packaged into the flash container as separate data partitions. **They are not stored in git and no proprietary SDK C sources are linked into the firmware.**
 
 ---
@@ -87,7 +87,7 @@ The low-level Bluetooth Low Energy MIDI stack for the AC791N / WL82 integrated r
 
 The native desktop emulator (`custom-fw/emu/`) and WebAssembly test harness include clean direct-input (DI) electric guitar waveforms used for interactive front-panel auditioning, automated effect audibility measurements, dynamic range validation, and DSP regression testing:
 
-- **Dry Guitar Captures (`jh_*.wav`):** Original, self-captured dry electric guitar direct input (DI) recordings (chords 1â€“5, lead licks 1â€“5, rhythm riffs 1â€“5) in `custom-fw/emu/samples/`, courtesy of **Jonas Hemmersbach**. Provided and used with permission.
+- **Dry Guitar Captures (`jh_*.wav`):** Original, self-captured dry electric guitar direct input (DI) recordings (chords 1–5, lead licks 1–5, rhythm riffs 1–5) in `custom-fw/emu/samples/`, courtesy of **Jonas Hemmersbach**. Provided and used with permission.
 - **Synthesised DI Phrases (`di_*.wav`):** Procedural plucked-string simulation model phrases generated on the host by `custom-fw/tools/gen_test_audio.py`.
 
 ---
@@ -108,7 +108,7 @@ Porting a modern dual-core audio DSP environment to the JieLi AC791N SoC (pi32v2
       }
   }
   ```
-  Every single compile step, host test execution, linking step, and packaging script is wrapped in `Invoke-Checked`. Flashable binary outputs (`Pocket_AMP_Andromeda.bin`, `.ufw`, `.fwsc`) are purged at the very start of the script and are written *only* when the pipeline passes 100% of its verification stages.
+  Every single compile step, host test execution, linking step, and packaging script is wrapped in `Invoke-Checked`. Flashable binary outputs (`Andromeda.bin`, `.ufw`, `.fwsc`) are purged at the very start of the script and are written *only* when the pipeline passes 100% of its verification stages.
 
 ### 2. Eliminating stale compilation artifacts
 - **The problem:** When switching between targets (e.g. Onyx amp-modelling vs Andromeda granular) or changing header macros, stale object files in the build cache led to undefined symbol combinations and phantom memory bugs.
@@ -157,13 +157,13 @@ Porting a modern dual-core audio DSP environment to the JieLi AC791N SoC (pi32v2
 
 | Component / Material | Original author / upstream | License | Path in repository | Notes / Provenance |
 |---|---|---|---|---|
-| **Optimist BLE Stack** | hdavid, Leo Kuroshita (@kurogedelic), HÃ¼gelton Instruments, Optimist contributors (<https://github.com/w0ts/optimist>) | GPL-3.0-only OR MPL-2.0 | `custom-fw/third_party/optimist_ble/` | Pinned at commit `fcdc4881e8788365c62ea8be7fa11b4d82966bac`. Consumed under MPL-2.0. Contains marked `PA-MOD` modifications for static MAC address derivation, Windows late instant tolerance, and soft channel remapping. |
+| **Optimist BLE Stack** | hdavid, Leo Kuroshita (@kurogedelic), Hügelton Instruments, Optimist contributors (<https://github.com/w0ts/optimist>) | GPL-3.0-only OR MPL-2.0 | `custom-fw/third_party/optimist_ble/` | Pinned at commit `fcdc4881e8788365c62ea8be7fa11b4d82966bac`. Consumed under MPL-2.0. Contains marked `PA-MOD` modifications for static MAC address derivation, Windows late instant tolerance, and soft channel remapping. |
 | **Radio initialization tables** | Zhuhai Jieli Technology Co., Ltd. & M-VAVE | Apache-2.0 | `custom-fw/third_party/optimist_ble/hal/ble_rf_tables_v15.h` | Factual RF hardware register constants and lookup tables captured from stock V15 environment; no proprietary code. |
-| **pendel-bsp (Loader & HAL)** | Leo Kuroshita (@kurogedelic), HÃ¼gelton Instruments (<https://github.com/hugelton/pendel-bsp>) | MPL-2.0 | `custom-fw/third_party/pendel_loader/` | Hardware abstraction, crt0, and update loader. Carries no secondary license restrictions; compatible with GPL-3.0 under MPL-2.0 Section 3.3. |
+| **pendel-bsp (Loader & HAL)** | Leo Kuroshita (@kurogedelic), Hügelton Instruments (<https://github.com/hugelton/pendel-bsp>) | MPL-2.0 | `custom-fw/third_party/pendel_loader/` | Hardware abstraction, crt0, and update loader. Carries no secondary license restrictions; compatible with GPL-3.0 under MPL-2.0 Section 3.3. |
 | **Onyx update loader** | Leo Kuroshita, adapted for Pocket AMP | MPL-2.0 | `custom-fw/loader/onyx_loader.c` | Derived from `boards/pocketamp/pa_loader.c` in pendel-bsp. |
 | **In-app OTA session** | Leo Kuroshita, adapted for Andromeda | MPL-2.0 | `custom-fw/src/sys/pa_ota_session.c` | Derived from `chip/ota.c` in pendel-bsp. |
 | **USB MIDI host & SMP code** | Adrien Tibi (Recursive Field Instruments), Kerem Kilic (Ellic Studio) (<https://github.com/keremimo/melodee>) | MPL-2.0 | `custom-fw/third_party/pendel_loader/chip/usb_host.c`, `fm1_cpu1.*` | Relicensed from Melodee to MPL-2.0 by permission of authors in Felucca-BSP PR #3, Issue #5, and Melodee PR #75. |
-| **Package builder & LZ4 tools** | Leo Kuroshita, HÃ¼gelton Instruments (<https://github.com/hugelton/Pendel>) | GPL-3.0-only | `custom-fw/tools/onyx_pkg_make.py`, `custom-fw/tools/lz4blk.py` | Adapted from Pendel's `tools/pa_pkg_make.py` for vendor-free release containers. |
+| **Package builder & LZ4 tools** | Leo Kuroshita, Hügelton Instruments (<https://github.com/hugelton/Pendel>) | GPL-3.0-only | `custom-fw/tools/onyx_pkg_make.py`, `custom-fw/tools/lz4blk.py` | Adapted from Pendel's `tools/pa_pkg_make.py` for vendor-free release containers. |
 | **JieLi AC79 AIoT SDK binaries** | Zhuhai Jieli Technology Co., Ltd. (<https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK>) | Apache-2.0 | `custom-fw/third_party/jieli_sdk_files/` (`uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin`) | Fetched on demand by `custom-fw/tools/get_sdk_files.py` from commit `5fa84a9b2f723a5e9337ad79dc2ad741fc98fe2d`. SHA-256 verified; not stored in git. |
 | **Dry Guitar Captures** | Jonas Hemmersbach | Courtesy of Jonas Hemmersbach (Used with permission) | `custom-fw/emu/samples/` (`jh_*.wav`) | Clean direct input (DI) electric guitar recordings (chords 1-5, licks 1-5, riffs 1-5) used in emulator and workbench for auditioning, level checks, and regression tests. |
 | **BLE-MIDI client reference** | flutter_midi_command authors (pub.dev) | MIT / BSD-3-Clause | Reference only | Used as clean-room specification reference for standard MIDI service UUIDs and packet framing. |

@@ -20,7 +20,7 @@ Use **Chrome or Edge** (which support Web MIDI), a standard USB-C data cable, an
 | Tool | What it does |
 |---|---|
 | [**Web Editor**](custom-fw/web/Andromeda_Web_Editor.html) | Connect over Web MIDI USB to manage presets P01–P20, adjust macro parameters, audition engines, and install firmware packages (`.bin` / `.fwsc`) with automatic sector safety verification. |
-| [**Desktop Emulator**](custom-fw/emu/README.md) | The entire firmware DSP and UI running as a native Windows DLL (`pocket_amp_emu.dll`), served with an interactive HTML5 front panel at `http://localhost:8080`. Streams real-time 44.1 kHz audio with live guitar input or 15 clean DI captures by **Jonas Hemmersbach**. |
+| [**Desktop Emulator**](custom-fw/emu/README.md) | The entire firmware DSP and UI running as a native Windows DLL (`andromeda_emu.dll`), served with an interactive HTML5 front panel at `http://localhost:8080`. Streams real-time 44.1 kHz audio with live guitar input or 15 clean DI captures by **Jonas Hemmersbach**. |
 | [**WASM Workbench**](custom-fw/wasm/workbench.html) | Browser-based WebAssembly compilation of the Andromeda DSP graph and effect host for instant cross-platform verification and browser tests. |
 | [**Flashing & Recovery Tools**](docs/ANDROMEDA-FLASHING.md) | Command-line verified flashing (`flash_unit.py`), partition readouts (`jl_safe_flash.py`), and ROM download-mode recovery (`pa_transporter.py`). |
 
