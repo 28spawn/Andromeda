@@ -6,11 +6,9 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $RepoRoot
 
-$clangExe = Get-Command clang.exe -ErrorAction SilentlyContinue
-if (-not $clangExe) {
-    $clangDir = (Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\MartinStorsjo.LLVM-MinGW.UCRT*" -Recurse -Filter "clang.exe" | Select-Object -First 1).DirectoryName
-    $env:PATH = "$clangDir;$env:PATH"
-}
+# Prefer the MinGW build of LLVM (it ships the C headers and libraries); build_dll.ps1 explains what to install when it is missing.
+$mingw = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\MartinStorsjo.LLVM-MinGW.UCRT*" -Recurse -Filter "clang.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($mingw) { $env:PATH = "$($mingw.DirectoryName);$env:PATH" }
 
 Write-Host "[1/2] Compiling Andromeda Firmware into Native Emulator DLL (andromeda_emu.dll)..." -ForegroundColor Cyan
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build_dll.ps1") -Product andromeda

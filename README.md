@@ -154,7 +154,7 @@ The analog **MASTER** knob controls output volume via an analog-taper linear sle
 
 ## Build it on your computer
 
-Requirements: Windows 10/11 with PowerShell, Python 3.10+, LLVM/Clang (LLVM-MinGW or WinGet MartinStorsjo.LLVM-MinGW), the JieLi pi32v2 toolchain (`$env:PI32_ROOT` or `C:\JL\pi32`), and Node.js for WASM suites. The emulator also requires NumPy and python-sounddevice.
+Requirements: Windows 10/11 with PowerShell, Python 3.10+, LLVM/Clang **with a C library**: install `winget install MartinStorsjo.LLVM-MinGW.UCRT` and open a new terminal (the plain `LLVM.LLVM` package has no `stdlib.h` / `string.h` / `math.h` and the emulator build fails on it), the JieLi pi32v2 toolchain (`$env:PI32_ROOT` or `C:\JL\pi32`), and Node.js for WASM suites. The emulator also requires NumPy and python-sounddevice.
 
 ```powershell
 # Clone the repository

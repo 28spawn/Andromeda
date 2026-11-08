@@ -14,10 +14,14 @@ Set-Location $RepoRoot
 $BoardDef = if ($Board -eq "blackbox") { "-DBOARD_BLACKBOX=1" } else { "-DBOARD_POCKET_AMP=1" }
 $ProductDef = if ($Product -eq "andromeda") { "-DPA_PRODUCT_ANDROMEDA=1" } else { "-DPA_PRODUCT_ANDROMEDA=0" }
 
-$clangExe = Get-Command clang.exe -ErrorAction SilentlyContinue
-if (-not $clangExe) {
-    $clangDir = (Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\MartinStorsjo.LLVM-MinGW.UCRT*" -Recurse -Filter "clang.exe" | Select-Object -First 1).DirectoryName
-    $env:PATH = "$clangDir;$env:PATH"
+# The emulator needs a clang that ships the C headers and libraries (stdlib.h, string.h, math.h): LLVM-MinGW. The plain "LLVM" package on Windows has clang but no C library,
+# and fails with "'string.h' file not found", so the MinGW one is preferred whenever it is installed.
+$mingw = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\MartinStorsjo.LLVM-MinGW.UCRT*" -Recurse -Filter "clang.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($mingw) { $env:PATH = "$($mingw.DirectoryName);$env:PATH" }
+elseif (-not (Get-Command clang.exe -ErrorAction SilentlyContinue)) {
+    throw "clang was not found. Install the MinGW build of LLVM:  winget install MartinStorsjo.LLVM-MinGW.UCRT   then open a NEW terminal and start the emulator again."
+} else {
+    Write-Warning "Using the clang on your PATH. If the build stops with 'string.h file not found', that clang has no C library: run  winget install MartinStorsjo.LLVM-MinGW.UCRT  and start again."
 }
 
 Write-Host "Compiling Andromeda Firmware into Native Emulator DLL (andromeda_emu.dll)..." -ForegroundColor Cyan
