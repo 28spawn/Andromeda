@@ -50,7 +50,7 @@ __asm__(
 );
 
 /* ---- configuration of the stack for this device (ble_cfg.h lists every knob) ---- */
-#define BLE_DEVICE_NAME "Pocket AMP_BLE"    /* advertised BLE device name */
+#define BLE_DEVICE_NAME "Andromeda_BLE"    /* advertised BLE device name */
 #define BLE_NAME_HEX 0                       /* the name as it is, no " XXXX" suffix */
 static uint16_t pa_ble_adv_units = 400u;     /* the advertising interval in 0.625 ms units: 400 = 250 ms (stock and the stack's default are 100 ms; slower means fewer scan-request interrupts competing with the audio) */
 #define BLE_ADV_INTERVAL pa_ble_adv_units
@@ -415,6 +415,7 @@ static void sup_raise(uint16_t reg, uint8_t mask, uint8_t target)
         v = (uint8_t)(plat_p33_read(reg) & mask);
     }
 }
+#if PA_BLE_SUPPLY
 static void supply_init(void)
 {
     const uint8_t r0b = plat_p33_read(0u);
@@ -446,6 +447,7 @@ static void supply_init(void)
         s_st[PA_BLE_ST_SUP_REGS] = ((uint32_t)r5 << 24) | ((uint32_t)r7 << 16) | ((uint32_t)r8 << 8) | r2;
     }
 }
+#endif
 
 /* power-on, interrupts off, before core 1 starts (main.c). Each state is written BEFORE the step it names, so a unit that stops
  * answering says where (STARTING with the breadcrumb: read the status block after a reset into the download mode). */
@@ -517,7 +519,7 @@ void pa_ble_radio_boot(uint32_t buttons)
         rnd = ble_hw_addr(a);                    /* a random static address from the hardware random source */
         ble_init(a, rnd);
         {   /* The name goes into the ADVERTISEMENT itself (flags 3 B + name 2+14 B = 19 B), the 128-bit MIDI service UUID into the scan response (18 B):
-             * a passive scanner then lists "Pocket AMP_BLE" from the first packet, without the SCAN_REQ / SCAN_RSP exchange. The stack puts the name only in the scan response. */
+             * a passive scanner then lists "Andromeda_BLE" from the first packet, without the SCAN_REQ / SCAN_RSP exchange. The stack puts the name only in the scan response. */
             uint8_t ad[31], sr[2 + 16], k = (uint8_t)(bgap.n > 26u ? 26u : bgap.n);   /* (a legacy PDU holds 31 B) */
             ad[0] = 2u; ad[1] = 0x01u; ad[2] = 0x06u;
             ad[3] = (uint8_t)(k + 1u); ad[4] = 0x09u;

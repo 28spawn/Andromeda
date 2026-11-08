@@ -31,14 +31,18 @@ A 240 x 240 display, five keys (`HOME`, `VOL-`, `VOL+`, `<`, `>`), the PARA push
 ## Building and verifying
 
 ```powershell
+# Standard build (Bluetooth LE disabled by default):
 powershell -ExecutionPolicy Bypass -File build.ps1 -Product andromeda
+
+# Optional: Build with Bluetooth LE enabled:
+powershell -ExecutionPolicy Bypass -File build.ps1 -Product andromeda -EnableBle
 ```
 
 The script:
 
 1. Compiles and runs the host test suites.
-2. Cross-compiles the device build with the JieLi clang and links it with `app_andromeda.ld`.
-3. Checks the image against the app slot, runs the effect matrix on the emulator DLL, and packages the release to `release/Pocket_AMP_Andromeda_<version>/`.
+2. Cross-compiles the device build with the JieLi clang and links it with `app_andromeda.ld` (with `-DPA_BLE=0` by default, or `-DPA_BLE=1` with `-EnableBle`).
+3. Checks the image against the app slot, runs the effect matrix on the emulator DLL, and packages the release to `release/Andromeda_<version>/`.
 
 Then `python tools/qa_gate.py` runs the full gate ([../TEST-PROTOCOL.md](../TEST-PROTOCOL.md)).
 

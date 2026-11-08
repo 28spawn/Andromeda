@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/andromeda/andromeda_pedal_studio_render.jpg" alt="Andromeda custom firmware for M-VAVE Pocket AMP" width="600">
+  <img src="docs/images/andromeda/menus_overview.png" alt="Andromeda custom firmware for M-VAVE Pocket AMP - Menus Overview" width="800">
 </p>
 
 <h1 align="center">Andromeda</h1>
@@ -48,9 +48,18 @@ The repository compiles for two hardware targets via `custom-fw/build.ps1 -Board
    ```powershell
    powershell -ExecutionPolicy Bypass -File custom-fw/build.ps1 -Product andromeda
    ```
-   The verified release image is placed in `custom-fw/release/Pocket_AMP_Andromeda_<version>/`.
+   The verified release image is placed in `custom-fw/release/Andromeda_<version>/`.
+
+   > [!IMPORTANT]
+   > **Bluetooth Distribution Policy:** Distributed release builds do **not** include Bluetooth LE enabled by default.
+   > If you require wireless Bluetooth LE MIDI, you must build the firmware from source with the `-EnableBle` switch:
+   > ```powershell
+   > powershell -ExecutionPolicy Bypass -File custom-fw/build.ps1 -Product andromeda -EnableBle
+   > ```
+   > When compiled with `-EnableBle`, the firmware links the open-source Optimist BLE stack and advertises as `Andromeda_BLE` (using the device's factory RF calibration trims from SPI flash).
+
 3. **Install.** 
-   - **Via Web Editor:** Open `custom-fw/web/Andromeda_Web_Editor.html` in Chrome or Edge, click **Connect MIDI**, navigate to the **Firmware** tab, select `Pocket_AMP_Andromeda_<version>.bin` (or `.fwsc`), and click **Flash**.
+   - **Via Web Editor:** Open `custom-fw/web/Andromeda_Web_Editor.html` in Chrome or Edge, click **Connect MIDI**, navigate to the **Firmware** tab, select `Andromeda_<version>.bin` (or `.fwsc`), and click **Flash**.
    - **Via Command Line:**
      ```powershell
      python custom-fw/tools/flash_unit.py custom-fw/build_app.bin
@@ -86,7 +95,7 @@ The repository compiles for two hardware targets via `custom-fw/build.ps1 -Board
   - **LAYER:** Secondary tuned GLASS resonator running in parallel under any primary engine.
   - **Input & Dynamics:** Mono input conditioning, input limiter, 3-band parametric EQ, and soft-clip master ceiling.
 - **Measured-cost dual-core allocator:** Core 0 runs the audio interrupt and UI; heavy effect chains automatically split early slots to Core 1 at a cost of 1 block (1.45 ms) latency. If Core 1 ever misses a deadline or faults, execution seamlessly reverts to Core 0 with zero audio dropouts.
-- **Specifications:** 44,118 Hz codec rate, 64-sample blocks (1.45 ms), 24-bit audio I/O, 512 KB SRAM, 20 preset slots, chromatic tuner (< 2 cents accuracy), USB audio, USB MIDI, and BLE MIDI.
+- **Specifications:** 44,118 Hz codec rate, 64-sample blocks (1.45 ms), 24-bit audio I/O, 512 KB SRAM, 20 preset slots, chromatic tuner (< 2 cents accuracy), USB audio, USB MIDI, and optional BLE MIDI (build with `-EnableBle`).
 
 <p align="center">
   <img src="docs/images/andromeda/01_glass_crystal.png" width="19%" alt="GLASS Crystal" />

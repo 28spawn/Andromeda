@@ -34,16 +34,16 @@ the 531 KB slot. Nothing else is touched:
 No administrator rights, no download mode, no dongle. The running firmware checks the package,
 stages the update loader, and the loader writes the app area only.
 
-1. Build the package (or use the one already built):
-   ```
+1. Build the package (or use the one already built; add `-EnableBle` if Bluetooth LE is required):
+   ```powershell
    powershell -ExecutionPolicy Bypass -File custom-fw\build.ps1 -Product andromeda
    ```
-   It writes `custom-fw/release/Pocket_AMP_Andromeda_0.10/Pocket_AMP_Andromeda_0.10.fwsc`.
-2. Open the web editor, `custom-fw/web/Onyx_Web_Editor.html`, in **Chrome or Edge** and allow MIDI with SysEx.
+   It writes `custom-fw/release/Andromeda_0.10/Andromeda_0.10.fwsc`.
+2. Open the web editor, `custom-fw/web/Andromeda_Web_Editor.html`, in **Chrome or Edge** and allow MIDI with SysEx.
    Close any other program that uses the unit's MIDI port.
-3. Firmware tab > *Install a firmware* > pick **`Pocket_AMP_Andromeda_0.10.fwsc`** from the
+3. Firmware tab > *Install a firmware* > pick **`Andromeda_0.10.fwsc`** from the
    release folder. Use the release-folder `.fwsc`: it carries the update loader, which writes the app
-   area only. The `Pocket_AMP_Andromeda.fwsc` next to `build.ps1` is a development container; its install can also erase stored user data.
+   area only. The `Andromeda.fwsc` next to `build.ps1` is a development container; its install can also erase stored user data.
 4. *Install this firmware*. Do not unplug. If it is cut off, the unit stays in update mode and
    the same button continues.
 5. The unit restarts into Andromeda.

@@ -20,7 +20,10 @@
 param(
     [string]$Board = "pocket_amp",
     # onyx = the amp-modelling firmware; andromeda = the granular / ambient firmware (pa_config.h PA_PRODUCT_ANDROMEDA)
-    [ValidateSet("andromeda", "onyx")][string]$Product = "andromeda"
+    [ValidateSet("andromeda", "onyx")][string]$Product = "andromeda",
+    # Distributed builds must NOT have Bluetooth LE enabled.
+    # Specify -EnableBle if you explicitly want to build with Bluetooth LE radio active.
+    [switch]$EnableBle
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,6 +36,7 @@ $BoardDef = if ($Board -eq "blackbox") { "-DBOARD_BLACKBOX=1" } else { "-DBOARD_
 $IsAndromeda = ($Product -eq "andromeda")
 $ProductDef  = if ($IsAndromeda) { "-DPA_PRODUCT_ANDROMEDA=1" } else { "-DPA_PRODUCT_ANDROMEDA=0" }
 $ImgTag      = if ($IsAndromeda) { "Andromeda" } else { "Custom" }
+$BleDef      = if ($EnableBle) { @("-DPA_BLE=1", "-DPA_BLE_SUPPLY=1", "-DPA_BLE_AUTOSTART=1") } else { @("-DPA_BLE=0", "-DPA_BLE_SUPPLY=0", "-DPA_BLE_AUTOSTART=0") }
 
 # ---- the one place a native command's failure is noticed --------------------
 function Invoke-Checked {
@@ -299,7 +303,7 @@ $pi32Inc = "$pi32Root\pi32v2-include"
 $pi32Lib = "$pi32Root\pi32v2-lib\r3"
 
     Invoke-Checked "the startup code compile" {
-        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 $BoardDef $ProductDef -c custom-fw/src/board/entry.S -o (Join-Path $BuildDir "entry.o")
+        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 $BoardDef $ProductDef $BleDef -c custom-fw/src/board/entry.S -o (Join-Path $BuildDir "entry.o")
     }
 
 # The object names come from the source PATH, not its base name: two files with the same
@@ -312,7 +316,7 @@ foreach ($s in $srcs) {
     $tag = ($rel -replace "[\\/:]", "_")
     $obj = Join-Path $BuildDir "$tag.o"
     Invoke-Checked "the compile of $($s.Name)" {
-        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 -O2 -Wall -Wno-tautological-constant-out-of-range-compare -ffreestanding -fno-builtin -isystem $pi32Inc -Icustom-fw/include $BoardDef $ProductDef -Icustom-fw/src/board/ble_platform -Icustom-fw/third_party/optimist_ble/src -Icustom-fw/third_party/optimist_ble/hal -c $s.FullName -o $obj
+        & "$pi32Bin\clang.exe" -target pi32v2 -mcpu=r3 -O2 -Wall -Wno-tautological-constant-out-of-range-compare -ffreestanding -fno-builtin -isystem $pi32Inc -Icustom-fw/include $BoardDef $ProductDef $BleDef -Icustom-fw/src/board/ble_platform -Icustom-fw/third_party/optimist_ble/src -Icustom-fw/third_party/optimist_ble/hal -c $s.FullName -o $obj
     }
     $objs += $obj
 }

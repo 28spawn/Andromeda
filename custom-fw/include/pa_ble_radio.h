@@ -18,15 +18,15 @@
 
 /* 1 in this test tree: the stack is linked (but still only started by the power-on gesture). Set 0 for a build without it. */
 #ifndef PA_BLE
-#define PA_BLE 1
+#define PA_BLE 0
 #endif
 /* 1 in this test tree: the radio starts at every power-on, with NO button held. (The gesture VOL+ and VOL- was also the Tuner chord and the CPU1 probe: those boots opened the
  * Tuner screen, which muddied the test of the radio. Set 0 to go back to the gesture.) */
 #ifndef PA_BLE_SUPPLY
-#define PA_BLE_SUPPLY 1   /* 1 = run the stock supply start-up (LDO to DC-DC hand-over etc.) before the radio and core 1 */
+#define PA_BLE_SUPPLY PA_BLE   /* 1 = run the stock supply start-up (LDO to DC-DC hand-over etc.) before the radio and core 1 */
 #endif
 #ifndef PA_BLE_AUTOSTART
-#define PA_BLE_AUTOSTART 1
+#define PA_BLE_AUTOSTART PA_BLE
 #endif
 
 /* the pointer block, fixed: [0] "BLEP", [1] address of the status block, [2] address of the stack's own counters (ble_dg, magic "BLEL"), [3] the
