@@ -56,6 +56,12 @@ The repository compiles for two hardware targets via `custom-fw/build.ps1 -Board
    > ```powershell
    > powershell -ExecutionPolicy Bypass -File custom-fw/build.ps1 -Product andromeda -EnableBle
    > ```
+   > **The one-step way:** double-click [`Build-Andromeda-BLE.bat`](Build-Andromeda-BLE.bat) in the repository folder. It checks your PC, offers to install what is missing (Git, Python, LLVM-MinGW, and JieLi's toolchain from JieLi's own installer), pulls the latest sources, builds, and leaves the firmware in `ble-build/Andromeda_<version>_BLE/`. Nothing is flashed. Without a copy of the repository, run this in PowerShell and it clones one into the current folder:
+   > ```powershell
+   > irm https://raw.githubusercontent.com/28spawn/Andromeda/main/Build-Andromeda-BLE.ps1 | iex
+   > ```
+   > A Bluetooth build is for your own pedal: please do not share the built files.
+   >
    > When compiled with `-EnableBle`, the firmware links the open-source Optimist BLE stack and advertises as `Andromeda_BLE` (using the device's factory RF calibration trims from SPI flash).
 
 3. **Install.** 

@@ -408,14 +408,21 @@ Invoke-Checked "the effect matrix" {
 # ---- the flashable images ---------------------------------------------------
 # Written LAST, and only now: everything above has passed.
 Write-Host "`n=== [4/5] Packaging .ufw and .fwsc Firmware Containers ===" -ForegroundColor Cyan
-Invoke-Checked "the packer" {
-    python custom-fw/tools/pack_ufw.py --in-bin $appBinBuilt --out-ufw $OutUfw --out-fwsc $OutFwsc --out-area $OutArea --template-fwsc $TemplateFwsc
-}
-Copy-Item -Force $OutFwsc (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$ImgTag.fwsc")
-Copy-Item -Force $OutUfw (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$ImgTag.ufw")
-Copy-Item -Force $OutArea (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$($ImgTag)_app_area.bin")
-Invoke-Checked "the package verification" {
-    python custom-fw/tools/pack_ufw.py --verify $OutFwsc
+# The stock container is not in the repository (it is the vendor's file). Andromeda's own package ([4b]) does not need it, so a clone without it
+# still builds Andromeda: only the template-based container and the app-area image are left out. Onyx has no other package, so there it stays required.
+$HaveTemplate = Test-Path $TemplateFwsc
+if ($HaveTemplate -or -not $IsAndromeda) {
+    Invoke-Checked "the packer" {
+        python custom-fw/tools/pack_ufw.py --in-bin $appBinBuilt --out-ufw $OutUfw --out-fwsc $OutFwsc --out-area $OutArea --template-fwsc $TemplateFwsc
+    }
+    Copy-Item -Force $OutFwsc (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$ImgTag.fwsc")
+    Copy-Item -Force $OutUfw (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$ImgTag.ufw")
+    Copy-Item -Force $OutArea (Join-Path $RepoRoot "custom-fw\Pocket_AMP_$($ImgTag)_app_area.bin")
+    Invoke-Checked "the package verification" {
+        python custom-fw/tools/pack_ufw.py --verify $OutFwsc
+    }
+} else {
+    Write-Host "    no stock container ($TemplateFwsc): the template-based .ufw / .fwsc / app-area files are skipped; the release package below is built without it." -ForegroundColor Yellow
 }
 Copy-Item -Force $appBinBuilt $AppBin
 
@@ -448,6 +455,10 @@ Write-Host ("    release   : {0}" -f $relDir)
 
 Write-Host "`n=== [5/5] Done ===" -ForegroundColor Green
 Write-Host ("    app image : {0} ({1} bytes)" -f $AppBin, $appSize)
-Write-Host ("    container : {0}" -f $OutFwsc)
-Write-Host ("    app area  : {0}   <- the file for the web editor (Firmware tab) and jl_safe_flash.py" -f $OutArea)
+if ($HaveTemplate -or -not $IsAndromeda) {
+    Write-Host ("    container : {0}" -f $OutFwsc)
+    Write-Host ("    app area  : {0}   <- the file for the web editor (Firmware tab) and jl_safe_flash.py" -f $OutArea)
+} else {
+    Write-Host ("    package   : {0}   <- the file for the web editor (Firmware tab)" -f $relPkg)
+}
 Write-Host ("    build dir : {0}" -f $BuildDir)

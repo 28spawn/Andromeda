@@ -26,6 +26,9 @@ archive/
 *.fwsc
 *.fmu
 
+# the output of Build-Andromeda-BLE.ps1 (a Bluetooth build is never committed or published)
+ble-build/
+
 # toolchains and SDKs
 ac79-sdk/
 jieli-toolchain/
