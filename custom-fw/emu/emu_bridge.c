@@ -215,6 +215,7 @@ static uint32_t emu_cycle_clock(void) {
  * report the same DSP load. */
 
 static void emu_sysex_init(void);
+static void emu_sysex_reply_sink(const uint8_t *data, uint32_t len);
 static void emu_ble_init(void);
 
 EMU_EXPORT void emu_init(void) {
@@ -257,6 +258,9 @@ EMU_EXPORT void emu_init(void) {
     /* The private diagnostic channel reads the emulated SPI NOR, so the flash
      * dump (custom-fw/tools/dump_flash.py) can be exercised without a device. */
     pa_diag_set_flash_reader(pa_spi_nor_read);
+    /* ...and its replies join the SysEx replies (on the unit both go back over the same USB MIDI port), so the web
+     * editor's preset backup (test/test_editor_presets.py) can read the preset store through the emulator. */
+    pa_diag_set_reply_sink(emu_sysex_reply_sink);
     /* The BLE replies are captured as BLE-MIDI 1.0 packets, the way the
      * device would notify them on the MIDI characteristic. */
     emu_ble_init();
@@ -1287,6 +1291,7 @@ EMU_EXPORT int emu_next_sysex_reply(char *out, int cap) {    if (g_emu_reply_cou
 EMU_EXPORT void emu_feed_sysex_bytes(const uint8_t *bytes, uint32_t len) {
     if (!bytes) return;
     for (uint32_t i = 0; i < len; i++) {
+        pa_diag_feed(bytes[i]);          /* as pa_usb_ble_poll() does on the unit: every byte goes to the diagnostic channel and to the SysEx parser */
         pa_sysex_input_byte(bytes[i]);
     }
 }

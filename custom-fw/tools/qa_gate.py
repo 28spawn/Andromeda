@@ -160,6 +160,8 @@ FUNCTIONAL = [
     # the web editor: its state record and name lists (cmd 80 / 81), the live cabinet upload, and the page's own protocol core (Node) against the firmware over USB and BLE-MIDI; the page's model tables equal ui_app.c's
     ("F-28", True,  ["{py}", "custom-fw/test/test_editor_protocol.py", "{dll}"], "dll"),
     ("F-29", True,  ["{py}", "custom-fw/test/test_editor_page.py", "{dll}"], "dll"),
+    # the editor's Presets tab: the preset store read over the diagnostic channel, the JSON file rebuilding every record byte for byte, a restore through the upload stored by the firmware
+    ("F-37", True,  ["{py}", "custom-fw/test/test_editor_presets.py", "{dll}"], "dll"),
     # the battery the stock way: SARADC channel 9, the stock capacity formula (0 below 528, 100 above 635), the charging flag, the warning levels
     ("F-30", True,  ["{py}", "custom-fw/test/test_battery.py", "{dll}"], "dll"),
     # the stored captures (16) and cabinets (15): upload, list, delete, overwrite, rename, the counts that follow, a reboot, the refusals, and nothing outside the user store written

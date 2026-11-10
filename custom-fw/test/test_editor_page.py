@@ -58,6 +58,14 @@ def js(*ops):
 print("=== the script is valid JavaScript ===")
 r = subprocess.run(["node", "--check", os.path.join(tmp, "page.js")], capture_output=True, text=True)
 check(r.returncode == 0, "node --check " + (r.stderr.strip()[:200] if r.returncode else "passes"))
+# Every element the script looks up by id must be on the page (in the markup or in a template the script writes). A missing one stops the script at that line when
+# the page loads, and every handler after it is never attached: v0.10 and v0.11 lost <input id="replaceFile">, and the Firmware tab's install button stayed grey for any file.
+used_ids = set(re.findall(r'\$\("([A-Za-z0-9_-]+)"\)', script)) | set(re.findall(r'getElementById\("([A-Za-z0-9_-]+)"\)', script))
+page_ids = set(re.findall(r'id="([A-Za-z0-9_-]+)"', page))
+missing_ids = sorted(used_ids - page_ids)
+check(not missing_ids, f"every id the script uses ({len(used_ids)}) is on the page" + (": missing " + ", ".join(missing_ids) if missing_ids else ""))
+tab_ids = re.findall(r'\["([a-z]+)", "[^"]+"\]', script[script.index("const TABS"):script.index("];", script.index("const TABS"))])
+check(all(f'id="t-{t}"' in page for t in tab_ids), "every tab (" + ", ".join(tab_ids) + ") has its section")
 
 print("=== framing: byte for byte the same as tools/mvave_device.py ===")
 cases = [(17, []), (80, []), (81, [0, 15]), (25, [64, 0, 0, 2, 0]), (34, list(range(256)) if False else list(range(200))), (48, [])]
