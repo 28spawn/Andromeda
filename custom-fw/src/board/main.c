@@ -67,6 +67,7 @@ static pa_cpu_meter_t  g_cpu_meter;
  * file needs it too (the calibration tools link main.c), and with the guard it
  * was simply missing there, so the host build did not compile at all. */
 extern uint32_t pa_pool_used_bytes(void); /* allocator lives in src/sys/pa_pool.c */
+extern uint32_t pa_alnk_isr_entries(void); /* src/board/audio_alnk.c */
 #include "pa_build_id.h"
 volatile uint32_t g_main_iters;           /* main-loop pass counter (test state, and the overlay when it is on) */
 
@@ -628,7 +629,7 @@ static uint32_t dg_spin(uint32_t mode, uint32_t until_ticks) {
             switch (mode) {
             case 1: x = x * 1664525u + 1013904223u; x ^= x >> 7; acc += x; break;                                  /* ALU only */
             case 2: acc += sram[(pos++) & 4095u]; break;                                                          /* SRAM reads */
-            case 3: sram[(pos++) & 4095u] = acc + pos; break;                                                     /* SRAM writes */
+            case 3: sram[pos & 4095u] = acc + pos; pos++; break;                                                     /* SRAM writes */
             case 4: acc += xip[(pos += 8u) & 0x1FFFFu]; break;                                                    /* flash reads, 32 B apart over 512 KB */
             case 5: acc += *tmr; break;                                                                           /* peripheral reads */
             default: break;
