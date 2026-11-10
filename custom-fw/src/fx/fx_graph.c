@@ -875,18 +875,23 @@ static void chain_tail(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R, int
 /* Core 1's share of the chain: slot_order[lo..to), and, when lo is 0, the input conditioning first. Core 1 runs this for the amp (see
  * pa_smp.h), or core 0 when core 1 is not available. */
 /* Set by core 0 when it has conditioned the block it is about to hand over (the conditioning is 20-30 us a block that the WaveNet engine's core 1 can not spare).
- * Core 1 reads it as its job starts, and core 0 only changes it for the NEXT block, after that job has started. */
+ * Core 1 reads it as its job starts, and core 0 only changes it for the NEXT block, after that job has started.
+ * Bit 0: the block is conditioned. Bit 1: the slots core 0 ran in front left the block in stereo, so the front starts from that state (a mono block
+ * that follows then gets the L+R mix, as in the single-core chain). */
+#define PRE_COND_DONE   1u
+#define PRE_COND_STEREO 2u
 static volatile uint8_t s_pre_cond;
 #if PA_PRODUCT_ANDROMEDA
 static volatile uint8_t s_front_ss;       /* did the front's last slot leave the signal in stereo? (core 1 writes it at the end of its job, core 0 reads it for the block that comes back) */
 #endif
 
 void pa_fx_chain_run_front(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R, int n, int lo, int to, int32_t *dry_L, int32_t *dry_R) {
-    int ss = 0;
+    const uint8_t pre = s_pre_cond;
+    int ss = (pre & PRE_COND_STEREO) ? 1 : 0;
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
     const uint32_t ft0 = plat_ticks24();
 #endif
-    if (lo <= 0 && !s_pre_cond) chain_condition(chain, buf_L, buf_R, n);
+    if (lo <= 0 && !(pre & PRE_COND_DONE)) chain_condition(chain, buf_L, buf_R, n);
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
     const uint32_t ft1 = plat_ticks24();
 #endif
@@ -926,6 +931,20 @@ static int choose_core1_lo(const pa_fx_chain_t *chain, int cut) {
         lo = idx;
     }
     return lo;
+}
+
+/* Core 0 ran slot_order[0..lo) and left the block in stereo. Is the next slot that runs in [lo, cut) a mono one? (The same tests as run_slot_range.) */
+static int front_next_is_mono(const pa_fx_chain_t *chain, int lo, int cut) {
+    for (int idx = lo; idx < cut; idx++) {
+        const uint8_t s = chain->slot_order[idx];
+        if (s >= PA_SLOT_COUNT) continue;
+        const fx_node_t *nd = chain->slots[s];
+        if (!nd || (!nd->active && !nd->tail_draining)) continue;
+        if (s == PA_SLOT_CAB && chain->force_cab_off) continue;
+        if (node_stereo_now(nd, 1)) return 0;
+        if (nd->run) return 1;
+    }
+    return 0;
 }
 #endif
 
@@ -1064,10 +1083,18 @@ void pa_fx_chain_run_stereo(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R
             int ss0 = 0;
             chain_condition(chain, buf_L, buf_R, n);
             run_slot_range(chain, buf_L, buf_R, n, 0, lo, &ss0, s_dry_L, s_dry_R, 0);
-            s_pre_cond = 0;
+            /* A stereo effect in front of the amp: the mono block that follows gets the L+R mix, as in the single-core chain, not the left channel alone.
+             * The mix is made here when that block is the next to run, because the WaveNet's input is conditioned from buf_L just below; the right
+             * channel stays as it is (it is the dry signal of that block's fade). Otherwise the state goes to core 1 with the block. */
+            uint8_t pre = 0u;
+            if (ss0 && buf_R) {
+                if (front_next_is_mono(chain, lo, cut)) { for (int i = 0; i < n; i++) buf_L[i] = (buf_L[i] >> 1) + (buf_R[i] >> 1); }
+                else pre = PRE_COND_STEREO;
+            }
+            s_pre_cond = pre;
         } else {                                                          /* the conditioning is done here too, so core 1 starts on the amp */
             chain_condition(chain, buf_L, buf_R, n);
-            s_pre_cond = 1;
+            s_pre_cond = PRE_COND_DONE;
         }
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
         rs_t1 = plat_ticks24();
