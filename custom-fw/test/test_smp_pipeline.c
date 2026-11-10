@@ -52,7 +52,7 @@ static fx_node_t s_amp_stub;
 
 /* front: 0 = the default order. 1 = MOD, DYN, AMP with the stand-in amp: the stereo modulation runs before the hand-over, the dynamics (mono) is the first
  * block after it. 2 = MOD, AMP: the amp itself is the first block after it. In the single-core chain the mono block gets the L+R mix; the split chain must
- * give it the same. */
+ * give it the same. 3 = as 2 with the amp and the cabinet bypassed and the delay on: nothing mono runs, so the block must stay in stereo across the hand-over. */
 static void setup(pa_fx_chain_t *chain, int drive_on, int front) {
     if (front) { memset(&s_amp_stub, 0, sizeof s_amp_stub); s_amp_stub.run = amp_stub_run; }
     pa_fx_chain_init(chain, front ? &s_amp_stub : 0, fx_cab_ir_new());
@@ -60,6 +60,11 @@ static void setup(pa_fx_chain_t *chain, int drive_on, int front) {
     if (front) {
         pa_fx_chain_swap_order(chain, 0, 5);                              /* MOD DRV AMP CAB EQ DYN DLY REV */
         pa_fx_chain_set_slot_enabled_now(chain, PA_SLOT_MOD, 1);
+    }
+    if (front == 3) {                                                     /* the amp bypassed, a stereo delay behind it: the stereo must reach the delay */
+        pa_fx_chain_set_slot_enabled_now(chain, PA_SLOT_AMP, 0);
+        pa_fx_chain_set_slot_enabled_now(chain, PA_SLOT_CAB, 0);
+        pa_fx_chain_set_slot_enabled_now(chain, PA_SLOT_DELAY, 1);
     }
     if (front == 1) {
         pa_fx_chain_swap_order(chain, 1, 5);                              /* MOD DYN AMP CAB EQ DRV DLY REV */
@@ -111,7 +116,12 @@ static int run_case(const char *label, uint32_t budget_us, int drive_on, int fro
            mismatches, (K - 1) * 2 * PA_BLOCK_N, nonzero);
     if (!silent0) fails++;
     if (mismatches) fails++;
-    if (front) {
+    if (front == 3) {                                   /* the stereo must come out of the chain: nothing mono runs behind the modulation */
+        int wide = 0;
+        for (int k = 0; k < K; k++) for (int i = 0; i < PA_BLOCK_N; i++) if (out_single[k][0][i] != out_single[k][1][i]) wide++;
+        printf("  the single-core output is stereo: %d samples with L != R\n", wide);
+        if (wide < 100) { printf("  FAIL: the chain did not put out a stereo signal, so the case proves nothing\n"); fails++; }
+    } else if (front) {
         printf("  the block reaches the hand-over in stereo: %d samples with L != R\n", hook_stereo);
         if (hook_stereo < 100) { printf("  FAIL: the effect in front of the amp did not make a stereo signal, so the case proves nothing\n"); fails++; }
     }
@@ -126,6 +136,8 @@ int main(void) {
     fails += run_case("the amp alone on core 1 (budget 1 us), drive on", 1u, 1, 0);
     fails += run_case("stereo MOD on core 0, then the dynamics and the amp on core 1 (budget 1300 us)", 1300u, 0, 1);
     fails += run_case("stereo MOD on core 0, then the amp alone on core 1 (budget 1 us)", 1u, 0, 2);
+    fails += run_case("stereo MOD on core 0, the amp bypassed, a stereo delay behind it (budget 1 us)", 1u, 0, 3);
+    fails += run_case("stereo MOD on core 1 (budget 5000 us), the amp bypassed, a stereo delay behind it", 5000u, 0, 3);
     printf(fails ? "RESULT: FAILED\n" : "RESULT: ALL PASSED\n");
     return fails ? 1 : 0;
 }

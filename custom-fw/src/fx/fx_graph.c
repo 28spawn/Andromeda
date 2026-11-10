@@ -881,9 +881,7 @@ static void chain_tail(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R, int
 #define PRE_COND_DONE   1u
 #define PRE_COND_STEREO 2u
 static volatile uint8_t s_pre_cond;
-#if PA_PRODUCT_ANDROMEDA
 static volatile uint8_t s_front_ss;       /* did the front's last slot leave the signal in stereo? (core 1 writes it at the end of its job, core 0 reads it for the block that comes back) */
-#endif
 
 void pa_fx_chain_run_front(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R, int n, int lo, int to, int32_t *dry_L, int32_t *dry_R) {
     const uint8_t pre = s_pre_cond;
@@ -896,9 +894,7 @@ void pa_fx_chain_run_front(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R,
     const uint32_t ft1 = plat_ticks24();
 #endif
     run_slot_range(chain, buf_L, buf_R, n, lo < 0 ? 0 : lo, to, &ss, dry_L, dry_R, s_fizz_core0);
-#if PA_PRODUCT_ANDROMEDA
     s_front_ss = (uint8_t)(ss ? 1 : 0);
-#endif
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
     {   /* where core 1's job goes (SRAM 0x01C7E7C0, TIMER4 ticks): [1] this function in all, last, [2] longest, [3] the slot loop, last, [4] the part before it, last */
         volatile uint32_t *F = (volatile uint32_t *)(uintptr_t)0x01C7E7C0u;
@@ -1078,6 +1074,7 @@ void pa_fx_chain_run_stereo(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R
     }
 #else
     if (cut > 0) {
+        const int ss_prev = s_front_ss;                                   /* what the front of the block that comes back left behind: stereo only when the amp slot did not run */
         const int lo = choose_core1_lo(chain, cut);
         if (lo > 0) {                                                     /* what does not fit core 1 runs here first */
             int ss0 = 0;
@@ -1102,13 +1099,14 @@ void pa_fx_chain_run_stereo(pa_fx_chain_t *chain, int32_t *buf_L, int32_t *buf_R
         pa_amp_defer_post(1);
         s_fizz_core0 = 1u;
         pa_amp_pre_core0(buf_L, n);                                       /* the WaveNet's input conditioning, on this core */
-        s_post_handoff(chain, buf_L, buf_R, n, cut, lo);                  /* the amp is a mono block, so the stereo state after it is 0 */
+        s_post_handoff(chain, buf_L, buf_R, n, cut, lo);                  /* the amp is a mono block, so the stereo state after it is 0 (ss_prev: it was bypassed) */
         pa_amp_apply_post(buf_L, n);                                      /* the tone stack and the trim of the block that came back */
         {   /* the fizz filter, left to this core (see s_fizz_core0): only where the slot loop would have applied it, i.e. when the amp slot runs */
             const fx_node_t *amp = chain->slots[PA_SLOT_AMP];
             if (chain->fizz_filter_enabled && amp && (amp->active || amp->tail_draining)) apply_fizz_filter_block(chain, buf_L, 0, n);
         }
-        if (buf_R) for (int i = 0; i < n; i++) buf_R[i] = buf_L[i];       /* the amp is mono: the right channel follows the left after the post stages */
+        if (ss_prev && buf_R) stereo_split = 1;                           /* the amp is bypassed behind a stereo effect: the block stays in stereo, as in the single-core chain */
+        else if (buf_R) for (int i = 0; i < n; i++) buf_R[i] = buf_L[i];  /* the amp is mono: the right channel follows the left after the post stages */
 #if !defined(PA_HOST_BUILD) && !defined(PA_HOST_SIM)
         rs_t2 = plat_ticks24();
 #endif

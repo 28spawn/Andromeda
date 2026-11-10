@@ -47,6 +47,9 @@ fx_node_t *fx_drive_new(void) {
     return &node;
 }
 #else
+#include "../dsp/fixedpoint.h"
+#include "../dsp/pa_oversample.h"
+#include "pa_prof.h"
 #define DRV_FS 44100.0f
 
 

@@ -1025,7 +1025,7 @@ void pa_wavenet_process_block_q21(pa_wavenet_model_t *m, int32_t *samples_q21, i
          * every block and the hang detector (6 ms) switches core 1 off. A job over 1.458 ms (35,000 ticks) counts up, one under 1.40 ms (33,600) counts down; at 16
          * this engine is given up (blk_bad): the amp slot then runs the GRU loaded before and core 1 keeps its deadline. An engine that averages under budget never
          * trips it. */
-        if (m->blk_t[5] != 0u) {                                      /* (profiled blocks, one in 32, are not timed here: the timer reads inflate them) */
+        if (m->blk_t[5] != 0u && ((m->blk_n - 1u) & 31u) != 0u) {     /* (profiled blocks, one in 32, are not timed here: the timer reads inflate them; blk_n was counted up by the run above) */
             const uint32_t tj = plat_ticks24() - t_start;
             m->blk_t[5] = tj;
             if (tj > 35000u) { if (++m->blk_slow >= 16u) { m->blk_bad = 1u; m->active = 0u; } }

@@ -84,7 +84,13 @@ if r:
         check(field in text, f"the record has {field!r}")
     check("DONNER Pocket AMP" in text,
           "the name is one the editor matches (\"DONNER Pocket AMP\")")
-    check("version=101" in text or "version=10" in text, "the version is valid (PA_FW_VERSION)")
+    import re
+    with open(os.path.join(ROOT, "include", "pa_config.h"), encoding="utf-8") as f:
+        cfg = f.read()
+    versions = re.findall(r"#define\s+PA_(?:ANDROMEDA_)?FW_VERSION\s+(\d+)u", cfg)   # both products' versions, as pa_config.h states them
+    got = re.search(r"version=(\d+)", text)
+    check(bool(versions) and got is not None and got.group(1) in versions,
+          f"the version is valid (PA_FW_VERSION: {got.group(1) if got else '?'}, pa_config.h has {', '.join(versions)})")
 
 print()
 print("=== the descriptor (cmd 18) ===")

@@ -11,7 +11,7 @@ What Andromeda is, the hardware limits that shape it, how each effect works, and
 | Audio | Codec at 44,118 Hz, 64-sample blocks (1.451 ms), 24-bit I/O; USB audio is rate-converted | Every time constant derives from `AND_FS` (44,118 Hz). |
 | Input | One guitar channel on the left I2S slot; stereo comes only from Andromeda's processing | The history the grain effects read is mono; stereo is created on the way out. |
 | SRAM | 512 KB: about 398 KB static, a 336 KB `.pool` region with a 147 KB effect overlay and about 47 KB free | **The binding limit.** One overlay is shared by the six effects, so only the playing one owns it. |
-| Flash | The app slot is 531,673 bytes; the 0.10 image is about 410 KB | Room for code, no room for audio assets. |
+| Flash | The app slot is 531,673 bytes; the 0.11 image is about 200 KB | Room for code, no room for audio assets. |
 | Display | 240 x 240 RGB565, SPI with DMA, drawn in 12-row bands from a display list | The only visual output; there are no LEDs. All feedback goes on the screen. |
 | Controls | MASTER pot, one PARA push-encoder, five keys (`HOME`, `VOL-`, `VOL+`, `<`, `>`), BLE and USB MIDI | The interface is shallow and gesture driven; footswitches arrive as MIDI. |
 | Hardware FFT | Only the matrix-MAC and block-FIR modes of the accelerator are mapped | A spectral effect would use a software FFT. |

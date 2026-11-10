@@ -45,7 +45,7 @@
 #define PA_FEAT_WAVENET        0
 #define PA_FEAT_DRUMS          0
 #define PA_DSP_POOL_BYTES      65536u   /* 64 KB: the AMP and CAB are locked off, so the peak (reverb + mod + granular state) is ~58 KB */
-#define PA_ANDROMEDA_FW_VERSION 10u   /* shown as 0.10 */
+#define PA_ANDROMEDA_FW_VERSION 11u   /* shown as 0.11 */
 #ifndef PA_FW_VERSION
 #define PA_FW_VERSION          PA_ANDROMEDA_FW_VERSION
 #endif

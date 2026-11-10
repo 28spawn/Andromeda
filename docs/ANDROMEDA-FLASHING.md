@@ -4,7 +4,7 @@ How to put an Andromeda build on a Pocket AMP, check it, and get back to a known
 
 ## What gets written
 
-Andromeda goes into the **app area only**: flash `0x4000`–`0x85FFF`. The 0.10 image is about 410 KB of
+Andromeda goes into the **app area only**: flash `0x4000`–`0x85FFF`. The 0.11 image is about 200 KB of
 the 531 KB slot. Nothing else is touched:
 
 | Region | | Flash of Andromeda |
@@ -38,10 +38,10 @@ stages the update loader, and the loader writes the app area only.
    ```powershell
    powershell -ExecutionPolicy Bypass -File custom-fw\build.ps1 -Product andromeda
    ```
-   It writes `custom-fw/release/Andromeda_0.10/Andromeda_0.10.fwsc`.
+   It writes `custom-fw/release/Andromeda_0.11/Andromeda_0.11.fwsc`.
 2. Open the web editor, `custom-fw/web/Andromeda_Web_Editor.html`, in **Chrome or Edge** and allow MIDI with SysEx.
    Close any other program that uses the unit's MIDI port.
-3. Firmware tab > *Install a firmware* > pick **`Andromeda_0.10.fwsc`** from the
+3. Firmware tab > *Install a firmware* > pick **`Andromeda_0.11.fwsc`** from the
    release folder. Use the release-folder `.fwsc`: it carries the update loader, which writes the app
    area only. The `Andromeda.fwsc` next to `build.ps1` is a development container; its install can also erase stored user data.
 4. *Install this firmware*. Do not unplug. If it is cut off, the unit stays in update mode and
@@ -75,7 +75,7 @@ python custom-fw\tools\jl_safe_flash.py --mock-flash <copy of full_dump.bin> wri
 ## First-boot checks
 
 - [ ] Boots within a few seconds into the home screen, `I GLASS CRYSTAL` (violet badge). The first boot writes Andromeda's own factory presets: presets saved by an earlier build with a different bank signature are gone.
-- [ ] Settings > System shows **ANDROMEDA**, version **0.10**, a new build code.
+- [ ] Settings > System shows **ANDROMEDA**, version **0.11**, a new build code.
 - [ ] GLASS (P01-P04): play a note; the 12 mode planets and bars light up and ring. `<` strikes by itself. Turn PARA: MATERIAL steps through crystal, bell, kalimba, metal, wood, marimba.
 - [ ] VOL+ to P05 (BLOOM): a cloud grows from what you play; grains show on the radar. `>` freezes the cloud (ice), again releases it.
 - [ ] The first ACCRETION slot (step with VOL+): `<` starts the recording of 2 s (red), it plays by itself when the time is over (`<` while recording ends it early), `>` overdubs (orange), `>` again goes back to play. With a loop in place `<` freezes it and `<` again releases it. `<` held 0.8 s erases the tape. GR % on the radar is the limiter: it should be 0 at normal levels and rise only on loud overdubs.

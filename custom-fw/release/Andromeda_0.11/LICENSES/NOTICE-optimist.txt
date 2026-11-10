@@ -1,0 +1,14 @@
+Optimist Bluetooth LE Stack
+Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments, and the Optimist contributors.
+Authored for Optimist by hdavid (<https://github.com/w0ts/optimist>).
+Imported at commit fcdc4881e8788365c62ea8be7fa11b4d82966bac.
+
+This component is offered under the Mozilla Public License 2.0 (MPL-2.0) or
+the GNU General Public License v3.0-only (GPL-3.0-only), at the recipient's choice.
+Andromeda consumes these files under the Mozilla Public License 2.0 (MPL-2.0).
+
+Modifications made for Andromeda are explicitly marked in the source with
+"/* PA-MOD: ... */" and remain under the same license terms.
+
+Radio initialization sequences and lookup tables in hal/ble_rf_tables_v15.h
+are Copyright (C) Zhuhai Jieli Technology Co., Ltd. and M-VAVE, licensed under Apache-2.0.

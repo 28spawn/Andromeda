@@ -2,7 +2,7 @@
 
 What is built, what has been measured on the unit, and what is left. Design: [ANDROMEDA-DESIGN.md](ANDROMEDA-DESIGN.md). Measuring on the unit: [ANDROMEDA-PERF.md](ANDROMEDA-PERF.md).
 
-## 1. Built (release 0.10)
+## 1. Built (release 0.11)
 
 | Area | State |
 |---|---|

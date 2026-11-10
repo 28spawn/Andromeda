@@ -38,6 +38,7 @@ fx_node_t *fx_mod_new(void) {
     return (fx_node_t *)0;
 }
 #else
+#include "../dsp/fixedpoint.h"
 #define MOD_FS        44100.0f
 #define MOD_BUF_LEN   1024u            /* longest tap: chorus 720 + 224 = 944 samples */
 #define MOD_BUF_MASK  (MOD_BUF_LEN - 1u)

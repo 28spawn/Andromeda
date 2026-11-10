@@ -36,6 +36,7 @@ fx_node_t *fx_delay_new(void) {
     return (fx_node_t *)0;
 }
 #else
+#include "../dsp/fixedpoint.h"
 #define DLY_BUF_LEN  32768u
 #define DLY_BUF_MASK (DLY_BUF_LEN - 1u)
 

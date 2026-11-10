@@ -37,6 +37,8 @@ uint32_t pa_rev_regions(int type, uint32_t *off, uint32_t *len, uint32_t max) { 
 uint32_t pa_rev_state_regions(const fx_node_t *nd, uint32_t *off, uint32_t *len, uint32_t max) { (void)nd; (void)off; (void)len; (void)max; return 0; }
 int32_t pa_rev_decay_gain(const fx_node_t *nd) { (void)nd; return 0; }
 #else
+#include "../dsp/fixedpoint.h"
+#include "pa_prof.h"
 #ifndef PA_REV_CLASSIC_FLOAT
 #define PA_REV_CLASSIC_FLOAT 1   /* 1: Room / Hall / Swell / Spring / Cloud run in float (reverb_run_classic_f); 0: the original integer loop */
 #endif
